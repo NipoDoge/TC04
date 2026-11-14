@@ -194,12 +194,21 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 
 ## 9. Reprodução e ressalvas técnicas
 
-Executar a partir da raiz, em ambiente virtual, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas e a compatibilidade com o sistema/Python precisam ser validadas; este README não certifica a instalação ou uma execução completa.
+Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. A dependência NVIDIA NCCL é instalada somente no Linux; no macOS, o XGBoost utiliza CPU.
+
+No macOS, instalar também o runtime OpenMP exigido pelo XGBoost:
 
 ```bash
-python3 -m venv .venv
+brew install libomp
+```
+
+A instalação foi validada localmente em macOS ARM64 com Python 3.12.14: `pip check` sem conflitos, imports das bibliotecas principais, validação dos dois Parquets pelo contrato, rejeição de idade inválida e treino reduzido do XGBoost em CPU com persistência via Joblib. O treinamento completo do baseline e a demonstração de ingestão/quarentena continuam pendentes.
+
+```bash
+python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+python -m pip check
 mkdir -p data/reference data/production data/incoming data/quarantine models
 python -m src.prepare
 python -m src.train
@@ -210,7 +219,7 @@ python -m src.ingest data/incoming/bad_batch.parquet
 
 O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Essas expectativas precisam ser demonstradas em execução antes de serem apresentadas como resultados.
 
-O `Makefile` atual usa espaços nas receitas e precisa de tabulações para funcionar com `make`; por isso os comandos acima invocam os módulos diretamente. Os diretórios de saída precisam existir. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar scripts sobrescreve artefatos, e a ingestão inválida movimenta o arquivo de origem: preservar evidências antes de repetir a demonstração.
+Com o ambiente ativado e os diretórios criados, também é possível usar `make prepare`, `make train`, `make demo-bad` e `make demo-good`. O alvo `demo-bad` gera os dois lotes, portanto deve preceder `demo-good`. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar scripts sobrescreve artefatos, e a ingestão inválida movimenta o arquivo de origem: preservar evidências antes de repetir a demonstração.
 
 ## 10. Vídeo STAR e checklist de entrega
 

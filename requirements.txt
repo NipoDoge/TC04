@@ -61,7 +61,8 @@ nest-asyncio2==1.7.4
 notebook==7.6.3
 notebook_shim==0.2.4
 numpy==2.5.4
-nvidia-nccl-cu13==2.32.3
+# NCCL/CUDA não está disponível no macOS.
+nvidia-nccl-cu13==2.32.3; sys_platform == "linux"
 packaging==26.3
 pandas==3.1.0
 pandera==0.35.0
