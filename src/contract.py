@@ -1,4 +1,5 @@
-import pandera.pandas as pa   # em versões antigas: import pandera as pa
+import numpy as np
+import pandera.pandas as pa
 
 LATE = ["NumberOfTime30-59DaysPastDueNotWorse", "NumberOfTimes90DaysLate",
         "NumberOfTime60-89DaysPastDueNotWorse"]
@@ -14,8 +15,15 @@ columns = {
     **{c: pa.Column(int, pa.Check.ge(0)) for c in LATE + COUNTS},
 }
 
+# A lista também define a ordem de entrada usada pelo modelo.
+FEATURE_COLUMNS = [name for name in columns if name != "SeriousDlqin2yrs"]
+
+for column in columns.values():
+    column.checks.append(pa.Check(np.isfinite, name="finite"))
+
 schema = pa.DataFrameSchema(
     columns,
+    checks=pa.Check(lambda df: not df.empty, name="non_empty"),
     strict=True,                 # coluna inesperada também reprova
     unique=list(columns),        # linhas duplicadas reprovam
 )

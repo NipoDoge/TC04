@@ -2,7 +2,7 @@
 
 Projeto acadêmico da Fase 4 do MLET/FIAP. O cenário é uma fintech cujo modelo de Credit Scoring pode sofrer degradação silenciosa diante de mudanças econômicas e do perfil dos clientes. O objetivo é validar dados, investigar mudanças de distribuição e definir como proteger dados e responder à degradação.
 
-Este README consolida a **proposta de governança da Etapa 4**, com base no enunciado do Tech Challenge, páginas 6 e 7, e no código deste repositório. As políticas abaixo orientam uma operação futura; não constituem evidência de controles já implantados nem de conformidade integral. O projeto não realiza concessões reais de crédito.
+Este README documenta a **Etapa 1 executada, com artefatos e evidências preservados**, e consolida a **proposta de governança da Etapa 4**, com base no enunciado e no código deste repositório. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
 
 ## 1. Escopo e evidências disponíveis
 
@@ -12,8 +12,8 @@ Este README consolida a **proposta de governança da Etapa 4**, com base no enun
 | Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória, sem simulação temporal |
 | Contrato de dados | [contract.py](src/contract.py) | Implementado em Pandera |
 | Bloqueio e quarentena | [ingest.py](src/ingest.py) | Implementados para falhas de validação do contrato |
-| Lotes de demonstração | [make_bad_batch.py](src/make_bad_batch.py) | Gerador implementado; execução deve produzir as evidências |
-| Treinamento e avaliação | [train.py](src/train.py) | Script implementado; modelo e métricas gerados não constam no repositório inspecionado |
+| Lotes de demonstração | [Log de aprovação](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt), [log de bloqueio](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) e [falhas](data/quarantine/bad_batch_errors.csv) | Executados: 500 linhas aprovadas e lote de 505 linhas em quarentena |
+| Treinamento e avaliação | [Modelo](models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib), [métricas](models/runs/32542e11c8c8477ea23d42db115efd0e/metrics.json) e [manifesto da execução](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) | Baseline treinado, métricas conferidas após recarregar o modelo e publicação por versão |
 | Simulação e detecção de drift | Sem scripts ou relatórios identificados | Pendentes |
 | Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
 | Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
@@ -49,7 +49,9 @@ data/raw/cs-training.csv
         -> data/validation/validation.parquet
             -> src.train: valida contratos das duas partições
                 -> treino XGBoost na referência e avaliação na validação
-                -> models/model.joblib + models/metrics.json
+                -> models/.tmp-<execução>/{model.joblib,metrics.json}
+                -> models/runs/<execução> (versão completa)
+                -> models/current (apontador para a versão publicada)
         -> data/reference/outlier_limits.json + cleaning_report.json
         -> data/production/holdout.parquet
             -> src.make_bad_batch: lotes de demonstração
@@ -61,17 +63,31 @@ data/raw/cs-training.csv
                         -> falha operacional: log e retorno 2
 ```
 
-Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. Após atualizar esta preparação, executar novamente `python -m src.prepare` antes de treinar, para gerar a validação e substituir os Parquets e o relatório antigos. As saídas de treinamento e demonstração são produzidas quando os scripts são executados. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
+Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
+
+Modelo e métricas são gravados em um diretório temporário exclusivo dentro de `models/`. Somente após concluir ambas as gravações, a versão é movida para `models/runs/<execução>` e o link simbólico `models/current` é substituído atomicamente. Os caminhos publicados são `models/current/model.joblib` e `models/current/metrics.json`. Falhas de gravação ou publicação retornam 2 e preservam a versão anterior; temporários e versões não publicadas são removidos nas falhas tratadas. Versões publicadas anteriores permanecem disponíveis em `models/runs/`.
+
+Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Arquivos antigos diretamente em `models/model.joblib` ou `models/metrics.json` não são atualizados; os consumidores devem usar a estrutura publicada. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
 
 O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
 
 ## 3. Qualidade de dados e limites do contrato
 
-O contrato exige alvo binário; idade inteira entre 18 e 100, inclusive; renda não nula e não negativa; demais medidas e contagens não negativas; colunas e tipos definidos; ausência de colunas extras e de linhas integralmente duplicadas. Os campos não marcados como anuláveis também rejeitam nulos por padrão. Não há coerção de tipos configurada.
+O contrato exige pelo menos um registro; valores finitos em todas as colunas numéricas (rejeita `+inf` e `-inf`); alvo binário; idade inteira entre 18 e 100, inclusive; renda não nula e não negativa; demais medidas e contagens não negativas; colunas e tipos definidos; ausência de colunas extras e de linhas integralmente duplicadas. Os campos não marcados como anuláveis também rejeitam nulos por padrão. Não há coerção de tipos configurada. Lotes vazios e números infinitos são violações do contrato, com retorno 1 na ingestão e no treinamento.
+
+A lista `FEATURE_COLUMNS`, definida no contrato, determina a ordem das entradas do modelo. O treinamento seleciona as mesmas features nessa ordem na referência e na validação, permitindo arquivos com colunas em outra ordem. A lista fica registrada também nos nomes das features do XGBoost serializado.
 
 A preparação remove duplicatas, idades fora do intervalo, registros sem renda ou dependentes, rendas negativas e códigos 96/98 nas colunas de atraso. Separa 30% para holdout e divide os 70% restantes em treino/validação na proporção 80/20. Calcula os percentis 99 de `DebtRatio` e de utilização de crédito exclusivamente no treino, antes de qualquer filtro estatístico. Aplica os mesmos limites às três partições, sem recalculá-los na validação ou no holdout. Os limites são salvos em `data/reference/outlier_limits.json`, e o relatório registra exclusões e tamanhos por partição.
 
-O relatório histórico versionado registra 609 duplicatas, 14 exclusões por idade, 29.214 por renda/dependentes ausentes, nenhuma por renda negativa, 145 pelos códigos 96/98 e 1.201 e 1.189 pelos dois filtros de outliers. Esses números vêm da preparação anterior e devem ser substituídos pelos resultados da nova execução. São contagens sequenciais, não estimativas independentes de prevalência.
+O [relatório da preparação executada](data/reference/cleaning_report.json) registra 609 duplicatas, 14 exclusões por idade, 29.214 por renda/dependentes ausentes, nenhuma por renda negativa e 145 pelos códigos 96/98. Restaram 120.018 registros antes dos filtros estatísticos. Os limites calculados somente no treino foram `DebtRatio ≤ 672,76` e `RevolvingUtilizationOfUnsecuredLines ≤ 1,09213079212`; os valores completos estão em [outlier_limits.json](data/reference/outlier_limits.json).
+
+| Partição | Antes dos outliers | Removidos por DebtRatio | Removidos por utilização | Registros finais |
+| --- | ---: | ---: | ---: | ---: |
+| Treino / referência | 67.209 | 673 | 669 | 65.867 |
+| Validação | 16.803 | 156 | 167 | 16.480 |
+| Holdout | 36.006 | 366 | 343 | 35.297 |
+
+As exclusões são contagens sequenciais, não estimativas independentes de prevalência. Ao final, restaram 117.644 registros nas três partições. A execução verificou contratos, limites aplicados e ausência de registros compartilhados entre partições.
 
 Limitações que precisam orientar a operação:
 
@@ -171,7 +187,7 @@ Esta seção prescreve controles ainda não automatizados. Os limiares são pont
 | Performance com rótulos maturados | Cada janela elegível | Queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra baseline, usando o mesmo limiar | Revisar incerteza, população e política; avaliar candidato |
 | Equidade | Cada avaliação e troca de modelo | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade |
 
-O baseline de comparação deverá ser versionado quando houver avaliação executada. Não há valor de AUC, recall ou KS verificado nesta proposta. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
+O baseline da Etapa 1 está preservado em `models/runs/32542e11c8c8477ea23d42db115efd0e`, com AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. Esses valores são uma referência inicial; os alertas e o acompanhamento por janelas ainda não foram implementados. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
 
 Fluxo de resposta proposto:
 
@@ -196,7 +212,7 @@ Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entr
 | MLOps / Segurança | Execução, acessos, logs, versionamento, incidentes e rollback |
 | Privacidade / encarregado, na operação real | Validar plano de privacidade, apoiar direitos e avaliar incidentes |
 
-Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. Em mudanças de modelo, acrescentar comparação com a versão anterior, aprovadores e motivo. O código já fixa seed 42 na preparação/treino e gera relatório de limpeza e métricas; o registro completo e o versionamento de artefatos estão pendentes.
+Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas. A coleta dessas evidências para cada execução futura ainda precisa ser automatizada.
 
 ## 9. Reprodução e ressalvas técnicas
 
@@ -208,7 +224,7 @@ No macOS, instalar também o runtime OpenMP exigido pelo XGBoost:
 brew install libomp
 ```
 
-A instalação foi validada localmente em macOS ARM64 com Python 3.12.14: `pip check` sem conflitos, imports das bibliotecas principais, validação dos Parquets pelo contrato e XGBoost em CPU com persistência via Joblib. O treinamento completo e a demonstração de ingestão/quarentena foram exercitados em diretório temporário. A geração e preservação dos artefatos definitivos no projeto continuam pendentes.
+A execução definitiva da Etapa 1 foi realizada no projeto em **14/11/2026, às 20:13, no fuso America/Sao_Paulo**, usando macOS ARM64 e Python 3.12.14. O `pip check` não encontrou conflitos, os 32 testes passaram e os artefatos estão preservados. As versões completas do ambiente constam em [environment.txt](artifacts/stage1/20261114T201315-0300-5fbfe64d/environment.txt).
 
 ```bash
 python3.12 -m venv .venv
@@ -226,7 +242,35 @@ O resultado esperado da última chamada é código de saída 1, lote movido para
 
 Com o ambiente ativado, também é possível usar `make prepare`, `make train`, `make demo-bad` e `make demo-good`. Para indicar o interpretador explicitamente, usar, por exemplo, `make train PYTHON=.venv/bin/python`. Cada script cria os diretórios necessários às suas saídas. O alvo `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar preparação, treinamento ou geração de lotes sobrescreve suas saídas; a ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
 
-Os testes são executados com `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem também bloqueio do treinamento por contratos, partições vazias ou com uma classe, preservação de modelo anterior, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. A integração de preparação, treinamento, geração dos lotes e ingestão foi verificada com os dados reais em diretório temporário, sem substituir os artefatos versionados.
+Os testes são executados com `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem também bloqueio do treinamento por contratos, partições vazias ou com uma classe, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e comparação de métricas e predições após reordenar colunas dos arquivos de treino e validação. Os testes de publicação simulam falhas na gravação do modelo, das métricas e na troca do apontador, verificando preservação integral do conjunto anterior, limpeza dos temporários e retorno 2 pelo treinamento. O [log dos 32 testes](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) foi preservado junto à execução definitiva.
+
+### Resultados e evidências da Etapa 1
+
+Execução: `20261114T201315-0300-5fbfe64d`. O [manifesto](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) relaciona comandos, códigos de saída, hashes SHA-256, dependências e cópias das fontes e dos resultados em `artifacts/stage1/20261114T201315-0300-5fbfe64d/`. As cópias em `outputs/` preservam este resultado caso os arquivos de trabalho sejam regenerados.
+
+| Partição | Registros | Inadimplentes | Taxa de inadimplência |
+| --- | ---: | ---: | ---: |
+| Treino / referência | 65.867 | 4.322 | 6,5617% |
+| Validação | 16.480 | 1.089 | 6,6080% |
+| Holdout | 35.297 | 2.335 | 6,6153% |
+
+| Métrica na validação | Valor |
+| --- | ---: |
+| AUC ROC | 0,857208 |
+| Recall no limiar 0,5 | 0,772268 |
+| KS de classificação | 0,567594 |
+
+As métricas foram recalculadas após recarregar o modelo salvo e coincidiram com o JSON publicado. O holdout ficou reservado para os lotes e etapas seguintes; estas métricas foram calculadas somente na validação. Elas descrevem a população retida pela limpeza e não demonstram desempenho temporal ou sob drift.
+
+| Evidência | Resultado observado | Arquivo |
+| --- | --- | --- |
+| Dependências | Sem conflitos, retorno 0 | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/01_dependencies.txt) |
+| Treinamento | Retorno 0, versão completa publicada | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/04_train.txt) |
+| Lote válido | 500 linhas, retorno 0 | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt) |
+| Lote inválido | 505 linhas, retorno 1, movido para quarentena | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) |
+| Diagnóstico do contrato | 104 entradas de falhas: coluna ausente, idade, nulo, valor negativo e unicidade | [CSV](data/quarantine/bad_batch_errors.csv) |
+
+As 104 entradas do relatório não representam 104 clientes distintos: um registro pode produzir múltiplas entradas. Antes de repetir o lote inválido com o mesmo nome, arquivar a ocorrência ativa de quarentena ou usar outro nome; a ingestão retorna 2 em colisões e preserva a evidência anterior. As cópias desta execução em `artifacts/stage1/` devem ser mantidas inalteradas para conferência dos hashes.
 
 ## 10. Vídeo STAR e checklist de entrega
 
@@ -246,10 +290,10 @@ Os testes são executados com `python -m unittest discover -s tests -v`. Verific
 - [x] Documentar riscos de viés, hipóteses causais e plano de resposta.
 - [ ] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos.
 - [ ] Atribuir responsáveis e validar as políticas propostas.
-- [ ] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
+- [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
 - [ ] Completar as Etapas 2 e 3 com simulação, relatório estatístico e observabilidade.
 - [ ] Atualizar a análise causal com resultados observados, sem transformar correlação em causa.
 - [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
 - [ ] Publicar o vídeo STAR e inserir o link nesta seção.
 
-A documentação cobre a proposta teórica da Etapa 4. O link do vídeo e as evidências pendentes precisam ser acrescentados para concluir a entrega do projeto.
+A Etapa 1 possui execução e evidências preservadas; a documentação de governança cobre a proposta teórica da Etapa 4. As Etapas 2 e 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.

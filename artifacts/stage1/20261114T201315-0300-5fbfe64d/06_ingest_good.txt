@@ -1,0 +1,7 @@
+COMMAND: /Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/.venv/bin/python -m src.ingest data/incoming/good_batch.parquet
+EXIT: 0
+
+STDOUT:
+
+STDERR:
+2026-11-14 20:13:36,053 INFO batch=good_batch.parquet OK: 500 linhas

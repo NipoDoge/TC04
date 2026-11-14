@@ -1,0 +1,6 @@
+COMMAND: /Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/.venv/bin/python -m src.make_bad_batch
+EXIT: 0
+
+STDOUT:
+
+STDERR:

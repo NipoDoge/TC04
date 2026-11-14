@@ -1,0 +1,7 @@
+COMMAND: /Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/.venv/bin/python -m pip --no-cache-dir check
+EXIT: 0
+
+STDOUT:
+No broken requirements found.
+
+STDERR:
