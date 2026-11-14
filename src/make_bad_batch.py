@@ -1,4 +1,7 @@
 import numpy as np, pandas as pd
+from pathlib import Path
+
+Path("data/incoming").mkdir(parents=True, exist_ok=True)
 df = pd.read_parquet("data/production/holdout.parquet").sample(500, random_state=1).reset_index(drop=True)
 df.loc[0, "age"] = 15
 df.loc[1, "MonthlyIncome"] = np.nan

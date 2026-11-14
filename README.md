@@ -9,7 +9,7 @@ Este README consolida a **proposta de governança da Etapa 4**, com base no enun
 | Componente | Evidência no repositório | Situação |
 | --- | --- | --- |
 | Exploração e avaliação inicial de seleção | [Notebook](notebooks/01_exploracao.ipynb) | Código e algumas saídas disponíveis |
-| Limpeza e separação referência/produção | [prepare.py](src/prepare.py), [relatório de limpeza](data/reference/cleaning_report.json) e arquivos Parquet | Implementados; divisão aleatória, sem simulação temporal |
+| Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória, sem simulação temporal |
 | Contrato de dados | [contract.py](src/contract.py) | Implementado em Pandera |
 | Bloqueio e quarentena | [ingest.py](src/ingest.py) | Implementados para falhas de validação do contrato |
 | Lotes de demonstração | [make_bad_batch.py](src/make_bad_batch.py) | Gerador implementado; execução deve produzir as evidências |
@@ -42,20 +42,26 @@ Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa id
 
 ```text
 data/raw/cs-training.csv
-    -> src.prepare: limpeza + divisão estratificada (seed 42)
-        -> data/reference/reference.parquet (70%)
-            -> src.train: divisão interna 80/20, treino XGBoost e avaliação
+    -> src.prepare: limpeza fixa + divisões estratificadas (seed 42)
+        -> treino (56%): ajusta os dois limites p99
+        -> aplica os mesmos limites ao treino, validação (14%) e holdout (30%)
+        -> data/reference/reference.parquet (somente treino)
+        -> data/validation/validation.parquet
+            -> src.train: valida contratos das duas partições
+                -> treino XGBoost na referência e avaliação na validação
                 -> models/model.joblib + models/metrics.json
-        -> data/production/holdout.parquet (30%)
+        -> data/reference/outlier_limits.json + cleaning_report.json
+        -> data/production/holdout.parquet
             -> src.make_bad_batch: lotes de demonstração
                 -> data/incoming/{good,bad}_batch.parquet
                     -> src.ingest + contrato Pandera
                         -> válido: log e retorno 0
                         -> inválido: movimentação para data/quarantine,
                            CSV de falhas e retorno 1
+                        -> falha operacional: log e retorno 2
 ```
 
-As saídas de treinamento e demonstração são produzidas quando os scripts são executados. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. Também não há integração obrigando o treinamento a passar pelo contrato.
+Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. Após atualizar esta preparação, executar novamente `python -m src.prepare` antes de treinar, para gerar a validação e substituir os Parquets e o relatório antigos. As saídas de treinamento e demonstração são produzidas quando os scripts são executados. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
 
 O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
 
@@ -63,17 +69,17 @@ O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de apre
 
 O contrato exige alvo binário; idade inteira entre 18 e 100, inclusive; renda não nula e não negativa; demais medidas e contagens não negativas; colunas e tipos definidos; ausência de colunas extras e de linhas integralmente duplicadas. Os campos não marcados como anuláveis também rejeitam nulos por padrão. Não há coerção de tipos configurada.
 
-A preparação remove duplicatas, idades fora do intervalo, registros sem renda ou dependentes, rendas negativas e códigos 96/98 nas colunas de atraso. Em seguida, remove valores acima do percentil 99 de `DebtRatio` e de utilização de crédito, sequencialmente.
+A preparação remove duplicatas, idades fora do intervalo, registros sem renda ou dependentes, rendas negativas e códigos 96/98 nas colunas de atraso. Separa 30% para holdout e divide os 70% restantes em treino/validação na proporção 80/20. Calcula os percentis 99 de `DebtRatio` e de utilização de crédito exclusivamente no treino, antes de qualquer filtro estatístico. Aplica os mesmos limites às três partições, sem recalculá-los na validação ou no holdout. Os limites são salvos em `data/reference/outlier_limits.json`, e o relatório registra exclusões e tamanhos por partição.
 
-O relatório existente registra 609 duplicatas, 14 exclusões por idade, 29.214 por renda/dependentes ausentes, nenhuma por renda negativa, 145 pelos códigos 96/98 e 1.201 e 1.189 pelos dois filtros de outliers. São contagens sequenciais, não estimativas independentes de prevalência.
+O relatório histórico versionado registra 609 duplicatas, 14 exclusões por idade, 29.214 por renda/dependentes ausentes, nenhuma por renda negativa, 145 pelos códigos 96/98 e 1.201 e 1.189 pelos dois filtros de outliers. Esses números vêm da preparação anterior e devem ser substituídos pelos resultados da nova execução. São contagens sequenciais, não estimativas independentes de prevalência.
 
 Limitações que precisam orientar a operação:
 
 - O contrato exige `SeriousDlqin2yrs`; atende lotes históricos rotulados. Inferência real exige contrato próprio sem o alvo, pois o desfecho futuro ainda não é conhecido.
 - O contrato não reproduz todos os filtros da limpeza: não bloqueia especificamente 96/98 nem aplica limites superiores de renda, dívida ou utilização.
-- A limpeza e seus percentis são calculados antes da separação referência/holdout. Para avaliação independente, ajustar as regras estatísticas somente no treino e aplicá-las às demais bases.
+- A remoção de outliers também filtra validação e holdout; as métricas descrevem a população retida. O relatório permite acompanhar as exclusões por partição. Valores extremos válidos devem ser considerados separadamente nas futuras simulações de drift.
 - O lote ruim contém idade 15, renda nula, dívida negativa, duplicatas e coluna ausente. Isso testa qualidade, não simula drift temporal.
-- O código trata `SchemaErrors`; erros de leitura, escrita e movimentação não têm tratamento operacional dedicado.
+- A ingestão retorna 2 para falhas de leitura, validação inesperada, escrita ou movimentação. Se já houver lote ou relatório com o mesmo nome na quarentena, preserva a evidência anterior e o arquivo de entrada e retorna 2; é necessário resolver a colisão antes de repetir. O armazenamento de múltiplas ocorrências com identificadores únicos continua pendente.
 
 ## 4. Plano de proteção de dados e base legal
 
@@ -202,14 +208,13 @@ No macOS, instalar também o runtime OpenMP exigido pelo XGBoost:
 brew install libomp
 ```
 
-A instalação foi validada localmente em macOS ARM64 com Python 3.12.14: `pip check` sem conflitos, imports das bibliotecas principais, validação dos dois Parquets pelo contrato, rejeição de idade inválida e treino reduzido do XGBoost em CPU com persistência via Joblib. O treinamento completo do baseline e a demonstração de ingestão/quarentena continuam pendentes.
+A instalação foi validada localmente em macOS ARM64 com Python 3.12.14: `pip check` sem conflitos, imports das bibliotecas principais, validação dos Parquets pelo contrato e XGBoost em CPU com persistência via Joblib. O treinamento completo e a demonstração de ingestão/quarentena foram exercitados em diretório temporário. A geração e preservação dos artefatos definitivos no projeto continuam pendentes.
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip check
-mkdir -p data/reference data/production data/incoming data/quarantine models
 python -m src.prepare
 python -m src.train
 python -m src.make_bad_batch
@@ -217,9 +222,11 @@ python -m src.ingest data/incoming/good_batch.parquet
 python -m src.ingest data/incoming/bad_batch.parquet
 ```
 
-O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Essas expectativas precisam ser demonstradas em execução antes de serem apresentadas como resultados.
+O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
 
-Com o ambiente ativado e os diretórios criados, também é possível usar `make prepare`, `make train`, `make demo-bad` e `make demo-good`. O alvo `demo-bad` gera os dois lotes, portanto deve preceder `demo-good`. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar scripts sobrescreve artefatos, e a ingestão inválida movimenta o arquivo de origem: preservar evidências antes de repetir a demonstração.
+Com o ambiente ativado, também é possível usar `make prepare`, `make train`, `make demo-bad` e `make demo-good`. Para indicar o interpretador explicitamente, usar, por exemplo, `make train PYTHON=.venv/bin/python`. Cada script cria os diretórios necessários às suas saídas. O alvo `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar preparação, treinamento ou geração de lotes sobrescreve suas saídas; a ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
+
+Os testes são executados com `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem também bloqueio do treinamento por contratos, partições vazias ou com uma classe, preservação de modelo anterior, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. A integração de preparação, treinamento, geração dos lotes e ingestão foi verificada com os dados reais em diretório temporário, sem substituir os artefatos versionados.
 
 ## 10. Vídeo STAR e checklist de entrega
 
