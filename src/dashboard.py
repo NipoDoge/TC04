@@ -92,7 +92,13 @@ def batch_label(batch):
         label = month_label("-".join(parts[:2]))
     except (ValueError, IndexError):
         return str(batch)
-    return label if len(parts) < 3 else f"{label} · {parts[2].replace('-', ' ')}"
+    return label if len(parts) < 3 else f"{label}, {parts[2].replace('-', ' ')}"
+
+
+def batch_parts(batch):
+    """Mês e complemento do lote, para cabeçalhos em duas linhas."""
+    label, _, extra = batch_label(batch).partition(", ")
+    return label, extra
 
 
 def feature_label(column):
@@ -106,11 +112,15 @@ def timestamp(value):
         return str(value)
 
 
-def tip(title, rows):
-    """Atributos de um marcador com tooltip (também alcançável pelo teclado)."""
+def tip(title, rows, focusable=True):
+    """Atributos de um marcador com tooltip (também alcançável pelo teclado).
+
+    Em grades (``focusable=False``) o script distribui o foco: uma parada de Tab
+    por tabela e setas entre as células, em vez de uma parada por célula."""
     data = {"t": title, "r": [{"n": name, "v": value} for name, value in rows]}
     label = f"{title}: " + "; ".join(f"{name} {value}" for name, value in rows)
-    return f' data-tip="{esc(json.dumps(data, ensure_ascii=False))}" tabindex="0" aria-label="{esc(label)}"'
+    focus = ' tabindex="0"' if focusable else ""
+    return f' data-tip="{esc(json.dumps(data, ensure_ascii=False))}"{focus} aria-label="{esc(label)}"'
 
 
 def chip(state, label=None, compact=False):
@@ -124,15 +134,22 @@ def count_label(count, severity):
     return f"{count} {SEVERITIES[severity][count != 1]}"
 
 
-def table(headers, rows, css="data"):
-    head = "".join(f"<th scope=\"col\">{esc(h)}</th>" for h in headers)
-    body = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
-    return f'<div class="scroll"><table class="{css}"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+def table(headers, rows, css="data", right=(), label=None):
+    """Tabela de dados; ``right`` lista as colunas numéricas, alinhadas à direita,
+    e ``label`` dá um nome à tabela para quem navega por leitor de tela."""
+    def align(index):
+        return ' class="r"' if index in right else ""
+
+    head = "".join(f'<th scope="col"{align(i)}>{esc(h)}</th>' for i, h in enumerate(headers))
+    body = "".join("<tr>" + "".join(f"<td{align(i)}>{cell}</td>" for i, cell in enumerate(row)) + "</tr>" for row in rows)
+    name = f' aria-label="{esc(label)}"' if label else ""
+    return f'<div class="scroll"><table class="{css}"{name}><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
-def table_view(headers, rows):
+def table_view(headers, rows, label="Dados do gráfico"):
     """Gêmeo tabular de um gráfico: os mesmos valores sem depender de cor ou hover."""
-    return f'<details class="table-view"><summary>Ver dados em tabela</summary>{table(headers, rows)}</details>'
+    return ('<details class="table-view"><summary>Ver dados em tabela</summary>'
+            f'{table(headers, rows, right=range(1, len(headers)), label=label)}</details>')
 
 
 # ------------------------------------------------------------------ gráficos
@@ -288,14 +305,25 @@ def inline_bar(value, scale, negative=False):
 
 
 # -------------------------------------------------------------------- seções
-SECTIONS = {"tempo": "Linha do tempo", "pipeline": "Pipeline", "drift": "Drift", "cenarios": "Cenários pareados",
-            "modelo": "Modelo",
-            "alertas": "Alertas", "causal": "Causalidade", "metricas": "Métricas"}
+SECTIONS = {"visao": "Visão geral", "tempo": "Linha do tempo", "pipeline": "Saúde do pipeline",
+            "drift": "Drift por variável", "cenarios": "Cenários pareados", "modelo": "Desempenho do modelo",
+            "alertas": "Alertas", "causal": "Causalidade", "metricas": "Definição das métricas"}
+# Grupos de regras do quadro de sinais: um por pergunta que o monitoramento responde.
+SIGNALS = (
+    ("Contrato de dados", ("contrato_violado",)),
+    ("Drift das variáveis", ("drift_feature",)),
+    ("Drift do score", ("drift_predicao",)),
+    ("Desempenho com rótulo", ("queda_auc", "queda_recall", "inadimplencia_elevada")),
+    ("Operação do pipeline", ("falha_operacional", "volume_baixo", "latencia_elevada")),
+)
+BOARD = {"ok": ("✓", "ok", "good"), "warning": ("●", "aviso", "warning"), "alert": ("▲", "alerta", "serious"),
+         "critical": ("✕", "bloqueado", "critical"), "na": ("–", "não avaliado", "neutral")}
 
 
 def card(title, body, subtitle=None, anchor=""):
+    """Seção aberta do boletim: título, subtítulo e conteúdo, separada por um fio."""
     sub = f'<p class="sub">{subtitle}</p>' if subtitle else ""
-    return f'<section class="card" id="{anchor}"><h2>{esc(title)}</h2>{sub}{body}</section>'
+    return f'<section class="block" id="{anchor}"><h2>{esc(title)}</h2>{sub}{body}</section>'
 
 
 def first_batch(batches, predicate):
@@ -311,7 +339,94 @@ def has_alert(batch, rule=None, severity=None):
                for a in batch["alerts"])
 
 
+def rail(summary, anchors):
+    """Trilho lateral: o que é esta página, de qual execução ela fala e o índice."""
+    facts = [("Execução", summary["run_id"]), ("Gerada em", timestamp(summary["generated_at"])),
+             ("Modelo publicado", str(summary.get("model_version", "—"))[:12]),
+             ("Referência", f'{num(summary["baseline"]["rows"], 0)} linhas de treino')]
+    return ('<aside class="rail" aria-label="Execução e índice">'
+            '<div><p class="product">Monitoramento do modelo de crédito</p>'
+            '<p class="product-sub">TC04, Fase 4</p></div>'
+            '<dl class="run">' + "".join(f"<dt>{esc(name)}</dt><dd>{esc(value)}</dd>" for name, value in facts) + "</dl>"
+            '<nav class="toc" aria-label="Seções"><ul>'
+            + "".join(f'<li><a href="#{anchor}">{esc(SECTIONS[anchor])}</a></li>' for anchor in anchors)
+            + '</ul></nav><button type="button" id="theme" class="theme">Usar tema escuro</button></aside>')
+
+
+def signal_cell(batch, rules):
+    """Estado de um grupo de regras em um lote: (estado, linhas do tooltip)."""
+    found = [alert for alert in batch["alerts"] if alert["rule"] in rules]
+    if found:
+        state = next(s for s in ("critical", "alert", "warning") if any(a["severity"] == s for a in found))
+        return state, [(alert["message"], RULES.get(alert["rule"], alert["rule"])) for alert in found]
+    ingested = batch["stages"].get("ingest", {}).get("status") == "success"
+    checked = (batch["status"] == "success" or "falha_operacional" in rules
+               or ("contrato_violado" in rules and ingested))
+    if not checked:
+        return "na", [("o lote foi interrompido antes desta verificação", "não avaliado")]
+    return "ok", [("nenhuma regra disparada", "ok")]
+
+
+def signal_board(summary):
+    """Quadro de sinais: lotes nas colunas, grupos de regras nas linhas."""
+    batches = summary["batches"]
+    head = '<th scope="col"><span class="sr">Sinal</span></th>'
+    for batch in batches:
+        label, extra = batch_parts(batch["batch"])
+        head += f'<th scope="col">{esc(label)}' + (f"<small>{esc(extra)}</small>" if extra else "") + "</th>"
+    body = ""
+    for title, rules in SIGNALS:
+        body += f'<tr><th scope="row">{esc(title)}</th>'
+        for batch in batches:
+            state, rows = signal_cell(batch, rules)
+            icon, label, color = BOARD[state]
+            if state == "critical" and any(a["rule"] == "falha_operacional" for a in batch["alerts"] if a["rule"] in rules):
+                label = "falhou"
+            text = f'<span class="sr">{label}</span>' if state == "ok" else esc(label)
+            body += (f'<td class="s-{state}"{tip(f"{title}, {batch_label(batch["batch"])}", rows, focusable=False)}>'
+                     f'<span class="ico ico-{color}" aria-hidden="true">{icon}</span>{text}</td>')
+        body += "</tr>"
+    columns = '<col class="signal">' + "<col>" * len(batches)
+    return ('<div class="scroll"><table class="board" data-grid><caption>Sinais por lote, na ordem de chegada. '
+            "Passe o cursor em uma célula, ou use Tab e as setas, para ler as mensagens."
+            f"</caption><colgroup>{columns}</colgroup><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>")
+
+
+def section_stats(summary, done):
+    """Fatos da execução em uma faixa: volume, latência, alertas e os dois indicadores do último lote."""
+    totals, base = summary["totals"], summary["baseline"]
+    alerts = totals["alerts"]
+    last = done[-1] if done else None
+    slowest = max(done, key=lambda b: b["duration_s"]) if done else None
+
+    def stat(label, value, note, extra=""):
+        return (f'<div class="stat"><p class="stat-label">{esc(label)}</p><p class="stat-value">{value}</p>'
+                f'<p class="stat-note">{note}</p>{extra}</div>')
+
+    rejected = f'{totals["rejected"]} rejeitado{"" if totals["rejected"] == 1 else "s"} pelo contrato de dados'
+    stats = [
+        stat("Lotes processados", f'{totals["success"]} de {totals["batches"]}',
+             f'{rejected}, {totals["failed"]} com falha operacional'),
+        stat("Linhas processadas", num(totals["rows_processed"], 0),
+             f'{num(totals["rows_blocked"], 0)} bloqueadas na ingestão'),
+        stat("Latência mediana por lote", seconds(totals["median_duration_s"]),
+             f'máxima {seconds(slowest["duration_s"])} em {esc(batch_label(slowest["batch"]))}' if slowest else "—"),
+        stat("Alertas gerados", str(sum(alerts.values())),
+             "<br>".join(chip(s, count_label(alerts[s], s)) for s in SEVERITIES)),
+    ]
+    if last:
+        auc, psi_max = last["performance"]["auc"], max_feature_psi(last)
+        stats.append(stat(f"AUC em {batch_label(last['batch'])}", num(auc),
+                          f'{signed(auc - base["auc"])} contra o baseline ({num(base["auc"])})',
+                          sparkline([b["performance"]["auc"] for b in done])))
+        stats.append(stat(f"PSI máximo em {batch_label(last['batch'])}", num(psi_max),
+                          f'limite de alerta {num(summary["thresholds"]["psi_alert"], 2)}',
+                          sparkline([max_feature_psi(b) for b in done])))
+    return f'<div class="stats">{"".join(stats)}</div>'
+
+
 def section_header(summary, done):
+    """Abertura: o veredito do último lote e o quadro de sinais de todos eles."""
     last = done[-1] if done else None
     counts = {s: sum(a["severity"] == s for a in (last["alerts"] if last else [])) for s in SEVERITIES}
     worst = next((s for s in ("critical", "alert", "warning") if counts[s]), "ok")
@@ -323,49 +438,11 @@ def section_header(summary, done):
                    f"contra {num(summary['baseline']['auc'])} do baseline; PSI máximo das variáveis "
                    f"{num(max_feature_psi(last))}.")
     return (
-        '<header><button type="button" id="theme" class="theme">Alternar tema</button>'
-        '<p class="eyebrow">TC04 · Fase 4 · Monitoramento do modelo de crédito</p>'
-        "<h1>Drift, desempenho e saúde do pipeline</h1>"
-        f'<p class="meta">Execução <code>{esc(summary["run_id"])}</code> · gerada em {esc(timestamp(summary["generated_at"]))}'
-        f' · modelo <code>{esc(str(summary.get("model_version", "—"))[:12])}</code> · referência com '
-        f'{num(summary["baseline"]["rows"], 0)} linhas</p>'
-        f'<p class="verdict">{chip(worst, STATUS[worst][2].capitalize())}<span>{esc(verdict)}</span></p>'
+        '<header class="hero" id="visao"><h1>Drift, desempenho e saúde do pipeline</h1>'
+        f'<p class="verdict v-{STATUS[worst][0]}">{chip(worst, STATUS[worst][2].capitalize())} <span>{esc(verdict)}</span></p>'
         '<p class="synthetic">Os lotes de produção são simulados (choque econômico sintético sobre o holdout). '
         "Os números demonstram o funcionamento do monitoramento, não o desempenho de uma operação real.</p>"
-        '<nav class="toc" aria-label="Seções">'
-        + "".join(f'<a href="#{anchor}">{esc(label)}</a>' for anchor, label in SECTIONS.items()) + "</nav></header>")
-
-
-def section_kpis(summary, done):
-    totals, base = summary["totals"], summary["baseline"]
-    alerts = totals["alerts"]
-    last = done[-1] if done else None
-    slowest = max(done, key=lambda b: b["duration_s"]) if done else None
-
-    def tile(label, value, note, extra=""):
-        return (f'<div class="tile"><p class="tile-label">{esc(label)}</p><p class="tile-value">{value}</p>'
-                f'<p class="tile-note">{note}</p>{extra}</div>')
-
-    severity = " · ".join(chip(s, count_label(alerts[s], s)) for s in SEVERITIES)
-    tiles = [
-        tile("Lotes processados", f'{totals["success"]} de {totals["batches"]}',
-             f'{totals["rejected"]} rejeitado(s) pelo contrato de dados, {totals["failed"]} com falha operacional'
-             .replace("1 rejeitado(s)", "1 rejeitado").replace("(s)", "s")),
-        tile("Linhas processadas", num(totals["rows_processed"], 0),
-             f'{num(totals["rows_blocked"], 0)} bloqueadas na ingestão'),
-        tile("Latência mediana por lote", seconds(totals["median_duration_s"]),
-             f'máxima {seconds(slowest["duration_s"])} em {esc(batch_label(slowest["batch"]))}' if slowest else "—"),
-        tile("Alertas gerados", str(sum(alerts.values())), severity),
-    ]
-    if last:
-        auc, psi_max = last["performance"]["auc"], max_feature_psi(last)
-        tiles.append(tile(f"AUC em {batch_label(last['batch'])}", num(auc),
-                          f'{signed(auc - base["auc"])} contra o baseline ({num(base["auc"])})',
-                          sparkline([b["performance"]["auc"] for b in done])))
-        tiles.append(tile(f"PSI máximo em {batch_label(last['batch'])}", num(psi_max),
-                          f'limite de alerta {num(summary["thresholds"]["psi_alert"], 2)}',
-                          sparkline([max_feature_psi(b) for b in done])))
-    return f'<div class="kpis">{"".join(tiles)}</div>'
+        + signal_board(summary) + section_stats(summary, done) + "</header>")
 
 
 def section_timeline(summary, done):
@@ -441,7 +518,8 @@ def section_pipeline(summary, events):
                   for s in SEVERITIES if any(a["severity"] == s for a in batch["alerts"])]
         cells.append(esc(", ".join(counts)) or "—")
         rows.append(cells)
-    health = table(["Lote", "Status", "Linhas", *STAGES.values(), "Duração total", "Alertas"], rows, "data health")
+    health = table(["Lote", "Status", "Linhas", *STAGES.values(), "Duração total", "Alertas"], rows, "data health", right=(2,),
+                   label="Status, volume e duração por lote e por etapa")
 
     latest = {}
     for event in events:
@@ -454,17 +532,20 @@ def section_pipeline(summary, events):
     levels = {}
     for event in run_events:
         levels[event.get("level", "INFO")] = levels.get(event.get("level", "INFO"), 0) + 1
-    log_note = (f'<p class="note">Log central <code>{esc(config.EVENT_LOG)}</code>: {len(run_events)} eventos nesta execução ('
+    plural = "evento" if len(run_events) == 1 else "eventos"
+    log_note = (f'<p class="note">Log central <code>{esc(config.EVENT_LOG)}</code>: {len(run_events)} {plural} nesta execução ('
                 + ", ".join(f"{count} {esc(level)}" for level, count in sorted(levels.items())) + ").</p>") if run_events else (
                 '<p class="note">Log central indisponível: a tabela usa o consolidado do monitoramento.</p>')
     log_rows = [[esc(e["ts"][11:23]), esc(e["stage"]), esc(e["batch"] or "—"), esc(e["status"]), esc(e["level"]),
                  seconds(e.get("duration_s")), num(e["rows"], 0) if e.get("rows") is not None else "—"]
                 for e in run_events]
-    log_table = (f'<details class="table-view"><summary>Ver os {len(log_rows)} eventos desta execução</summary>'
-                 + table(["Hora (UTC)", "Etapa", "Lote", "Status", "Nível", "Duração", "Linhas"], log_rows)
+    log_table = (f'<details class="table-view"><summary>Ver o registro de eventos desta execução ({len(log_rows)})</summary>'
+                 + table(["Hora (UTC)", "Etapa", "Lote", "Status", "Nível", "Duração", "Linhas"], log_rows, right=(5, 6),
+                         label="Eventos desta execução no log central")
                  + "</details>") if log_rows else ""
     extra = ("<h3>Demais etapas do pipeline (última execução registrada)</h3>"
-             + table(["Etapa", "Status", "Quando", "Duração", "Linhas"], other)) if other else ""
+             + table(["Etapa", "Status", "Quando", "Duração", "Linhas"], other, right=(3, 4),
+                     label="Última execução das demais etapas")) if other else ""
     return card("Saúde do pipeline", health + log_note + log_table + extra,
                 "Uma linha por lote, na ordem de chegada. O primeiro lote inclui a carga inicial do Evidently.", "pipeline")
 
@@ -484,13 +565,14 @@ def section_drift(summary, done):
         link = ""
         if report and Path(report).exists():
             href = os.path.relpath(report, config.DASHBOARD.parent).replace(os.sep, "/")
-            link = f'<a href="{esc(href)}" title="Relatório do Evidently deste lote">Evidently</a>'
+            name = f"Relatório do Evidently de {batch_label(batch['batch'])}"
+            link = f'<a href="{esc(href)}" aria-label="{esc(name)}" title="{esc(name)}">relatório</a>'
         head += f'<th scope="col">{esc(batch_label(batch["batch"]))}{link}</th>'
     body = ""
     for column in columns + [config.SCORE]:
         tag = '<span class="tag">alterada na simulação</span>' if column in shocked else ""
         body += (f'<tr class="{"score-row" if column == config.SCORE else ""}"><th scope="row">'
-                 f'{esc(feature_label(column))}{tag}<code>{esc(column)}</code></th>')
+                 f'{esc(feature_label(column))}{tag}<code lang="en">{esc(column)}</code></th>')
         for batch in done:
             item = batch["drift"][column]
             mark = {"warning": '<span aria-hidden="true">●</span>', "alert": '<span aria-hidden="true">▲</span>'}.get(item["status"], "")
@@ -499,7 +581,7 @@ def section_drift(summary, done):
                     ("média, referência → lote", f'{num(item["ref_mean"], 2)} → {num(item["cur_mean"], 2)}'),
                     ("mediana, referência → lote", f'{num(item["ref_median"], 2)} → {num(item["cur_median"], 2)}')]
             body += (f'<td class="seq-{psi_level(item["psi"], limits)}"'
-                     f'{tip(f"{feature_label(column)} · {batch_label(batch["batch"])}", rows)}>{mark}{num(item["psi"])}</td>')
+                     f'{tip(f"{feature_label(column)}, {batch_label(batch["batch"])}", rows, focusable=False)}>{mark}{num(item["psi"])}</td>')
         body += "</tr>"
     warning, alert = limits["psi_warning"], limits["psi_alert"]
     scale = [(1, f"abaixo de {num(warning / 2, 2)}"), (2, f"{num(warning / 2, 2)} a {num(warning, 2)}"),
@@ -511,10 +593,11 @@ def section_drift(summary, done):
             "<code>psi_decis</code>; o relatório HTML de cada lote traz o mesmo número, com o nome "
             "“PSI (decis da referência)”, e o teste KS. O KS aparece como "
             "evidência complementar e não gera alerta: é mais sensível que o PSI e acusa também mudanças pequenas. "
-            "Passe o cursor (ou use Tab) em uma célula para ver KS, médias e medianas. Os links “Evidently” abrem os "
-            "relatórios gerados por <code>make report</code>; o repositório versiona apenas alguns deles (ver README).</p>")
+            "Passe o cursor em uma célula, ou use Tab e as setas, para ver KS, médias e medianas. Os links “relatório” abrem os "
+            "relatórios do Evidently gerados por <code>make report</code>; o repositório versiona apenas alguns deles (ver README).</p>")
     return card("Drift por variável e por lote",
-                f'<div class="scroll"><table class="heat"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+                '<div class="scroll"><table class="heat" data-grid><caption class="sr">PSI por variável (linhas) e por lote (colunas)'
+                f'</caption><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
                 + legend_html + note,
                 "PSI de cada variável de entrada e do score, lote contra referência. Variáveis ordenadas pelo maior PSI.", "drift")
 
@@ -534,7 +617,8 @@ def section_scenarios(scenarios, limits):
         link = ""
         if Path(item["report"]).exists():
             href = os.path.relpath(item["report"], config.DASHBOARD.parent).replace(os.sep, "/")
-            link = f'<a href="{esc(href)}">Evidently</a>'
+            name = f"Relatório do Evidently do cenário {item['scenario']}"
+            link = f'<a href="{esc(href)}" aria-label="{esc(name)}" title="{esc(name)}">relatório</a>'
         flagged = item.get("evidently_drifted")
         verdict = "—" if flagged is None else (f'{len(flagged)} de {len(drift) - 1}' if flagged else "nenhuma")
         rows.append([f'<span class="strong">{esc(item["scenario"])}</span>',
@@ -551,7 +635,8 @@ def section_scenarios(scenarios, limits):
         "o modelo dá pouco peso a essas duas colunas.")
     body = (f'<p class="reading">{reading}</p>'
             + table(["Cenário", "Renda", "Dívida", "Colunas em drift no Evidently", "PSI da renda", "PSI do endividamento",
-                     "PSI do score", "AUC", "Sinalizados", "Relatório"], rows)
+                     "PSI do score", "AUC", "Sinalizados", "Relatório"], rows, right=(1, 2, 7, 8),
+                    label="Drift e desempenho por cenário pareado")
             + f'<p class="note">{esc(scenarios.get("note", ""))} Os {num(first["rows"], 0)} clientes são os mesmos em todos os '
             "cenários; os fatores multiplicam <code>MonthlyIncome</code> e <code>DebtRatio</code> do holdout original. "
             "A coluna do Evidently vem dos relatórios de <code>src.detect_drift</code> (KS e PSI por feature), que dizem "
@@ -608,8 +693,11 @@ def section_alerts(summary):
         f'<tr data-sev="{esc(a["severity"])}"><td>{chip(a["severity"])}</td><td>{esc(batch_label(a["batch"]))}</td>'
         f'<td>{esc(RULES.get(a["rule"], a["rule"]))}</td><td>{esc(a["message"])}</td></tr>' for a in alerts)
     head = "".join(f'<th scope="col">{h}</th>' for h in ["Severidade", "Lote", "Regra", "Mensagem"])
-    body = (f'<div class="filters" role="group" aria-label="Filtrar por severidade">{buttons}</div>'
-            f'<div class="scroll"><table class="data alerts"><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
+    shown = f"{len(alerts)} alerta exibido" if len(alerts) == 1 else f"{len(alerts)} alertas exibidos"
+    body = (f'<div class="filters" role="group" aria-label="Filtrar por severidade">{buttons}'
+            f'<output id="alert-count" aria-live="polite">{shown}</output></div>'
+            '<div class="scroll"><table class="data alerts" aria-label="Alertas gerados nesta execução">'
+            f'<thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
             if alerts else '<p class="note">Nenhum alerta nesta execução.</p>')
     return card("Alertas", body, "Crítico interrompe o lote; alerta exige investigação; aviso pede acompanhamento. "
                 "Um alerta de drift indica mudança de distribuição, não a sua causa.", "alertas")
@@ -648,9 +736,11 @@ def section_causal(causal):
         f'{bars}<p class="note">Barras a partir do zero; o traço fino é o intervalo de confiança. '
         "A interação é o que sobra: os dois mecanismos juntos derrubam menos do que a soma dos efeitos isolados.</p></div>"
         "<div><h3>Intervenção em uma variável por vez (rótulos originais)</h3>"
-        + table(["Variável", "Efeito na AUC", "Efeito no score médio", "Sinalizados"], feature_rows, "data causal")
+        + table(["Variável", "Efeito na AUC", "Efeito no score médio", "Sinalizados"], feature_rows, "data causal", right=(3,),
+                label="Efeito de alterar uma variável por vez")
         + "</div></div><h3>Cenários contrafactuais</h3>"
-        + table(["Cenário", "AUC", "Efeito na AUC [IC 95%]", "Recall", "Sinalizados", "Inadimplência", "PSI do score"], rows)
+        + table(["Cenário", "AUC", "Efeito na AUC [IC 95%]", "Recall", "Sinalizados", "Inadimplência", "PSI do score"], rows,
+                right=(1, 3, 4, 5, 6), label="Métricas por cenário contrafactual")
         + '<p class="note">Limite da análise: as intervenções são sintéticas e conhecidas. O resultado mostra como o diagnóstico '
         "seria conduzido e quanto cada mecanismo pesa neste cenário; não identifica a causa de uma degradação real.</p>")
     return card("Atribuição causal por intervenção", body,
@@ -679,7 +769,8 @@ def section_definitions(summary):
         ["Sinalizados", "Parcela do lote com score ≥ limiar de decisão.", "Calculada na escoragem.",
          "Sem regra própria; lida junto com o PSI do score."],
     ]
-    return card("Definição das métricas", table(["Métrica", "O que mede", "Como é obtida", "Regra de alerta"], rows, "data defs"),
+    return card("Definição das métricas", table(["Métrica", "O que mede", "Como é obtida", "Regra de alerta"], rows, "data defs",
+                                                label="Definição das métricas e regras de alerta"),
                 "Os limiares são pontos de partida para a simulação e ficam em <code>src/config.py</code>.", "metricas")
 
 
@@ -695,19 +786,23 @@ def footer(summary):
 def build(summary, causal=None, events=(), scenarios=None):
     """Monta o HTML completo a partir dos consolidados (sem tocar em disco)."""
     done = [batch for batch in summary["batches"] if batch["status"] == "success"]
-    sections = [section_header(summary, done), section_kpis(summary, done)]
+    sections = [section_header(summary, done)]
     if done:
         sections += [section_timeline(summary, done), section_pipeline(summary, list(events)),
                      section_drift(summary, done), section_scenarios(scenarios, summary["thresholds"]),
                      section_model(summary, done)]
     else:
         sections += [section_pipeline(summary, list(events)), section_scenarios(scenarios, summary["thresholds"])]
-    sections += [section_alerts(summary), section_causal(causal), section_definitions(summary), footer(summary)]
+    sections += [section_alerts(summary), section_causal(causal), section_definitions(summary)]
+    content = "".join(sections)
+    anchors = [anchor for anchor in SECTIONS if f' id="{anchor}"' in content]     # índice só do que existe
     return ('<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            "<title>TC04 · Monitoramento do modelo de crédito</title>"
-            f"<style>{CSS}</style></head><body class=\"viz-root\"><main class=\"wrap\">{''.join(sections)}</main>"
-            f'<div id="tip" role="status" hidden></div><script>{JS}</script></body></html>\n')
+            "<title>Monitoramento do modelo de crédito, TC04</title>"
+            f'<style>{CSS}</style></head><body class="viz-root">'
+            '<a class="skip" href="#conteudo">Pular para o conteúdo</a>'
+            f'<div class="layout">{rail(summary, anchors)}<main class="main" id="conteudo">{content}{footer(summary)}</main></div>'
+            f'<div id="tip" aria-hidden="true" hidden></div><script>{JS}</script></body></html>\n')
 
 
 def main(argv=None):

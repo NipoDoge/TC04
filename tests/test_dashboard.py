@@ -80,7 +80,7 @@ class FormattingTests(unittest.TestCase):
 
     def test_batch_labels(self):
         self.assertEqual(batch_label("2026-05"), "mai/26")
-        self.assertEqual(batch_label("2026-05-entrega-corrompida"), "mai/26 · entrega corrompida")
+        self.assertEqual(batch_label("2026-05-entrega-corrompida"), "mai/26, entrega corrompida")
         self.assertEqual(batch_label("lote-avulso"), "lote-avulso")
 
     def test_ticks_cover_the_range_with_even_steps(self):
@@ -121,6 +121,36 @@ class BuildTests(unittest.TestCase):
         self.assertIn("4.612 bloqueadas", page)
         self.assertIn("mai/26".replace("mai", "mar"), page)          # último lote: mar/26
         self.assertIn("alterada na simulação", page)
+
+    def test_signal_board_summarises_each_rule_group_per_batch(self):
+        page = build(make_summary(FULL), None, [])
+        board = page[page.index('<table class="board"'):page.index("</table>", page.index('<table class="board"'))]
+        self.assertEqual(board.count("<td "), 5 * 4)                 # cinco grupos de regras, quatro lotes
+        self.assertEqual(board.count('class="s-critical"'), 1)       # a entrega corrompida, no contrato
+        self.assertEqual(board.count('class="s-na"'), 3)             # drift e desempenho não avaliados nela
+        self.assertEqual(board.count('class="s-alert"'), 3)          # AUC em fev e mar, drift em mar
+        self.assertIn("bloqueado", board)
+        self.assertIn("<small>entrega corrompida</small>", board)
+        self.assertIn("Queda de AUC", board)                         # a mensagem vai no tooltip da célula
+        self.assertIn("data-grid", board)
+        self.assertNotIn("tabindex", board)                          # o script dá uma parada de Tab por grade
+        self.assertEqual(board.count("aria-label="), 5 * 4)          # cada célula tem nome próprio
+
+    def test_rail_lists_run_facts_and_only_existing_sections(self):
+        page = build(make_summary(FULL), None, [])
+        rail = page[page.index('<aside class="rail"'):page.index("</aside>")]
+        for expected in ["mon-teste", "14/11/2026 23:41 UTC", "abc123", "65.867 linhas de treino",
+                         'href="#visao"', 'href="#drift"', 'href="#metricas"']:
+            self.assertIn(expected, rail)
+        self.assertNotIn('href="#cenarios"', rail)                   # sem resumo de cenários, sem item no índice
+        self.assertIn('<a class="skip" href="#conteudo">', page)
+        self.assertIn('<main class="main" id="conteudo">', page)
+        for label in ["Alertas gerados nesta execução", "Status, volume e duração por lote e por etapa",
+                      "Definição das métricas e regras de alerta", "Dados do gráfico"]:
+            self.assertIn(f'aria-label="{label}"', page)             # toda tabela de dados tem nome
+        only_rejected = build(make_summary([rejected_batch()]), None, [])
+        self.assertNotIn('href="#drift"', only_rejected)
+        self.assertIn('href="#pipeline"', only_rejected)
 
     def test_page_is_self_contained(self):
         page = build(make_summary(FULL), None, [])
@@ -173,7 +203,7 @@ class BuildTests(unittest.TestCase):
         self.assertIn("7,77 s", page)                                 # evento desta execução
         self.assertNotIn("9,99 s", page)                              # evento de outra execução é ignorado
         self.assertIn("Treino do baseline", page)
-        self.assertIn("1 eventos nesta execução", page)
+        self.assertIn("1 evento nesta execução", page)
         self.assertIn("Log central indisponível", build(summary, None, []))
 
     def test_causal_section_shows_scenarios_or_a_placeholder(self):
