@@ -1,65 +1,84 @@
 {
-  "run_id": "scn-20261115T020045Z-5e2e63",
-  "generated_at": "2026-11-15T02:00:45+00:00",
-  "model_version": "32542e11c8c8477ea23d42db115efd0e",
+  "run_id": "scn-20261115T024528Z-4e082b",
+  "generated_at": "2026-11-15T02:45:28+00:00",
+  "model": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+    "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
+  },
   "reference_rows": 65867,
   "thresholds": {
     "psi_warning": 0.1,
     "psi_alert": 0.2,
     "decision_threshold": 0.5
   },
+  "shifted_columns": [
+    "MonthlyIncome",
+    "DebtRatio",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfTime30-59DaysPastDueNotWorse"
+  ],
   "note": "Cenários sintéticos pareados sobre o mesmo holdout, com rótulos históricos preservados. As métricas medem sensibilidade ao data drift; não demonstram concept drift nem desempenho futuro.",
   "scenarios": [
     {
       "scenario": "t0_control",
-      "file": "data/production/scenarios/t0_control.parquet",
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 1.0,
-        "DebtRatio": 1.0
+        "DebtRatio": 1.0,
+        "RevolvingUtilizationOfUnsecuredLines": 1.0
       },
       "report": "reports/drift/t0_control.html",
       "evidently_drifted": [],
       "drift": {
         "age": {
-          "psi": 0.000535240657883003,
-          "status": "ok"
+          "psi": 0.000535240657883,
+          "status": "ok",
+          "evidently_drift": false
         },
         "MonthlyIncome": {
-          "psi": 0.0003102543047905672,
-          "status": "ok"
+          "psi": 0.0003102543047905,
+          "status": "ok",
+          "evidently_drift": false
         },
         "DebtRatio": {
-          "psi": 0.00031471873078040794,
-          "status": "ok"
+          "psi": 0.0003147187307804,
+          "status": "ok",
+          "evidently_drift": false
         },
         "RevolvingUtilizationOfUnsecuredLines": {
-          "psi": 0.00037104649247364757,
-          "status": "ok"
+          "psi": 0.0003710464924736,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfDependents": {
-          "psi": 0.0008251837397289148,
-          "status": "ok"
+          "psi": 0.0008251837397289,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime30-59DaysPastDueNotWorse": {
-          "psi": 0.0004211176276649992,
-          "status": "ok"
+          "psi": 0.0004211176276649,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTimes90DaysLate": {
-          "psi": 0.0006111554427614986,
-          "status": "ok"
+          "psi": 0.0006111554427614,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime60-89DaysPastDueNotWorse": {
-          "psi": 0.00022896318951367434,
-          "status": "ok"
+          "psi": 0.0002289631895136,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfOpenCreditLinesAndLoans": {
-          "psi": 0.00037853154041911585,
-          "status": "ok"
+          "psi": 0.0003785315404191,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberRealEstateLoansOrLines": {
-          "psi": 0.00011055635288574889,
-          "status": "ok"
+          "psi": 0.0001105563528857,
+          "status": "ok",
+          "evidently_drift": false
         },
         "score": {
           "psi": 0.0005467803516508423,
@@ -78,209 +97,242 @@
     },
     {
       "scenario": "t1",
-      "file": "data/production/scenarios/t1.parquet",
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.9,
-        "DebtRatio": 1.1
+        "DebtRatio": 1.1,
+        "RevolvingUtilizationOfUnsecuredLines": 1.1
       },
       "report": "reports/drift/t1.html",
       "evidently_drifted": [
         "MonthlyIncome",
-        "DebtRatio"
+        "DebtRatio",
+        "RevolvingUtilizationOfUnsecuredLines"
       ],
       "drift": {
         "age": {
-          "psi": 0.000535240657883003,
-          "status": "ok"
+          "psi": 0.000535240657883,
+          "status": "ok",
+          "evidently_drift": false
         },
         "MonthlyIncome": {
-          "psi": 0.029564395865138128,
-          "status": "ok"
+          "psi": 0.0295643958651381,
+          "status": "ok",
+          "evidently_drift": true
         },
         "DebtRatio": {
-          "psi": 0.015735440129881453,
-          "status": "ok"
+          "psi": 0.0157354401298814,
+          "status": "ok",
+          "evidently_drift": true
         },
         "RevolvingUtilizationOfUnsecuredLines": {
-          "psi": 0.00037104649247364757,
-          "status": "ok"
+          "psi": 0.0145628833184245,
+          "status": "ok",
+          "evidently_drift": true
         },
         "NumberOfDependents": {
-          "psi": 0.0008251837397289148,
-          "status": "ok"
+          "psi": 0.0008251837397289,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime30-59DaysPastDueNotWorse": {
-          "psi": 0.0004211176276649992,
-          "status": "ok"
+          "psi": 0.0356678123477118,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTimes90DaysLate": {
-          "psi": 0.0006111554427614986,
-          "status": "ok"
+          "psi": 0.0006111554427614,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime60-89DaysPastDueNotWorse": {
-          "psi": 0.00022896318951367434,
-          "status": "ok"
+          "psi": 0.0002289631895136,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfOpenCreditLinesAndLoans": {
-          "psi": 0.00037853154041911585,
-          "status": "ok"
+          "psi": 0.0003785315404191,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberRealEstateLoansOrLines": {
-          "psi": 0.00011055635288574889,
-          "status": "ok"
+          "psi": 0.0001105563528857,
+          "status": "ok",
+          "evidently_drift": false
         },
         "score": {
-          "psi": 0.001122457331445178,
+          "psi": 0.042034234116293756,
           "status": "ok"
         }
       },
       "performance": {
-        "auc": 0.8434969565239423,
-        "ks": 0.5318257075469552,
-        "recall": 0.75203426124197,
-        "precision": 0.19337077414381676,
+        "auc": 0.8349890997705879,
+        "ks": 0.5235454569904452,
+        "recall": 0.7755888650963597,
+        "precision": 0.177985257985258,
         "default_rate": 0.06615293084398108,
-        "mean_score": 0.33395370841026306,
-        "flagged_rate": 0.2572739892908746
+        "mean_score": 0.3616902530193329,
+        "flagged_rate": 0.28826812476981045
       }
     },
     {
       "scenario": "t2",
-      "file": "data/production/scenarios/t2.parquet",
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.75,
-        "DebtRatio": 1.3
+        "DebtRatio": 1.3,
+        "RevolvingUtilizationOfUnsecuredLines": 1.3
       },
       "report": "reports/drift/t2.html",
       "evidently_drifted": [
         "MonthlyIncome",
-        "DebtRatio"
+        "DebtRatio",
+        "RevolvingUtilizationOfUnsecuredLines"
       ],
       "drift": {
         "age": {
-          "psi": 0.000535240657883003,
-          "status": "ok"
+          "psi": 0.000535240657883,
+          "status": "ok",
+          "evidently_drift": false
         },
         "MonthlyIncome": {
-          "psi": 0.19549706493700109,
-          "status": "warning"
+          "psi": 0.195497064937001,
+          "status": "warning",
+          "evidently_drift": true
         },
         "DebtRatio": {
-          "psi": 0.10853371956105543,
-          "status": "warning"
+          "psi": 0.1085337195610554,
+          "status": "warning",
+          "evidently_drift": true
         },
         "RevolvingUtilizationOfUnsecuredLines": {
-          "psi": 0.00037104649247364757,
-          "status": "ok"
+          "psi": 0.0613154052754085,
+          "status": "ok",
+          "evidently_drift": true
         },
         "NumberOfDependents": {
-          "psi": 0.0008251837397289148,
-          "status": "ok"
+          "psi": 0.0008251837397289,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime30-59DaysPastDueNotWorse": {
-          "psi": 0.0004211176276649992,
-          "status": "ok"
+          "psi": 0.0707131245341697,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTimes90DaysLate": {
-          "psi": 0.0006111554427614986,
-          "status": "ok"
+          "psi": 0.0006111554427614,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime60-89DaysPastDueNotWorse": {
-          "psi": 0.00022896318951367434,
-          "status": "ok"
+          "psi": 0.0002289631895136,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfOpenCreditLinesAndLoans": {
-          "psi": 0.00037853154041911585,
-          "status": "ok"
+          "psi": 0.0003785315404191,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberRealEstateLoansOrLines": {
-          "psi": 0.00011055635288574889,
-          "status": "ok"
+          "psi": 0.0001105563528857,
+          "status": "ok",
+          "evidently_drift": false
         },
         "score": {
-          "psi": 0.009963233831301035,
-          "status": "ok"
+          "psi": 0.1034922500661978,
+          "status": "warning"
         }
       },
       "performance": {
-        "auc": 0.8440885078619504,
-        "ks": 0.5321553454519753,
-        "recall": 0.7661670235546039,
-        "precision": 0.18579291722920344,
+        "auc": 0.8330303131488638,
+        "ks": 0.5232017349937836,
+        "recall": 0.8149892933618844,
+        "precision": 0.16140797285835454,
         "default_rate": 0.06615293084398108,
-        "mean_score": 0.3461405038833618,
-        "flagged_rate": 0.27279938804997594
+        "mean_score": 0.3961789906024933,
+        "flagged_rate": 0.334022721477746
       }
     },
     {
       "scenario": "t3",
-      "file": "data/production/scenarios/t3.parquet",
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.6,
-        "DebtRatio": 1.6
+        "DebtRatio": 1.6,
+        "RevolvingUtilizationOfUnsecuredLines": 1.6
       },
       "report": "reports/drift/t3.html",
       "evidently_drifted": [
         "MonthlyIncome",
-        "DebtRatio"
+        "DebtRatio",
+        "RevolvingUtilizationOfUnsecuredLines"
       ],
       "drift": {
         "age": {
-          "psi": 0.000535240657883003,
-          "status": "ok"
+          "psi": 0.000535240657883,
+          "status": "ok",
+          "evidently_drift": false
         },
         "MonthlyIncome": {
           "psi": 0.5995727939279433,
-          "status": "alert"
+          "status": "alert",
+          "evidently_drift": true
         },
         "DebtRatio": {
-          "psi": 0.32931142220811704,
-          "status": "alert"
+          "psi": 0.329311422208117,
+          "status": "alert",
+          "evidently_drift": true
         },
         "RevolvingUtilizationOfUnsecuredLines": {
-          "psi": 0.00037104649247364757,
-          "status": "ok"
+          "psi": 0.1444677843796722,
+          "status": "warning",
+          "evidently_drift": true
         },
         "NumberOfDependents": {
-          "psi": 0.0008251837397289148,
-          "status": "ok"
+          "psi": 0.0008251837397289,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime30-59DaysPastDueNotWorse": {
-          "psi": 0.0004211176276649992,
-          "status": "ok"
+          "psi": 0.1238920882888093,
+          "status": "warning",
+          "evidently_drift": false
         },
         "NumberOfTimes90DaysLate": {
-          "psi": 0.0006111554427614986,
-          "status": "ok"
+          "psi": 0.0006111554427614,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfTime60-89DaysPastDueNotWorse": {
-          "psi": 0.00022896318951367434,
-          "status": "ok"
+          "psi": 0.0002289631895136,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberOfOpenCreditLinesAndLoans": {
-          "psi": 0.00037853154041911585,
-          "status": "ok"
+          "psi": 0.0003785315404191,
+          "status": "ok",
+          "evidently_drift": false
         },
         "NumberRealEstateLoansOrLines": {
-          "psi": 0.00011055635288574889,
-          "status": "ok"
+          "psi": 0.0001105563528857,
+          "status": "ok",
+          "evidently_drift": false
         },
         "score": {
-          "psi": 0.033951993520185825,
-          "status": "ok"
+          "psi": 0.2031019729616321,
+          "status": "alert"
         }
       },
       "performance": {
-        "auc": 0.8429888508303702,
-        "ks": 0.5305489014863265,
-        "recall": 0.7794432548179872,
-        "precision": 0.17747440273037543,
+        "auc": 0.8286351021038176,
+        "ks": 0.507941140969934,
+        "recall": 0.841541755888651,
+        "precision": 0.14461289372976155,
         "default_rate": 0.06615293084398108,
-        "mean_score": 0.36067816615104675,
-        "flagged_rate": 0.29053460634048217
+        "mean_score": 0.43635910749435425,
+        "flagged_rate": 0.3849618947785931
       }
     }
   ]
