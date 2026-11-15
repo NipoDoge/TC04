@@ -1,0 +1,6 @@
+Etapa 1: hashes de entrada, fontes arquivadas, saídas históricas e saídas atuais válidos.
+Data drift e predições: todos os hashes de procedência válidos.
+Relatórios de data drift: 40 resultados coerentes com testes nativos do Evidently.
+Concept drift: regra condicional, 4 cenários, 141.188 predições e 20 avaliações de sensibilidade conferidos.
+Data drift e concept drift reproduzidos em diretórios temporários com resultados idênticos.
+87 referências de hash válidas; 90 arquivos de dados, modelos e evidências preservados.

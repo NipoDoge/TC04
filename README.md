@@ -39,7 +39,7 @@ O alvo `SeriousDlqin2yrs` representa inadimplência grave no horizonte de dois a
 
 Não há colunas de nome, CPF, telefone ou e-mail no arquivo de treino inspecionado. A coluna `Unnamed: 0`, um índice do arquivo, é removida na preparação. **Essa remoção não comprova anonimização**: não há avaliação de reidentificação ou técnica de anonimização implementada.
 
-Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/documentos-e-publicacoes/glossario-anpd).
+Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/glossario-anpd).
 
 ### Fluxo implementado
 
@@ -146,7 +146,7 @@ O CSV de falhas pode conter valores rejeitados. Quarentena é uma área restrita
 
 ### Direitos e decisões automatizadas
 
-Em uma operação real, disponibilizar canal de privacidade para acesso, correção e demais solicitações aplicáveis; manter registro de atendimento. Solicitações de revisão de decisões automatizadas devem receber procedimento documentado, com informação sobre critérios e parâmetros, respeitados os segredos comercial e industrial. Fonte: [direitos dos titulares, ANPD](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados-1/direito-dos-titulares).
+Em uma operação real, disponibilizar canal de privacidade para acesso, correção e demais solicitações aplicáveis; manter registro de atendimento. Solicitações de revisão de decisões automatizadas devem receber procedimento documentado, com informação sobre critérios e parâmetros, respeitados os segredos comercial e industrial. Fonte: [direitos dos titulares, ANPD](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares).
 
 Como política do projeto para uma implantação futura, decisões contestadas ou com alerta crítico serão encaminhadas a análise humana, com justificativa registrada. O protótipo atual não possui cadastro de titulares, canal de atendimento ou sistema de decisão de crédito.
 
@@ -403,7 +403,7 @@ Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instal
 | scikit-learn | Separação estratificada e métricas de classificação |
 | XGBoost | Treinamento e execução do classificador salvo |
 | joblib | Persistência e leitura do modelo |
-| Evidently AI | Testes estatísticos e relatórios HTML/JSON de data drift |
+| Evidently AI | Testes estatísticos de data drift e relatórios HTML/JSON de drift e desempenho de classificação |
 
 O Evidently 0.7.23 falha ao importar com pandas 3.1.0 por usar uma função interna removida. A integração fixa **pandas 2.3.3**, adiciona o Evidently e mantém as versões das outras seis dependências diretas do pipeline. A preparação, as predições e o baseline foram reproduzidos com os mesmos valores após esse ajuste. Parquet regenerado pode ter hash binário diferente devido à versão do pandas nos metadados; comparar o conteúdo e guardar o novo hash no manifesto. Os artefatos preservados da execução com pandas 3.1.0 continuam inalterados.
 
@@ -448,6 +448,8 @@ O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-030
 Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift a suíte contém **51 testes**, todos aprovados. Os cinco testes adicionais verificam a intervenção condicional e cumulativa, seeds, invariância de features/scores, métricas em exemplos conhecidos, segmentos de uma classe, concordância com métricas nativas do Evidently, hashes e publicação sem resultados parciais.
 
 A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
+
+A [auditoria consolidada das Etapas 1 e 2](artifacts/audit_stage1_stage2/audit.json) registra a nova execução dos 51 testes no ambiente atual e em um ambiente isolado, a reprodução dos dois experimentos, a integridade dos manifestos e a conferência dos links. Foram atualizados dois endereços da ANPD que redirecionavam e removidos metadados antigos de Python 3.14.4 do notebook. Não foi identificado fluxo legado ativo; as fontes em `artifacts/stage1/` são evidências históricas. Os commits anteriores à padronização ainda têm mensagens não semânticas, sem reescrita do histórico. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente de auditoria. A validação de execução cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
 
 ### Resultados e evidências da Etapa 1
 
