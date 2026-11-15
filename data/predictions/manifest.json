@@ -1,7 +1,7 @@
 {
-  "created_at_utc": "2026-11-14T23:59:29.984205+00:00",
+  "created_at_utc": "2026-11-15T02:40:26.796632+00:00",
   "model": {
-    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
     "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
   },
   "feature_columns": [
@@ -28,52 +28,52 @@
     {
       "name": "reference",
       "source": {
-        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/reference/reference.parquet",
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/reference/reference.parquet",
         "sha256": "ea42310cca334ea19e4aece22e79dbfeb1349e9431dd1b554843ddf7beafe943"
       },
       "rows": 65867,
       "file": "reference.parquet",
-      "sha256": "1ca968a4837ebe6ff1f062d6bff69182d900bf74fdd1afa69fb5d8077e234a03"
+      "sha256": "b8828f016c4945a7ebf0491322e6c44e88887860b165fb7671d8c9b833d1bd26"
     },
     {
       "name": "t0_control",
       "source": {
-        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t0_control.parquet",
-        "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/production/scenarios/t0_control.parquet",
+        "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
       },
       "rows": 35297,
       "file": "t0_control.parquet",
-      "sha256": "45dd00fd0d53bde9fd56e325eefa75dc63b02c10ce204f644ff13164600b324d"
+      "sha256": "a67023ec4606170c778a081d14620a5b987d6939f745aba8646779421e4d855f"
     },
     {
       "name": "t1",
       "source": {
-        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t1.parquet",
-        "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/production/scenarios/t1.parquet",
+        "sha256": "591953b92846014b33279ab17b01dc6b67b9b857058faf8527890d62945bbec4"
       },
       "rows": 35297,
       "file": "t1.parquet",
-      "sha256": "ad2f3d51722f19b5feffa192e6aad707d04d7adb0eeceb04949af4b43d083cb9"
+      "sha256": "3e5a423b3331d3ab9c0b65f244e1d700f4b88b67276c54daaef03c302212a332"
     },
     {
       "name": "t2",
       "source": {
-        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t2.parquet",
-        "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/production/scenarios/t2.parquet",
+        "sha256": "ed091308eb2ab6dac62bb414f396268de15316337bebbc88a3c74711e84db0d6"
       },
       "rows": 35297,
       "file": "t2.parquet",
-      "sha256": "c9a3ce52f849b8e0c448b4984ab1c0a6e0d4f4c8a87ec39c5612c8d985d3dd69"
+      "sha256": "16499ba3c1e743f6e227cc5f4cad2ace128b42a00b9b94da7544247784db77ce"
     },
     {
       "name": "t3",
       "source": {
-        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t3.parquet",
-        "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/production/scenarios/t3.parquet",
+        "sha256": "2b6d4a557228246d76a82027fec6005ea07e848dd7c08a85f2cf214aea583493"
       },
       "rows": 35297,
       "file": "t3.parquet",
-      "sha256": "c219feed56947faceeab24a15c80c168c6123c0def23d1240a6d6c3a2997ca71"
+      "sha256": "b62f67a3eb91da4a0907e1b29fb7db63d0240a658f9b2bb90d1ee6793e1413c6"
     }
   ]
 }

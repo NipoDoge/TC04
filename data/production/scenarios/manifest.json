@@ -1,12 +1,13 @@
 {
-  "limitation": "O dataset não fornece uma série temporal real. Os períodos são sintéticos e reutilizam os mesmos clientes do holdout, na mesma ordem, para comparação pareada. Os rótulos históricos são preservados; o experimento não demonstra concept drift, causalidade econômica ou desempenho futuro real.",
+  "limitation": "O dataset não fornece uma série temporal real. Os períodos são sintéticos e reutilizam os mesmos clientes do holdout, na mesma ordem, para comparação pareada. Os rótulos históricos são preservados; o experimento não demonstra concept drift, causalidade econômica ou desempenho futuro real. Os fatores e a regra de atraso são parâmetros ilustrativos, não estimativas econômicas.",
   "source": {
-    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/holdout.parquet",
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/data/production/holdout.parquet",
     "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
   },
   "design": "paired_full_holdout",
   "sampling": "Todos os registros; sem amostragem ou aleatoriedade.",
   "target_policy": "SeriousDlqin2yrs preservado sem alterações.",
+  "delay_rule": "NumberOfTime30-59DaysPastDueNotWorse recebe +1 quando a utilização original é menor que 1 e, multiplicada pelo fator do período, atinge 1 ou mais.",
   "periods": [
     {
       "name": "t0_control",
@@ -14,9 +15,11 @@
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 1.0,
-        "DebtRatio": 1.0
+        "DebtRatio": 1.0,
+        "RevolvingUtilizationOfUnsecuredLines": 1.0
       },
-      "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+      "rows_with_new_delay": 0,
+      "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
     },
     {
       "name": "t1",
@@ -24,9 +27,11 @@
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.9,
-        "DebtRatio": 1.1
+        "DebtRatio": 1.1,
+        "RevolvingUtilizationOfUnsecuredLines": 1.1
       },
-      "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+      "rows_with_new_delay": 3709,
+      "sha256": "591953b92846014b33279ab17b01dc6b67b9b857058faf8527890d62945bbec4"
     },
     {
       "name": "t2",
@@ -34,9 +39,11 @@
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.75,
-        "DebtRatio": 1.3
+        "DebtRatio": 1.3,
+        "RevolvingUtilizationOfUnsecuredLines": 1.3
       },
-      "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+      "rows_with_new_delay": 5510,
+      "sha256": "ed091308eb2ab6dac62bb414f396268de15316337bebbc88a3c74711e84db0d6"
     },
     {
       "name": "t3",
@@ -44,9 +51,11 @@
       "rows": 35297,
       "factors": {
         "MonthlyIncome": 0.6,
-        "DebtRatio": 1.6
+        "DebtRatio": 1.6,
+        "RevolvingUtilizationOfUnsecuredLines": 1.6
       },
-      "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+      "rows_with_new_delay": 7402,
+      "sha256": "2b6d4a557228246d76a82027fec6005ea07e848dd7c08a85f2cf214aea583493"
     }
   ]
 }
