@@ -1,0 +1,138 @@
+{
+  "created_at_utc": "2026-11-15T01:26:39.368020+00:00",
+  "versions": {
+    "evidently": "0.7.23",
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "reference": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/reference/reference.parquet",
+    "sha256": "ea42310cca334ea19e4aece22e79dbfeb1349e9431dd1b554843ddf7beafe943"
+  },
+  "reference_rows": 65867,
+  "feature_columns": [
+    "age",
+    "MonthlyIncome",
+    "DebtRatio",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfDependents",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+    "NumberOfTimes90DaysLate",
+    "NumberOfTime60-89DaysPastDueNotWorse",
+    "NumberOfOpenCreditLinesAndLoans",
+    "NumberRealEstateLoansOrLines"
+  ],
+  "settings": {
+    "continuous_columns": [
+      "MonthlyIncome",
+      "DebtRatio",
+      "RevolvingUtilizationOfUnsecuredLines"
+    ],
+    "continuous_method": "ks",
+    "ks_p_value_threshold": 0.01,
+    "categorical_method": "psi",
+    "psi_threshold": 0.2,
+    "dataset_drift_share_threshold": 0.2
+  },
+  "limitations": "Os períodos são sintéticos, sem série temporal real. O controle pode diferir da referência por amostragem. Data drift não comprova degradação de desempenho, concept drift ou causalidade. Alvo e predições não são monitorados neste relatório. Os limiares são critérios iniciais do experimento, sem ajuste de múltiplas comparações.",
+  "scenarios": [
+    {
+      "name": "t0_control",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t0_control.parquet",
+        "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+      },
+      "rows": 35297,
+      "drifted_features": [],
+      "drift_share": 0.0,
+      "dataset_drift_detected": false,
+      "reports": [
+        {
+          "file": "t0_control.html",
+          "sha256": "fb1b5c012b8cb517c9d428768561e97321d6db5a086cd35a99db98170679ecf4"
+        },
+        {
+          "file": "t0_control.json",
+          "sha256": "eeaf38912db3bea2f3294855c0b3e037614ccd5ee14a8e8804835da63c173d9c"
+        }
+      ]
+    },
+    {
+      "name": "t1",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t1.parquet",
+        "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "MonthlyIncome",
+        "DebtRatio"
+      ],
+      "drift_share": 0.2,
+      "dataset_drift_detected": true,
+      "reports": [
+        {
+          "file": "t1.html",
+          "sha256": "35b11c97cc93f0a4f71508df893951f3ebe6b9ffd68d2f92170ce602ac75dfc2"
+        },
+        {
+          "file": "t1.json",
+          "sha256": "d9258fd38a6ea6c0dff70b2c07320d3967b92a2ceb06950c88d4a66f1108ca28"
+        }
+      ]
+    },
+    {
+      "name": "t2",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t2.parquet",
+        "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "MonthlyIncome",
+        "DebtRatio"
+      ],
+      "drift_share": 0.2,
+      "dataset_drift_detected": true,
+      "reports": [
+        {
+          "file": "t2.html",
+          "sha256": "161e807c9da9e5518264b826f4e48c92254d8fbec717508f7452bce3f43bcddc"
+        },
+        {
+          "file": "t2.json",
+          "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+        }
+      ]
+    },
+    {
+      "name": "t3",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t3.parquet",
+        "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "MonthlyIncome",
+        "DebtRatio"
+      ],
+      "drift_share": 0.2,
+      "dataset_drift_detected": true,
+      "reports": [
+        {
+          "file": "t3.html",
+          "sha256": "7768b6c0c10ea5ca99e01780c1d7fcd76e992ed3fabf775f452ffd211abb7e04"
+        },
+        {
+          "file": "t3.json",
+          "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "file": "summary.csv",
+    "sha256": "0e99ebc515751f3ae80081eb165c3cb8f9406f50248fca5029d25a4cf9d76f8a"
+  }
+}

@@ -2,7 +2,7 @@
 
 Projeto acadêmico da Fase 4 do MLET/FIAP. O cenário é uma fintech cujo modelo de Credit Scoring pode sofrer degradação silenciosa diante de mudanças econômicas e do perfil dos clientes. O objetivo é validar dados, investigar mudanças de distribuição e definir como proteger dados e responder à degradação.
 
-Este README documenta a **Etapa 1 executada**, a **simulação e as predições já executadas da Etapa 2** e a **proposta de governança da Etapa 4**. A comparação estatística e o relatório de drift da Etapa 2 e a observabilidade da Etapa 3 ainda estão pendentes. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
+Este README documenta a **Etapa 1 executada**, a **simulação, as predições e os relatórios de data drift executados da Etapa 2** e a **proposta de governança da Etapa 4**. A observabilidade contínua da Etapa 3 ainda está pendente. O experimento implementado cobre data drift; não demonstra concept drift ou degradação real de desempenho. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
 
 ## 1. Escopo e evidências disponíveis
 
@@ -16,7 +16,7 @@ Este README documenta a **Etapa 1 executada**, a **simulação e as predições 
 | Treinamento e avaliação | [Modelo](models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib), [métricas](models/runs/32542e11c8c8477ea23d42db115efd0e/metrics.json) e [manifesto da execução](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) | Baseline treinado, métricas conferidas após recarregar o modelo e publicação por versão |
 | Simulação de data drift | [simulate_drift.py](src/simulate_drift.py): controle e três períodos sintéticos pareados a partir do holdout | Implementada; não representa série temporal real |
 | Predições da Etapa 2 | [predict.py](src/predict.py): inferência com o modelo salvo na referência e nos quatro cenários | Implementadas; probabilidades e classes em arquivos separados |
-| Detecção de drift | Sem testes estatísticos de drift ou relatórios HTML implementados | Pendente |
+| Detecção de data drift | [detect_drift.py](src/detect_drift.py), [resumo estatístico](reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: controle sem detecção; renda e dívida com drift em t1, t2 e t3 |
 | Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
 | Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
 | Vídeo STAR | Seção 10 | Gravação e link pendentes |
@@ -71,9 +71,14 @@ models/current/model.joblib + referência + quatro cenários
     -> src.predict: contrato + seleção ordenada de FEATURE_COLUMNS
         -> data/predictions/{reference,t0_control,t1,t2,t3}.parquet
         -> data/predictions/manifest.json
+
+referência + quatro cenários (somente FEATURE_COLUMNS)
+    -> src.detect_drift: Evidently DataDriftPreset + KS/PSI
+        -> reports/drift/{t0_control,t1,t2,t3}.{html,json}
+        -> reports/drift/summary.csv + manifest.json
 ```
 
-[config.py](src/config.py) centraliza alvo, seed, limiar de classificação e fatores dos períodos. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados na simulação e na inferência. A ordem das features continua definida apenas em [contract.py](src/contract.py).
+[config.py](src/config.py) centraliza alvo, seed, limiar de classificação, fatores dos períodos e critérios de drift. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados na simulação, na inferência e nos relatórios de drift. A ordem das features continua definida apenas em [contract.py](src/contract.py).
 
 Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
 
@@ -169,7 +174,7 @@ Não há atributos explícitos suficientes para auditar todos os grupos protegid
 
 ## 6. Causalidade: diagnóstico e hipóteses
 
-**Não há evidência de degradação temporal real ou de causa econômica no código atual.** O holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O script `src.simulate_drift` cria cenários sintéticos de data drift a partir do holdout, descritos abaixo. Não há experimento causal, simulação de concept drift ou relatório estatístico de drift implementado.
+**Não há evidência de degradação temporal real ou de causa econômica no código atual.** O holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O script `src.simulate_drift` cria cenários sintéticos de data drift a partir do holdout e `src.detect_drift` identifica as alterações por testes estatísticos e gera relatórios do Evidently. Não há experimento causal ou simulação de concept drift implementados.
 
 O mecanismo econômico a investigar é: mudança econômica pode afetar renda e endividamento, que podem alterar o risco de inadimplência; mudanças no público atendido e na política de aprovação também podem alterar a população observada. Essas relações são hipóteses de domínio, não conclusões obtidas neste projeto.
 
@@ -220,7 +225,7 @@ O alvo não depende de `prepare`, evitando regenerar a referência. Para outra e
 .venv/bin/python -m src.simulate_drift --holdout data/production/holdout.parquet --output-dir /tmp/tc04-scenarios
 ```
 
-O destino deve ser inexistente; reexecuções não sobrescrevem cenários anteriores. Os quatro Parquet e o manifesto são publicados juntos após a gravação em diretório temporário. A inferência está descrita a seguir; detecção estatística com Evidently e relatório HTML permanecem pendentes para concluir a Etapa 2.
+O destino deve ser inexistente; reexecuções não sobrescrevem cenários anteriores. Os quatro Parquet e o manifesto são publicados juntos após a gravação em diretório temporário. A inferência e a detecção estatística com Evidently estão descritas a seguir.
 
 ### Predições na referência e nos cenários
 
@@ -252,15 +257,53 @@ Os argumentos `--reference` e `--scenarios-dir` também permitem indicar outras 
 
 Na execução local com o modelo `32542e11c8c8477ea23d42db115efd0e`, foram salvas 65.867 predições na referência e 35.297 em cada cenário, totalizando 207.055. O [manifesto de inferência](data/predictions/manifest.json) registra a procedência. Após recarregar os cinco Parquet, probabilidades e classes coincidiram exatamente com uma nova inferência do modelo salvo; posições e rótulos também coincidiram com as entradas. Os hashes dos 12 arquivos de dados e modelo envolvidos permaneceram inalterados.
 
+### Detecção de data drift com Evidently AI
+
+O script [detect_drift.py](src/detect_drift.py) integra o Evidently **0.7.23** usando a API `Dataset`, `DataDefinition`, `Report` e `DataDriftPreset`, conforme a [documentação oficial de relatórios](https://docs.evidentlyai.com/docs/library/report) e de [métodos de drift](https://docs.evidentlyai.com/metrics/customize_data_drift). A execução é local, com telemetria de uso desabilitada por `DO_NOT_TRACK=1`. Não requer conta, servidor ou envio dos dados à plataforma Evidently.
+
+```bash
+make detect-drift PYTHON=.venv/bin/python
+```
+
+Cada cenário é comparado com `data/reference/reference.parquet`. Entrada e referência passam pelo contrato Pandera; somente `FEATURE_COLUMNS` são entregues ao Evidently. O alvo, `row_position`, probabilidades e classes previstas não participam dessa comparação. Os arquivos de inferência continuam disponíveis para análises posteriores de scores e desempenho, separadas da detecção de data drift.
+
+Os métodos e limiares são explícitos em `src/config.py`, sem depender da seleção automática por cardinalidade do Evidently:
+
+| Grupo | Features | Método | Critério por feature |
+| --- | --- | --- | --- |
+| Medidas financeiras contínuas | `MonthlyIncome`, `DebtRatio`, `RevolvingUtilizationOfUnsecuredLines` | KS de duas amostras | p-valor < 0,01 |
+| Idade e contagens, tratadas como categorias | As outras sete features do contrato | PSI sobre frequências das categorias | PSI ≥ 0,20 |
+
+O PSI categórico usa a união dos valores presentes nas duas amostras e o tratamento de frequências zero do Evidently 0.7.23; não discretiza renda ou dívida. O KS evita a escolha de bins para as medidas financeiras. O p-valor não mede a magnitude nem o impacto de negócio, e os testes podem ser sensíveis ao volume e a valores repetidos. Os limiares são escolhas iniciais do experimento, sem correção de múltiplas comparações; não são exigências do enunciado nem critérios universais. O critério global sinaliza drift quando **pelo menos 20% das dez features** apresentam drift; os resultados individuais continuam disponíveis mesmo abaixo desse percentual.
+
+O diretório `reports/drift/` contém quatro relatórios HTML, quatro JSONs nativos do Evidently, `summary.csv` com as 40 comparações por feature e cenário e `manifest.json` com versões das bibliotecas, parâmetros, hashes das entradas/saídas e limitações. Nos relatórios, testes em falha indicam drift detectado, não falha operacional do script. Uma execução concluída retorna 0 mesmo com drift; erros de leitura, contrato ou geração propagam erro e não publicam um conjunto parcial. O destino deve ser inexistente. Para outro conjunto ou destino:
+
+```bash
+.venv/bin/python -m src.detect_drift --reference data/reference/reference.parquet --scenarios-dir data/production/scenarios --output-dir /tmp/tc04-drift
+```
+
+Resultados da execução sobre os artefatos preservados:
+
+| Cenário | Features com drift | Proporção | Relatório |
+| --- | --- | ---: | --- |
+| Controle | Nenhuma | 0/10 | [t0_control.html](reports/drift/t0_control.html) |
+| t1 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t1.html](reports/drift/t1.html) |
+| t2 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t2.html](reports/drift/t2.html) |
+| t3 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t3.html](reports/drift/t3.html) |
+
+No controle, os p-valores de renda e dívida foram aproximadamente 0,925 e 0,588; em t1, aproximadamente 1,01 × 10⁻¹²³ e 1,91 × 10⁻⁶⁰. Em t2 e t3, a biblioteca retornou 0 por precisão numérica para esses p-valores extremamente pequenos. Os números completos estão no [resumo estatístico](reports/drift/summary.csv) e a procedência no [manifesto](reports/drift/manifest.json). Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados durante a geração, verificados por SHA-256.
+
+A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção em renda e dívida confirma mudanças de distribuição introduzidas no experimento; não comprova queda de desempenho, causa econômica ou concept drift. A menção a concept drift no contexto geral do enunciado requer um experimento adicional sobre `P(Y|X)`, ainda não implementado.
+
 ## 7. Monitoramento e resposta à degradação
 
-Esta seção prescreve controles ainda não automatizados. Os limiares são pontos iniciais para simulação e devem ser calibrados; não são resultados medidos ou exigências do enunciado.
+Esta seção propõe a operação contínua e a resposta aos sinais; agendamento, centralização e acionamento operacional ainda não estão implementados. A detecção offline de data drift já está executada na seção 6. Os limiares são pontos iniciais e devem ser calibrados; não são exigências do enunciado.
 
 | Sinal | Frequência proposta | Critério inicial | Resposta |
 | --- | --- | --- | --- |
 | Qualidade do contrato | Cada lote | Qualquer violação | Bloquear e colocar em quarentena; corrigir e revalidar |
 | Status, volume, duração e erros | Cada execução | Falha ou lote vazio inesperado; duração acima de 2 vezes a mediana das últimas 20 execuções válidas | Abrir incidente e investigar dependências e origem |
-| Drift de features | Cada janela de análise com pelo menos 500 registros | PSI ≥ 0,20 em feature monitorada, com bins fixados na referência | Alertar; examinar magnitude, segmentos e qualidade antes de decidir |
+| Drift de features | Cada janela de análise com pelo menos 500 registros | KS com p < 0,01 nas três medidas financeiras ou PSI ≥ 0,20 nas demais categorias; sinal global em ≥ 20% das features | Alertar; examinar magnitude, segmentos e qualidade antes de decidir |
 | Performance com rótulos maturados | Cada janela elegível | Queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra baseline, usando o mesmo limiar | Revisar incerteza, população e política; avaliar candidato |
 | Equidade | Cada avaliação e troca de modelo | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade |
 
@@ -293,7 +336,7 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 
 ## 9. Reprodução e ressalvas técnicas
 
-Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém somente sete dependências diretas do pipeline e dos testes, nas versões usadas pelos artefatos existentes:
+Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém oito dependências diretas do pipeline e dos testes:
 
 | Dependência | Uso |
 | --- | --- |
@@ -304,8 +347,11 @@ Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instal
 | scikit-learn | Separação estratificada e métricas de classificação |
 | XGBoost | Treinamento e execução do classificador salvo |
 | joblib | Persistência e leitura do modelo |
+| Evidently AI | Testes estatísticos e relatórios HTML/JSON de data drift |
 
-Dependências transitivas, como SciPy e Pydantic, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
+O Evidently 0.7.23 falha ao importar com pandas 3.1.0 por usar uma função interna removida. A integração fixa **pandas 2.3.3**, adiciona o Evidently e mantém as versões das outras seis dependências diretas do pipeline. A preparação, as predições e o baseline foram reproduzidos com os mesmos valores após esse ajuste. Parquet regenerado pode ter hash binário diferente devido à versão do pandas nos metadados; comparar o conteúdo e guardar o novo hash no manifesto. Os artefatos preservados da execução com pandas 3.1.0 continuam inalterados.
+
+Dependências transitivas, como SciPy, Pydantic e Plotly, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução; bibliotecas trazidas transitivamente pelo Evidently permanecem necessárias à sua instalação. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
 
 O arquivo fixa as versões diretas; não é um lockfile completo de dependências transitivas. O ambiente integral da execução histórica permanece registrado em `artifacts/stage1/` para auditoria.
 
@@ -333,15 +379,15 @@ python -m src.ingest data/incoming/bad_batch.parquet
 
 O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
 
-Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift` e `make predict`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação e inferência exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. Se regenerar partições ou trocar o modelo, gerar novos cenários e predições antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
+Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift`, `make predict` e `make detect-drift`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação, inferência e detecção exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. A detecção usa diretamente a referência e os cenários, sem depender das predições. Se regenerar partições ou trocar o modelo, gerar novos cenários, predições e relatórios antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
 
 Os alvos `make demo-bad` e `make demo-good` demonstram o contrato da Etapa 1. `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador valida o holdout e exige pelo menos 500 registros; sua importação não lê nem grava arquivos. Para gerar lotes em outro local, usar `python -m src.make_bad_batch --output-dir /tmp/tc04-batches`. Cada script cria os diretórios necessários às suas saídas. Reexecutar preparação ou geração dos lotes sobrescreve suas saídas; o treinamento cria uma nova versão e troca o apontador publicado. A ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
 
-Os testes são executados com `make test` ou `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem bloqueio do treinamento, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e invariância à ordem das colunas. Os testes de publicação simulam falhas e conferem preservação da versão anterior e limpeza de temporários. Simulação e inferência têm testes de pareamento, preservação de entradas, hashes, ordem das features, exclusão do alvo, limiar 0,5, probabilidades inválidas e publicação sem resultados parciais. Também há cobertura para importação do gerador sem efeitos no filesystem, lotes de demonstração e execução explícita do Makefile.
+Os testes são executados com `make test` ou `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem bloqueio do treinamento, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e invariância à ordem das colunas. Os testes de publicação simulam falhas e conferem preservação da versão anterior e limpeza de temporários. Simulação e inferência têm testes de pareamento, preservação de entradas, hashes, ordem das features, exclusão do alvo, limiar 0,5, probabilidades inválidas e publicação sem resultados parciais. Também há cobertura para importação do gerador sem efeitos no filesystem, lotes de demonstração e execução explícita do Makefile. Os testes de drift usam o Evidently real para conferir ausência de detecção em features idênticas, exclusão do alvo, detecção de alterações conhecidas, hashes dos relatórios e ausência de publicação parcial quando um cenário é inválido.
 
 O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) e as cópias de código e requisitos em `artifacts/stage1/` são evidências imutáveis daquela execução, não a implementação atual. Não devem ser usados para instalar ou executar o pipeline atual.
 
-Na revisão atual, os **42 testes passaram** no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências de execução, reutilizando as versões já instaladas. A reprodução em diretórios temporários conferiu exatamente as três partições, os relatórios de limpeza, os lotes da Etapa 1, os quatro cenários, as 207.055 predições e as métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`. Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados, verificados por SHA-256.
+Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Com Evidently 0.7.23 e pandas 2.3.3, a suíte contém **46 testes**, todos aprovados. A reprodução em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`. Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados, verificados por SHA-256. `pip check` não apontou conflitos.
 
 ### Resultados e evidências da Etapa 1
 
@@ -379,7 +425,7 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 | --- | --- | --- |
 | 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
 | 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação e predições; após implementação, demonstrar relatório de drift e observabilidade; explicar privacidade e retenção |
+| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação, predições e relatórios de data drift; após implementação, demonstrar observabilidade; explicar privacidade e retenção |
 | 3:40–5:00 | Result | Mostrar métricas e alertas efetivamente gerados, interpretação, limitações causais, mitigação de vieses e resposta proposta |
 
 ### Antes da entrega
@@ -391,10 +437,11 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 - [ ] Atribuir responsáveis e validar as políticas propostas.
 - [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
 - [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
-- [ ] Concluir a Etapa 2 com detecção estatística e relatório HTML de drift.
+- [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
+- [ ] Complementar a menção a concept drift no contexto geral com experimento próprio sobre `P(Y|X)`.
 - [ ] Implementar a observabilidade da Etapa 3.
 - [ ] Atualizar a análise causal com resultados observados, sem transformar correlação em causa.
 - [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
 - [ ] Publicar o vídeo STAR e inserir o link nesta seção.
 
-A Etapa 1 possui execução e evidências preservadas; a documentação de governança cobre a proposta teórica da Etapa 4. As Etapas 2 e 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.
+A Etapa 1 e o fluxo de data drift da Etapa 2 possuem execução e evidências preservadas; a documentação de governança cobre a proposta teórica da Etapa 4. O experimento de concept drift citado no contexto geral, a Etapa 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.

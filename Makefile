@@ -1,10 +1,10 @@
 PYTHON ?= python
 .DEFAULT_GOAL := help
-.PHONY: help prepare train demo-bad demo-good simulate-drift predict test
+.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift test
 
 help:
-	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, test"
-	@echo "Sequência: prepare -> train -> simulate-drift -> predict"
+	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, test"
+	@echo "Sequência: prepare -> train -> simulate-drift -> predict -> detect-drift"
 	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
 
 # Usa o holdout existente; não executa prepare nem altera a referência.
@@ -14,6 +14,9 @@ simulate-drift:
 # Usa artefatos existentes; não prepara dados nem treina novamente.
 predict:
 	$(PYTHON) -m src.predict
+
+detect-drift:
+	$(PYTHON) -m src.detect_drift
 
 prepare:
 	$(PYTHON) -m src.prepare

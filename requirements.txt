@@ -2,9 +2,11 @@
 # As dependências transitivas são resolvidas pelo pip.
 joblib==1.6.0
 numpy==2.5.4
-pandas==3.1.0
+# Evidently 0.7.23 usa APIs internas removidas no pandas 3.x.
+pandas==2.3.3
 pandera[pandas]==0.35.0
 # Engine utilizado por pandas.read_parquet/to_parquet.
 pyarrow==26.0.0
 scikit-learn==1.9.1
 xgboost==3.4.1
+evidently==0.7.23
