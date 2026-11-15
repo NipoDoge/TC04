@@ -89,7 +89,7 @@ MLFLOW_URI = "sqlite:///mlflow.db"
 EXPERIMENT_BASELINE = "tc04-baseline"
 EXPERIMENT_MONITORING = "tc04-monitoramento"
 
-# Regras de alerta do monitoramento (pontos de partida documentados no README, seção 7).
+# Regras de alerta do monitoramento (pontos de partida documentados no README, seção 8).
 # O PSI por lote é o mesmo tamanho de efeito gravado nos relatórios de cenários, com os
 # mesmos limites; o KS, exibido como evidência, usa o mesmo p-valor.
 PSI_WARNING, PSI_ALERT = DRIFT_EFFECT_MODERATE, DRIFT_EFFECT_LARGE

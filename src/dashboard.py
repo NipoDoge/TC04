@@ -608,7 +608,7 @@ def section_drift(summary, done):
             "abrem o relatório do Evidently de cada lote, que diz se há drift por feature (KS nas medidas contínuas, PSI de "
             "categorias nas demais); o KS é mais sensível e acusa também mudanças pequenas. Passe o cursor em uma célula, ou use "
             "Tab e as setas, para ver o veredito do Evidently, o KS, as médias e as medianas. Os relatórios são gerados por "
-            "<code>make report</code>; o repositório versiona apenas alguns deles (ver README).</p>")
+            "<code>make report</code>; o repositório versiona os de janeiro e agosto (ver docs/03).</p>")
     return card("Drift por variável e por lote",
                 '<div class="scroll"><table class="heat" data-grid><caption class="sr">PSI por variável (linhas) e por lote (colunas)'
                 f'</caption><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
