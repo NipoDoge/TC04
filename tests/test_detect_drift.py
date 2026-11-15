@@ -8,7 +8,7 @@ import pandas as pd
 import pandera.pandas as pa
 
 from src.artifacts import sha256
-from src.config import SCENARIOS, TARGET
+from src.config import LATE90_COLUMN, SCENARIOS, TARGET, UTILIZATION_COLUMN
 from src.contract import FEATURE_COLUMNS, schema
 from src.detect_drift import compare_datasets, detect_drift, summarize
 
@@ -39,12 +39,12 @@ class DetectDriftTests(unittest.TestCase):
 
     def test_known_shifts_detected_without_modifying_inputs(self):
         current = self.reference.copy(deep=True)
-        current["MonthlyIncome"] *= 0.3
-        current["DebtRatio"] *= 4
+        current[UTILIZATION_COLUMN] *= 4
+        current[LATE90_COLUMN] += 1
         original_reference, original_current = self.reference.copy(), current.copy()
         rows = summarize(compare_datasets(self.reference, current), "shift")
         self.assertEqual({r["feature"] for r in rows if r["drift_detected"]},
-                         {"MonthlyIncome", "DebtRatio"})
+                         {UTILIZATION_COLUMN, LATE90_COLUMN})
         for row in rows:
             self.assertEqual(row["score_kind"], "p_value" if row["method"] == "ks" else "psi")
         pd.testing.assert_frame_equal(self.reference, original_reference)

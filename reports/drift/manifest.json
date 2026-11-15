@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-11-15T01:26:39.368020+00:00",
+  "created_at_utc": "2026-11-15T03:12:54.853689+00:00",
   "versions": {
     "evidently": "0.7.23",
     "pandas": "2.3.3",
@@ -41,7 +41,7 @@
       "name": "t0_control",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t0_control.parquet",
-        "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+        "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
       },
       "rows": 35297,
       "drifted_features": [],
@@ -50,7 +50,7 @@
       "reports": [
         {
           "file": "t0_control.html",
-          "sha256": "fb1b5c012b8cb517c9d428768561e97321d6db5a086cd35a99db98170679ecf4"
+          "sha256": "14020da366d615bffef693cba28a1a5ceef5816f28c7de405c8caf8a764cd03a"
         },
         {
           "file": "t0_control.json",
@@ -62,23 +62,22 @@
       "name": "t1",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t1.parquet",
-        "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+        "sha256": "ca6344ce247e8ce00e9b09ee49713be97c9a82a0aa53ca28410f6905a1ca2b05"
       },
       "rows": 35297,
       "drifted_features": [
-        "MonthlyIncome",
-        "DebtRatio"
+        "RevolvingUtilizationOfUnsecuredLines"
       ],
-      "drift_share": 0.2,
-      "dataset_drift_detected": true,
+      "drift_share": 0.1,
+      "dataset_drift_detected": false,
       "reports": [
         {
           "file": "t1.html",
-          "sha256": "35b11c97cc93f0a4f71508df893951f3ebe6b9ffd68d2f92170ce602ac75dfc2"
+          "sha256": "022f88416882c491abd1497e923bc0dcd74c81507b647fb7f82e5d61f742a7fb"
         },
         {
           "file": "t1.json",
-          "sha256": "d9258fd38a6ea6c0dff70b2c07320d3967b92a2ceb06950c88d4a66f1108ca28"
+          "sha256": "ba2e823acf560fd655afb511cab4f22711cd7a9888170a256b46559e33a8bacd"
         }
       ]
     },
@@ -86,23 +85,23 @@
       "name": "t2",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t2.parquet",
-        "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+        "sha256": "04a5fe40261a4d6ec5a418e65398a4bf503b8a99cbea3ec158d99678b572fc2f"
       },
       "rows": 35297,
       "drifted_features": [
-        "MonthlyIncome",
-        "DebtRatio"
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTimes90DaysLate"
       ],
       "drift_share": 0.2,
       "dataset_drift_detected": true,
       "reports": [
         {
           "file": "t2.html",
-          "sha256": "161e807c9da9e5518264b826f4e48c92254d8fbec717508f7452bce3f43bcddc"
+          "sha256": "3f1fa073ad81bf294e8de0f44420067b052715cc97a7d013af66742dce4f5552"
         },
         {
           "file": "t2.json",
-          "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+          "sha256": "dec3ab63e593e81cab86bc367fee5d2740f7ec9500f317ac89a4bd332bbf7f54"
         }
       ]
     },
@@ -110,29 +109,29 @@
       "name": "t3",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t3.parquet",
-        "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+        "sha256": "7bbf8f02fc997dd13dc80196bfc65b052b107ae698ea921ca213cc021b457a41"
       },
       "rows": 35297,
       "drifted_features": [
-        "MonthlyIncome",
-        "DebtRatio"
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTimes90DaysLate"
       ],
       "drift_share": 0.2,
       "dataset_drift_detected": true,
       "reports": [
         {
           "file": "t3.html",
-          "sha256": "7768b6c0c10ea5ca99e01780c1d7fcd76e992ed3fabf775f452ffd211abb7e04"
+          "sha256": "9fc026f387bbde8584f383d9c27b2706b783f8bc0e92ff2a960605bdd84dffb1"
         },
         {
           "file": "t3.json",
-          "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+          "sha256": "0ac59bd7385bf32126c0ba6edb1cd041ce4e6059a4137240ca8a4e13cbb7d11b"
         }
       ]
     }
   ],
   "summary": {
     "file": "summary.csv",
-    "sha256": "0e99ebc515751f3ae80081eb165c3cb8f9406f50248fca5029d25a4cf9d76f8a"
+    "sha256": "4f616f65ba3f3b7d6e36d4849c79c4b7d96be65b950ffafca1504ddbc40dc3d8"
   }
 }

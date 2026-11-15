@@ -1,0 +1,91 @@
+{
+  "created_at_utc": "2026-11-15T03:24:12.695568+00:00",
+  "model": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+    "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
+  },
+  "holdout": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/holdout.parquet",
+    "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+  },
+  "reference": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/reference/reference.parquet",
+    "sha256": "ea42310cca334ea19e4aece22e79dbfeb1349e9431dd1b554843ddf7beafe943"
+  },
+  "inputs": [
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/data_drift_income_debt/scenarios/manifest.json",
+      "sha256": "5ea7b463d57d949f9cff01c73d7c192961f069eb13d9664173c0667188c7bb59"
+    },
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/data_drift_income_debt/predictions/manifest.json",
+      "sha256": "5428baae30545f2f06ffcbba03cbe8942c02974ce97e491b976d451db1b2bdff"
+    },
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/data_drift_income_debt/reports/manifest.json",
+      "sha256": "5aff96f3eda414507df493bbc57f32f4d7b5307a6a36563a217babcbac64bbda"
+    },
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/manifest.json",
+      "sha256": "3df4cc0c52f638702713b36740033bff282262bf6b83a2689c9864ea4420c8a7"
+    },
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/predictions/manifest.json",
+      "sha256": "23f2f6ae93e235a895eb87ddb250f55ab1f7670dbd447efdf309201b21434d1a"
+    },
+    {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/reports/drift/manifest.json",
+      "sha256": "01aa4485a6759622a1de75eea983260542a695bc2b0758951d3b8b6d2b77895a"
+    }
+  ],
+  "baseline_auc": 0.8432570982067857,
+  "classification_threshold": 0.5,
+  "permutation_seed": 42,
+  "permutation_repeats": 10,
+  "limitations": "Comparação de sensibilidade a intervenções sintéticas, com rótulos históricos preservados. Não representa desempenho econômico futuro, concept drift ou efeito causal das features. Os períodos têm nomes correspondentes, mas as doses e unidades dos choques são diferentes; a comparação não isola a importância das variáveis. Ganho e permutação descrevem o modelo fixo no holdout original. Desvios padrão das permutações não são intervalos de confiança.",
+  "versions": {
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "evidently": "0.7.23"
+  },
+  "artifacts": [
+    {
+      "file": "analysis.html",
+      "sha256": "daafa4e3ccc45211e419d481209eaea39aabd403455b30a47c19c3749c7aaeb6"
+    },
+    {
+      "file": "drift_summary.csv",
+      "sha256": "0835f3d6d2c86a4ff021ccc5065354692bb1624f4cb2e9723917d3fb257651f2"
+    },
+    {
+      "file": "feature_importance.csv",
+      "sha256": "9945f7668db2684db842f1a0295689476e9fd882a2115b5c094a7357ed8fb074"
+    },
+    {
+      "file": "joint_importance.csv",
+      "sha256": "86a138fa9d60f35ad1265fd6ae1b1ff116e95a6be76dfa005c16639aa154e56c"
+    },
+    {
+      "file": "metrics.csv",
+      "sha256": "4c38481f630090d0bb1cd10fd81e2f58243c6de673b8b6ffe4e1d1fbe8ff400a"
+    },
+    {
+      "file": "performance_current_t3.html",
+      "sha256": "9fd67f9e45b0122290633fd753bc0509483e2e0fc4882b113cd0f4cbcea8bdb2"
+    },
+    {
+      "file": "performance_current_t3.json",
+      "sha256": "847c020d0a3b85e2065dd1699b2ccbe916e835c1061a03fd0e6f5d136628a18a"
+    },
+    {
+      "file": "performance_previous_t3.html",
+      "sha256": "16b6c7ee39a141dec4f4a6dc4a004dde92cb8b3e553be8d229c596c81b52d27e"
+    },
+    {
+      "file": "performance_previous_t3.json",
+      "sha256": "cb9436486c81abcf162d84831957bc6973f75c856b746891f97a894396aa6340"
+    }
+  ]
+}

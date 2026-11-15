@@ -9,6 +9,7 @@ import pandera.pandas as pa
 
 from src.contract import FEATURE_COLUMNS, schema
 from src.artifacts import sha256
+from src.config import DATA_DRIFT_FEATURES, LATE90_COLUMN, UTILIZATION_COLUMN
 from src.simulate_drift import build_scenarios, simulate
 
 
@@ -29,16 +30,32 @@ class SimulateDriftTests(unittest.TestCase):
         result = build_scenarios(self.holdout)
         pd.testing.assert_frame_equal(self.holdout, original)
         pd.testing.assert_frame_equal(result["t0_control"], original)
-        unchanged = original.columns.difference(["MonthlyIncome", "DebtRatio"])
+        unchanged = original.columns.difference(DATA_DRIFT_FEATURES)
         for name, period in result.items():
             schema.validate(period, lazy=True)
             pd.testing.assert_frame_equal(period[unchanged], original[unchanged])
             if name != "t0_control":
-                self.assertTrue(period.MonthlyIncome.lt(original.MonthlyIncome).all())
-                self.assertTrue(period.DebtRatio.gt(original.DebtRatio).all())
+                self.assertTrue(period[UTILIZATION_COLUMN].gt(original[UTILIZATION_COLUMN]).all())
+                self.assertTrue((period[LATE90_COLUMN] - original[LATE90_COLUMN]).isin([0, 1]).all())
+                self.assertTrue(pd.api.types.is_integer_dtype(period[LATE90_COLUMN]))
         for earlier, later in zip(list(result.values()), list(result.values())[1:]):
-            self.assertTrue(later.MonthlyIncome.lt(earlier.MonthlyIncome).all())
-            self.assertTrue(later.DebtRatio.gt(earlier.DebtRatio).all())
+            self.assertTrue(later[UTILIZATION_COLUMN].gt(earlier[UTILIZATION_COLUMN]).all())
+            self.assertTrue(later[LATE90_COLUMN].ge(earlier[LATE90_COLUMN]).all())
+
+    def test_late_shock_is_reproducible_and_can_change_zero_counts(self):
+        self.holdout[LATE90_COLUMN] = 0
+        first = build_scenarios(self.holdout, seed=42)
+        repeated = build_scenarios(self.holdout, seed=42)
+        other = build_scenarios(self.holdout, seed=43)
+        for name in first:
+            pd.testing.assert_frame_equal(first[name], repeated[name])
+        self.assertTrue(first["t3"][LATE90_COLUMN].eq(1).any())
+        self.assertFalse(first["t3"][LATE90_COLUMN].equals(other["t3"][LATE90_COLUMN]))
+
+    def test_zero_utilization_is_preserved_by_scaling(self):
+        self.holdout.loc[0, UTILIZATION_COLUMN] = 0.0
+        for period in build_scenarios(self.holdout).values():
+            self.assertEqual(period.loc[0, UTILIZATION_COLUMN], 0.0)
 
     def test_publication_records_provenance_and_preserves_inputs(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -1,5 +1,5 @@
 {
-  "created_at_utc": "2026-11-14T23:59:29.984205+00:00",
+  "created_at_utc": "2026-11-15T03:12:49.475779+00:00",
   "model": {
     "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
     "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
@@ -33,47 +33,47 @@
       },
       "rows": 65867,
       "file": "reference.parquet",
-      "sha256": "1ca968a4837ebe6ff1f062d6bff69182d900bf74fdd1afa69fb5d8077e234a03"
+      "sha256": "b8828f016c4945a7ebf0491322e6c44e88887860b165fb7671d8c9b833d1bd26"
     },
     {
       "name": "t0_control",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t0_control.parquet",
-        "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+        "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
       },
       "rows": 35297,
       "file": "t0_control.parquet",
-      "sha256": "45dd00fd0d53bde9fd56e325eefa75dc63b02c10ce204f644ff13164600b324d"
+      "sha256": "a67023ec4606170c778a081d14620a5b987d6939f745aba8646779421e4d855f"
     },
     {
       "name": "t1",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t1.parquet",
-        "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+        "sha256": "ca6344ce247e8ce00e9b09ee49713be97c9a82a0aa53ca28410f6905a1ca2b05"
       },
       "rows": 35297,
       "file": "t1.parquet",
-      "sha256": "ad2f3d51722f19b5feffa192e6aad707d04d7adb0eeceb04949af4b43d083cb9"
+      "sha256": "3d6dca4a9b43a1f89bac8ae1e084867cbd248584ab98bfe42bc93206789bbc4a"
     },
     {
       "name": "t2",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t2.parquet",
-        "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+        "sha256": "04a5fe40261a4d6ec5a418e65398a4bf503b8a99cbea3ec158d99678b572fc2f"
       },
       "rows": 35297,
       "file": "t2.parquet",
-      "sha256": "c9a3ce52f849b8e0c448b4984ab1c0a6e0d4f4c8a87ec39c5612c8d985d3dd69"
+      "sha256": "be8bb1b02f1374dc321201d8dca9bd0f58ca5ed4e791f592d6d3f7be5fa2a10b"
     },
     {
       "name": "t3",
       "source": {
         "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t3.parquet",
-        "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+        "sha256": "7bbf8f02fc997dd13dc80196bfc65b052b107ae698ea921ca213cc021b457a41"
       },
       "rows": 35297,
       "file": "t3.parquet",
-      "sha256": "c219feed56947faceeab24a15c80c168c6123c0def23d1240a6d6c3a2997ca71"
+      "sha256": "df2cadb7d184dd81996c9dca56ac65d230dd44564a480e1dea6037b98fa92dab"
     }
   ]
 }

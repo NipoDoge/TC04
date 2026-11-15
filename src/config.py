@@ -4,12 +4,16 @@ SEED = 42
 TARGET = "SeriousDlqin2yrs"
 THRESHOLD = 0.5
 
-# Fatores aplicados diretamente ao holdout original, sem acumulação.
+# Cenários: nome, fator de utilização de crédito, fração com um atraso adicional.
+# Intervenções aplicadas diretamente ao holdout original, sem acumulação.
+UTILIZATION_COLUMN = "RevolvingUtilizationOfUnsecuredLines"
+LATE90_COLUMN = "NumberOfTimes90DaysLate"
+DATA_DRIFT_FEATURES = (UTILIZATION_COLUMN, LATE90_COLUMN)
 PERIODS = (
-    ("t0_control", 1.0, 1.0),
-    ("t1", 0.90, 1.10),
-    ("t2", 0.75, 1.30),
-    ("t3", 0.60, 1.60),
+    ("t0_control", 1.0, 0.0),
+    ("t1", 1.10, 0.10),
+    ("t2", 1.30, 0.25),
+    ("t3", 1.60, 0.40),
 )
 SCENARIOS = tuple(name for name, _, _ in PERIODS)
 

@@ -16,7 +16,8 @@ Este README documenta a **Etapa 1 executada**, os **experimentos de data drift e
 | Treinamento e avaliação | [Modelo](models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib), [métricas](models/runs/32542e11c8c8477ea23d42db115efd0e/metrics.json) e [manifesto da execução](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) | Baseline treinado, métricas conferidas após recarregar o modelo e publicação por versão |
 | Simulação de data drift | [simulate_drift.py](src/simulate_drift.py): controle e três períodos sintéticos pareados a partir do holdout | Implementada; não representa série temporal real |
 | Predições da Etapa 2 | [predict.py](src/predict.py): inferência com o modelo salvo na referência e nos quatro cenários | Implementadas; probabilidades e classes em arquivos separados |
-| Detecção de data drift | [detect_drift.py](src/detect_drift.py), [resumo estatístico](reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: controle sem detecção; renda e dívida com drift em t1, t2 e t3 |
+| Detecção de data drift | [detect_drift.py](src/detect_drift.py), [resumo estatístico](reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: utilização de crédito detectada em t1–t3; atrasos de 90 dias detectados em t2–t3 |
+| Comparativo de intervenções | [compare_data_drift.py](src/compare_data_drift.py) e [análise comparativa](reports/drift_comparison/analysis.html) | Mesmo modelo/holdout; perfil anterior de renda/dívida preservado e comparado ao perfil atual de utilização/atrasos |
 | Concept drift e comportamento do modelo | [concept_drift.py](src/concept_drift.py), [análise](artifacts/concept_drift/analysis.html) e [métricas](artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
 | Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
 | Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
@@ -64,7 +65,7 @@ data/raw/cs-training.csv
                         -> inválido: movimentação para data/quarantine,
                            CSV de falhas e retorno 1
                         -> falha operacional: log e retorno 2
-            -> src.simulate_drift: controle e intervenções pareadas em renda/dívida
+            -> src.simulate_drift: controle e intervenções em utilização/atrasos de 90 dias
                 -> data/production/scenarios/{t0_control,t1,t2,t3}.parquet
                 -> data/production/scenarios/manifest.json
 
@@ -77,6 +78,11 @@ referência + quatro cenários (somente FEATURE_COLUMNS)
     -> src.detect_drift: Evidently DataDriftPreset + KS/PSI
         -> reports/drift/{t0_control,t1,t2,t3}.{html,json}
         -> reports/drift/summary.csv + manifest.json
+
+perfil anterior arquivado + cenários/predições atuais + modelo fixo
+    -> src.compare_data_drift
+        -> reports/drift_comparison/{analysis.html,metrics.csv,feature_importance.csv}
+        -> comparações nativas de classificação + importância conjunta + manifest.json
 
 referência (ajusta apenas corte de renda) + holdout + modelo salvo
     -> src.concept_drift: altera Y condicionalmente a X; preserva X e modelo
@@ -189,14 +195,14 @@ O mecanismo econômico a investigar é: mudança econômica pode afetar renda e 
 | Hipótese | Evidência necessária | Ação se corroborada |
 | --- | --- | --- |
 | Erro na coleta ou transformação | Falhas no contrato, mudança de unidade, versão da fonte e logs | Bloquear lote, corrigir origem e reprocessar |
-| Data drift: mudança em P(X) | Comparação referência/análise, por exemplo em renda e endividamento, com testes e magnitude | Investigar origem, população e impacto sobre predições |
+| Data drift: mudança em P(X) | Comparação referência/análise, por exemplo em utilização de crédito e atrasos de 90 dias, com testes e magnitude | Investigar origem, população e impacto sobre predições |
 | Concept drift: mudança em P(Y\|X) | Rótulos maturados, queda de desempenho/calibração em condições comparáveis e análise de alternativas | Avaliar recalibração ou retreinamento |
 | Seleção causada pela limpeza | Comparação entre incluídos/excluídos e alternativas de tratamento | Rever filtros e repetir avaliação por segmento |
 | Efeito econômico sobre inadimplência | Dados temporais, fatores de confusão e desenho causal defensável | Submeter a hipótese a análise específica antes de atribuir causa |
 
 PSI ou um teste KS de duas amostras pode apontar mudança de distribuição; não identifica sua causa nem comprova concept drift. Queda de performance também exige investigar qualidade, seleção, mudança de política e maturação do alvo.
 
-O experimento de data drift registra intervenções em duas features e sua intensidade, compara cenários pareados e executa o mesmo modelo. Essa simulação usa todo o holdout sem aleatoriedade. O experimento separado de concept drift usa sorteios reproduzíveis para alterar o mecanismo do alvo. A seed 42 também se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica; a alteração de `P(Y|X)` está explicitada na subseção de concept drift.
+O experimento de data drift registra intervenções em duas features, compara cenários pareados e executa o mesmo modelo. Usa todo o holdout; sorteios com seed 42 determinam quais registros recebem um atraso adicional, sem alterar a composição da amostra. O experimento separado de concept drift usa sorteios reproduzíveis para alterar o mecanismo do alvo. A seed 42 também se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica; a alteração de `P(Y|X)` está explicitada na subseção de concept drift.
 
 Como o alvo tem horizonte de dois anos, produção real requer política de maturação e acompanhamento de rótulos. Sem desfechos disponíveis, monitorar dados e scores e declarar a limitação de avaliação do modelo. O dataset local não permite reconstruir uma série temporal real de concessões.
 
@@ -206,20 +212,20 @@ Como o alvo tem horizonte de dois anos, produção real requer política de matu
 
 O script [simulate_drift.py](src/simulate_drift.py) lê `data/production/holdout.parquet` e gera:
 
-| Arquivo em `data/production/scenarios/` | Cenário | Fator de MonthlyIncome | Fator de DebtRatio |
+| Arquivo em `data/production/scenarios/` | Cenário | Fator de utilização de crédito | Chance de acrescentar um atraso de 90 dias |
 | --- | --- | ---: | ---: |
-| `t0_control.parquet` | Controle: cópia integral do holdout, sem alterações de valores | 1,00 | 1,00 |
-| `t1.parquet` | Primeira intervenção sintética | 0,90 | 1,10 |
-| `t2.parquet` | Segunda intervenção sintética | 0,75 | 1,30 |
-| `t3.parquet` | Terceira intervenção sintética | 0,60 | 1,60 |
+| `t0_control.parquet` | Controle: cópia integral do holdout, sem alterações de valores | 1,00 | 0% |
+| `t1.parquet` | Primeira intervenção sintética | 1,10 | 10% |
+| `t2.parquet` | Segunda intervenção sintética | 1,30 | 25% |
+| `t3.parquet` | Terceira intervenção sintética | 1,60 | 40% |
 
-Cada fator é aplicado diretamente ao holdout original, sem acumular intervenções entre períodos. São parâmetros ilustrativos para reduzir renda e aumentar endividamento; não são estimativas econômicas nem recalculam contabilmente `DebtRatio` a partir da renda. Valores zero permanecem zero. Todas as demais features e o alvo histórico `SeriousDlqin2yrs` são preservados. Manter esses rótulos após alterar as features permite estudar sensibilidade, mas não comprova concept drift nem desempenho futuro real.
+As features alteradas são `RevolvingUtilizationOfUnsecuredLines` e `NumberOfTimes90DaysLate`. O fator de utilização é aplicado diretamente ao holdout original, sem acumulação; valores zero permanecem zero. Para atrasos, sortear um `U ~ Uniforme(0,1)` por linha com seed 42 e acrescentar **um** atraso quando `U` estiver abaixo da probabilidade do período, inclusive para quem tinha zero atrasos. Os mesmos sorteios são reutilizados, formando grupos aninhados; a contagem permanece inteira e não usa o alvo ou os scores. Em t1/t2/t3, respectivamente 3.472/8.889/14.055 linhas recebem o acréscimo; 32.977 linhas têm utilização alterada em cada período. Renda, `DebtRatio`, demais features e o alvo histórico permanecem intactos. Esses parâmetros são testes de estresse, não estimativas econômicas ou evidências de desempenho futuro.
 
 O controle não recebe intervenção; isso não garante ausência de diferenças estatísticas em relação ao treino. O holdout já passou pela limpeza da Etapa 1. Não há nova filtragem por p99 após as intervenções, para não remover a mudança introduzida. O script valida a entrada e todos os cenários com o contrato Pandera antes de publicar os arquivos. A referência de treino, a validação, o holdout e o modelo permanecem intactos; não há treinamento nessa operação.
 
-O `manifest.json` registra o caminho e o hash SHA-256 da entrada, fatores, número de registros, hashes dos arquivos gerados e limitações do experimento. O processo usa todo o holdout e não contém amostragem ou aleatoriedade; não requer seed. Metadados ficam no manifesto, fora dos Parquet, para preservar o contrato estrito.
+O `manifest.json` registra entrada e hashes, identificação `credit_utilization_late90_v1`, seed, intervenções, quantidade de linhas alteradas, volumes e limitações. O processo usa todo o holdout sem reamostragem; a seed controla somente o choque de atrasos. Metadados ficam no manifesto, fora dos Parquet, para preservar o contrato estrito. O argumento `--seed` permite outra realização, usando um novo destino.
 
-Na execução local, cada cenário contém 35.297 registros e passa pelo contrato. O [manifesto gerado](data/production/scenarios/manifest.json) registra os artefatos. A verificação SHA-256 antes/depois confirmou que os sete arquivos de referência, validação, holdout e modelo/métricas não foram alterados. O controle também coincidiu integralmente com o holdout após a leitura dos Parquet.
+Na execução local, cada cenário contém 35.297 registros e passa pelo contrato. O [manifesto gerado](data/production/scenarios/manifest.json) registra os artefatos. Referência, validação, holdout e modelo permanecem preservados. O controle coincide integralmente com o holdout após a leitura dos Parquet. Os cenários anteriores de renda/endividamento foram arquivados para comparação, conforme a subseção abaixo.
 
 Para gerar os cenários usando o holdout existente:
 
@@ -282,7 +288,7 @@ Os métodos e limiares são explícitos em `src/config.py`, sem depender da sele
 | Medidas financeiras contínuas | `MonthlyIncome`, `DebtRatio`, `RevolvingUtilizationOfUnsecuredLines` | KS de duas amostras | p-valor < 0,01 |
 | Idade e contagens, tratadas como categorias | As outras sete features do contrato | PSI sobre frequências das categorias | PSI ≥ 0,20 |
 
-O PSI categórico usa a união dos valores presentes nas duas amostras e o tratamento de frequências zero do Evidently 0.7.23; não discretiza renda ou dívida. O KS evita a escolha de bins para as medidas financeiras. O p-valor não mede a magnitude nem o impacto de negócio, e os testes podem ser sensíveis ao volume e a valores repetidos. Os limiares são escolhas iniciais do experimento, sem correção de múltiplas comparações; não são exigências do enunciado nem critérios universais. O critério global sinaliza drift quando **pelo menos 20% das dez features** apresentam drift; os resultados individuais continuam disponíveis mesmo abaixo desse percentual.
+O PSI categórico usa a união dos valores presentes nas duas amostras e o tratamento de frequências zero do Evidently 0.7.23; não discretiza as medidas financeiras contínuas. O KS evita a escolha de bins para essas medidas. O p-valor não mede a magnitude nem o impacto de negócio, e os testes podem ser sensíveis ao volume e a valores repetidos. Os limiares são escolhas iniciais do experimento, sem correção de múltiplas comparações; não são exigências do enunciado nem critérios universais. O critério global sinaliza drift quando **pelo menos 20% das dez features** apresentam drift; os resultados individuais continuam disponíveis mesmo abaixo desse percentual.
 
 O diretório `reports/drift/` contém quatro relatórios HTML, quatro JSONs nativos do Evidently, `summary.csv` com as 40 comparações por feature e cenário e `manifest.json` com versões das bibliotecas, parâmetros, hashes das entradas/saídas e limitações. Nos relatórios, testes em falha indicam drift detectado, não falha operacional do script. Uma execução concluída retorna 0 mesmo com drift; erros de leitura, contrato ou geração propagam erro e não publicam um conjunto parcial. O destino deve ser inexistente. Para outro conjunto ou destino:
 
@@ -295,13 +301,41 @@ Resultados da execução sobre os artefatos preservados:
 | Cenário | Features com drift | Proporção | Relatório |
 | --- | --- | ---: | --- |
 | Controle | Nenhuma | 0/10 | [t0_control.html](reports/drift/t0_control.html) |
-| t1 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t1.html](reports/drift/t1.html) |
-| t2 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t2.html](reports/drift/t2.html) |
-| t3 | `MonthlyIncome`, `DebtRatio` | 2/10 | [t3.html](reports/drift/t3.html) |
+| t1 | `RevolvingUtilizationOfUnsecuredLines` | 1/10 | [t1.html](reports/drift/t1.html) |
+| t2 | Utilização de crédito e atrasos de 90 dias | 2/10 | [t2.html](reports/drift/t2.html) |
+| t3 | Utilização de crédito e atrasos de 90 dias | 2/10 | [t3.html](reports/drift/t3.html) |
 
-No controle, os p-valores de renda e dívida foram aproximadamente 0,925 e 0,588; em t1, aproximadamente 1,01 × 10⁻¹²³ e 1,91 × 10⁻⁶⁰. Em t2 e t3, a biblioteca retornou 0 por precisão numérica para esses p-valores extremamente pequenos. Os números completos estão no [resumo estatístico](reports/drift/summary.csv) e a procedência no [manifesto](reports/drift/manifest.json). Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados durante a geração, verificados por SHA-256.
+O KS da utilização tem p-valor aproximadamente 0,603 no controle e 3,23 × 10⁻²²⁷ em t1; em t2/t3 retorna 0 por precisão numérica. O PSI de atrasos de 90 dias é 0,002781 no controle, 0,129921 em t1, 0,550084 em t2 e 1,097602 em t3. O choque de t1 altera a distribuição dos atrasos, mas não supera o limiar PSI de 0,20. Assim, t1 não aciona o sinal global de 20% das features; t2 e t3 acionam. Os métodos e limiares foram mantidos para permitir comparação. Os números completos estão no [resumo estatístico](reports/drift/summary.csv) e a procedência no [manifesto](reports/drift/manifest.json).
 
-A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção em renda e dívida confirma mudanças de distribuição introduzidas no experimento; não comprova queda de desempenho, causa econômica ou concept drift. O experimento separado a seguir altera explicitamente `P(Y|X)`.
+A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção nas duas features confirma mudanças de distribuição introduzidas no experimento; não comprova causa econômica ou concept drift. A avaliação a seguir mede sensibilidade do mesmo modelo aos choques com rótulos históricos preservados.
+
+### Comparação dos efeitos: perfil anterior e perfil atual de data drift
+
+O perfil anterior, com renda ×0,90/0,75/0,60 e dívida ×1,10/1,30/1,60, foi preservado em [artifacts/data_drift_income_debt](artifacts/data_drift_income_debt/archive.json), com seus 21 arquivos de cenários, predições e relatórios e o commit de origem. Os manifestos históricos mantêm os caminhos da execução antiga; `archive.json` mapeia cada caminho original para o snapshot e seu hash. Esse material é evidência histórica; o gerador ativo produz somente utilização de crédito/atrasos de 90 dias.
+
+[compare_data_drift.py](src/compare_data_drift.py) exige o mesmo modelo e holdout, confere hashes, ordem, rótulos e predições, recalcula os resultados salvos e avalia ambos os perfis no limiar 0,5. As features fora da dupla de intervenção devem permanecer idênticas. A avaliação inclui AUC, recall, precisão, F1, average precision, KS de classificação, Brier, log loss, matriz de confusão, scores e classes alteradas, além de importância por ganho e permutação com dez repetições.
+
+```bash
+make compare-data-drift PYTHON=.venv/bin/python
+```
+
+Os resultados ficam em [reports/drift_comparison/analysis.html](reports/drift_comparison/analysis.html), com métricas, importância individual e conjunta, 80 resultados estatísticos de drift dos dois perfis e comparações de classificação do Evidently em t3. A referência de treino não é usada para medir desempenho: as métricas são do holdout pareado. Para outro destino, usar `python -m src.compare_data_drift --output-dir /tmp/tc04-comparison`.
+
+| Perfil | Cenário | AUC | Recall | Precisão | Previsões positivas | Classes alteradas contra controle |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Controle comum | t0 | 0,843257 | 74,09% | 19,74% | 24,83% | 0 |
+| Renda/dívida anterior | t1 | 0,843497 | 75,20% | 19,34% | 25,73% | 608 |
+| Renda/dívida anterior | t2 | 0,844089 | 76,62% | 18,58% | 27,28% | 1.210 |
+| Renda/dívida anterior | t3 | 0,842989 | 77,94% | 17,75% | 29,05% | 1.950 |
+| Utilização/atrasos atual | t1 | 0,826368 | 78,67% | 15,53% | 33,52% | 3.200 |
+| Utilização/atrasos atual | t2 | 0,810124 | 84,03% | 12,19% | 45,61% | 7.462 |
+| Utilização/atrasos atual | t3 | 0,800850 | 88,27% | 10,29% | 56,74% | 11.377 |
+
+Em t3, os falsos positivos são 8.435 no perfil anterior e 17.965 no atual; a taxa de falsos positivos passa de 25,59% para 54,50%. O aumento de recall ocorre junto com mais previsões positivas e menor precisão. O Brier piora de 0,168535 para 0,316147 e o log loss de 0,514014 para 0,885914 entre os dois perfis de t3. A variação média absoluta do score contra o controle é 0,044117 no anterior e 0,193918 no atual. O modelo é mais sensível aos choques atuais escolhidos, com pior discriminação e mais falsos positivos contra os rótulos históricos.
+
+No holdout original, utilização e atrasos de 90 dias ocupam a 1ª e a 2ª posição por importância de permutação: quedas médias de AUC de 0,065950 e 0,032620. Dívida e renda ocupam a 5ª e a 8ª posição, com 0,008679 e 0,003704. A permutação conjunta, preservando a relação interna de cada dupla e usando as mesmas dez ordens, reduz a AUC em média 0,123676 na dupla atual e 0,012697 na anterior. Ganhos normalizados de 28,29% e 21,71% são indicadores internos das árvores, não proporções do risco explicado. Ver [feature_importance.csv](reports/drift_comparison/feature_importance.csv) e [joint_importance.csv](reports/drift_comparison/joint_importance.csv).
+
+**Limites da comparação:** o modelo e a amostra são fixos, mas as doses e unidades das intervenções são diferentes. Nomes t1/t2/t3 não significam choques economicamente equivalentes. Portanto, a diferença dos efeitos não pode ser atribuída somente ao ranking de importância. Com os rótulos antigos, trata-se de sensibilidade sintética, não uma estimativa de desfechos após uma mudança real. Os desvios padrão das permutações não são intervalos de confiança. O experimento separado de concept drift, abaixo, mantém seu mecanismo de renda, seus dados e seus resultados anteriores.
 
 ### Experimento de concept drift e comportamento do modelo
 
@@ -437,6 +471,8 @@ O resultado esperado da última chamada é código de saída 1, lote movido para
 
 Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift`, `make predict` e `make detect-drift`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação, inferência e detecção exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. A detecção usa diretamente a referência e os cenários, sem depender das predições. Se regenerar partições ou trocar o modelo, gerar novos cenários, predições e relatórios antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
 
+`make compare-data-drift` compara os artefatos ativos com o perfil de renda/dívida arquivado, sem regerar os cenários nem treinar o modelo. Exige os mesmos hashes de modelo/holdout e destino inexistente. O perfil antigo não é uma opção do gerador ativo: sua versão de código está identificada pelo commit no arquivo histórico. O comparativo é um relatório adicional, separado dos relatórios de detecção por cenário.
+
 `make concept-drift` executa o experimento separado com a referência, o holdout e o modelo existentes. Não depende dos cenários t1–t3 de data drift. O destino também deve ser inexistente e pode ser alterado com `python -m src.concept_drift --output-dir ...`; esse experimento não sobrescreve os dados ou relatórios das etapas anteriores.
 
 Os alvos `make demo-bad` e `make demo-good` demonstram o contrato da Etapa 1. `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador valida o holdout e exige pelo menos 500 registros; sua importação não lê nem grava arquivos. Para gerar lotes em outro local, usar `python -m src.make_bad_batch --output-dir /tmp/tc04-batches`. Cada script cria os diretórios necessários às suas saídas. Reexecutar preparação ou geração dos lotes sobrescreve suas saídas; o treinamento cria uma nova versão e troca o apontador publicado. A ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
@@ -445,11 +481,11 @@ Os testes são executados com `make test` ou `python -m unittest discover -s tes
 
 O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) e as cópias de código e requisitos em `artifacts/stage1/` são evidências imutáveis daquela execução, não a implementação atual. Não devem ser usados para instalar ou executar o pipeline atual.
 
-Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift a suíte contém **51 testes**, todos aprovados. Os cinco testes adicionais verificam a intervenção condicional e cumulativa, seeds, invariância de features/scores, métricas em exemplos conhecidos, segmentos de uma classe, concordância com métricas nativas do Evidently, hashes e publicação sem resultados parciais.
+Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift passaram 51. Após substituir as features de data drift e adicionar o comparativo, a suíte contém **54 testes**, todos aprovados. A cobertura adicional verifica sorteios reproduzíveis, grupos aninhados, incremento inteiro de atrasos a partir de zero, invariância das demais colunas, comparação dos dois perfis e rejeição de predições/snapshots adulterados. Os testes de concept drift continuam verificando intervenção condicional, métricas conhecidas, hashes, concordância com Evidently e ausência de publicação parcial.
 
 A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
 
-A [auditoria consolidada das Etapas 1 e 2](artifacts/audit_stage1_stage2/audit.json) registra a nova execução dos 51 testes no ambiente atual e em um ambiente isolado, a reprodução dos dois experimentos, a integridade dos manifestos e a conferência dos links. Foram atualizados dois endereços da ANPD que redirecionavam e removidos metadados antigos de Python 3.14.4 do notebook. Não foi identificado fluxo legado ativo; as fontes em `artifacts/stage1/` são evidências históricas. Os commits anteriores à padronização ainda têm mensagens não semânticas, sem reescrita do histórico. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente de auditoria. A validação de execução cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
+A [auditoria consolidada das Etapas 1 e 2](artifacts/audit_stage1_stage2/audit.json) é uma evidência histórica anterior à troca das features de data drift: registra 51 testes no ambiente então vigente e em um ambiente isolado, reprodução dos experimentos, integridade e links daquele estado. Seus hashes e conclusões se referem ao commit e às fontes indicados, não certificam automaticamente os novos artefatos. Os resultados de renda/dívida foram preservados em `artifacts/data_drift_income_debt/`; os resultados atuais e o comparativo têm manifestos próprios. Foram atualizados dois endereços da ANPD e removidos metadados antigos do notebook. As fontes em `artifacts/stage1/` também são evidências históricas, sem uso no pipeline ativo. Os commits antigos com mensagens não semânticas foram preservados. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente. A execução validada cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
 
 ### Resultados e evidências da Etapa 1
 

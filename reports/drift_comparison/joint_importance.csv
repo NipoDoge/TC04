@@ -1,0 +1,3 @@
+profile,features,auc_drop_mean,auc_drop_std
+previous_income_debt,"MonthlyIncome,DebtRatio",0.012696671541962311,0.0011432630618867558
+current_credit_late90,"RevolvingUtilizationOfUnsecuredLines,NumberOfTimes90DaysLate",0.12367603107179273,0.0019308197040061334

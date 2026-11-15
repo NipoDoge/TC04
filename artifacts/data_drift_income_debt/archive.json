@@ -1,0 +1,112 @@
+{
+  "created_at_utc": "2026-11-15T03:12:46.254552+00:00",
+  "source_code_commit": "d953260b8e477b03b8d369339540d0e3c99f5357",
+  "description": "Evidências históricas de data drift em MonthlyIncome e DebtRatio, preservadas antes de substituir os cenários ativos. Os manifestos originais conservam os caminhos da execução antiga; resolver os arquivos com este mapa e conferir os hashes.",
+  "files": [
+    {
+      "original_file": "data/production/scenarios/manifest.json",
+      "archived_file": "scenarios/manifest.json",
+      "sha256": "5ea7b463d57d949f9cff01c73d7c192961f069eb13d9664173c0667188c7bb59"
+    },
+    {
+      "original_file": "data/production/scenarios/t0_control.parquet",
+      "archived_file": "scenarios/t0_control.parquet",
+      "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+    },
+    {
+      "original_file": "data/production/scenarios/t1.parquet",
+      "archived_file": "scenarios/t1.parquet",
+      "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+    },
+    {
+      "original_file": "data/production/scenarios/t2.parquet",
+      "archived_file": "scenarios/t2.parquet",
+      "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+    },
+    {
+      "original_file": "data/production/scenarios/t3.parquet",
+      "archived_file": "scenarios/t3.parquet",
+      "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+    },
+    {
+      "original_file": "data/predictions/manifest.json",
+      "archived_file": "predictions/manifest.json",
+      "sha256": "5428baae30545f2f06ffcbba03cbe8942c02974ce97e491b976d451db1b2bdff"
+    },
+    {
+      "original_file": "data/predictions/reference.parquet",
+      "archived_file": "predictions/reference.parquet",
+      "sha256": "1ca968a4837ebe6ff1f062d6bff69182d900bf74fdd1afa69fb5d8077e234a03"
+    },
+    {
+      "original_file": "data/predictions/t0_control.parquet",
+      "archived_file": "predictions/t0_control.parquet",
+      "sha256": "45dd00fd0d53bde9fd56e325eefa75dc63b02c10ce204f644ff13164600b324d"
+    },
+    {
+      "original_file": "data/predictions/t1.parquet",
+      "archived_file": "predictions/t1.parquet",
+      "sha256": "ad2f3d51722f19b5feffa192e6aad707d04d7adb0eeceb04949af4b43d083cb9"
+    },
+    {
+      "original_file": "data/predictions/t2.parquet",
+      "archived_file": "predictions/t2.parquet",
+      "sha256": "c9a3ce52f849b8e0c448b4984ab1c0a6e0d4f4c8a87ec39c5612c8d985d3dd69"
+    },
+    {
+      "original_file": "data/predictions/t3.parquet",
+      "archived_file": "predictions/t3.parquet",
+      "sha256": "c219feed56947faceeab24a15c80c168c6123c0def23d1240a6d6c3a2997ca71"
+    },
+    {
+      "original_file": "reports/drift/manifest.json",
+      "archived_file": "reports/manifest.json",
+      "sha256": "5aff96f3eda414507df493bbc57f32f4d7b5307a6a36563a217babcbac64bbda"
+    },
+    {
+      "original_file": "reports/drift/summary.csv",
+      "archived_file": "reports/summary.csv",
+      "sha256": "0e99ebc515751f3ae80081eb165c3cb8f9406f50248fca5029d25a4cf9d76f8a"
+    },
+    {
+      "original_file": "reports/drift/t0_control.html",
+      "archived_file": "reports/t0_control.html",
+      "sha256": "fb1b5c012b8cb517c9d428768561e97321d6db5a086cd35a99db98170679ecf4"
+    },
+    {
+      "original_file": "reports/drift/t0_control.json",
+      "archived_file": "reports/t0_control.json",
+      "sha256": "eeaf38912db3bea2f3294855c0b3e037614ccd5ee14a8e8804835da63c173d9c"
+    },
+    {
+      "original_file": "reports/drift/t1.html",
+      "archived_file": "reports/t1.html",
+      "sha256": "35b11c97cc93f0a4f71508df893951f3ebe6b9ffd68d2f92170ce602ac75dfc2"
+    },
+    {
+      "original_file": "reports/drift/t1.json",
+      "archived_file": "reports/t1.json",
+      "sha256": "d9258fd38a6ea6c0dff70b2c07320d3967b92a2ceb06950c88d4a66f1108ca28"
+    },
+    {
+      "original_file": "reports/drift/t2.html",
+      "archived_file": "reports/t2.html",
+      "sha256": "161e807c9da9e5518264b826f4e48c92254d8fbec717508f7452bce3f43bcddc"
+    },
+    {
+      "original_file": "reports/drift/t2.json",
+      "archived_file": "reports/t2.json",
+      "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+    },
+    {
+      "original_file": "reports/drift/t3.html",
+      "archived_file": "reports/t3.html",
+      "sha256": "7768b6c0c10ea5ca99e01780c1d7fcd76e992ed3fabf775f452ffd211abb7e04"
+    },
+    {
+      "original_file": "reports/drift/t3.json",
+      "archived_file": "reports/t3.json",
+      "sha256": "fab20aa89158b2d1955e8a769deef3eb2463ecbc066a9e923eff69d105c7c22a"
+    }
+  ]
+}

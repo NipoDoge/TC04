@@ -1,9 +1,9 @@
 PYTHON ?= python
 .DEFAULT_GOAL := help
-.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift concept-drift test
+.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift compare-data-drift concept-drift test
 
 help:
-	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, concept-drift, test"
+	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, compare-data-drift, concept-drift, test"
 	@echo "Sequência: prepare -> train -> simulate-drift -> predict -> detect-drift"
 	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
 
@@ -17,6 +17,9 @@ predict:
 
 detect-drift:
 	$(PYTHON) -m src.detect_drift
+
+compare-data-drift:
+	$(PYTHON) -m src.compare_data_drift
 
 concept-drift:
 	$(PYTHON) -m src.concept_drift
