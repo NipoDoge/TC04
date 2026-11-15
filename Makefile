@@ -1,10 +1,29 @@
 PYTHON ?= python
-.PHONY: prepare train demo-bad demo-good
+.DEFAULT_GOAL := help
+.PHONY: help prepare train demo-bad demo-good simulate-drift predict test
+
+help:
+	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, test"
+	@echo "Sequência: prepare -> train -> simulate-drift -> predict"
+	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
+
+# Usa o holdout existente; não executa prepare nem altera a referência.
+simulate-drift:
+	$(PYTHON) -m src.simulate_drift
+
+# Usa artefatos existentes; não prepara dados nem treina novamente.
+predict:
+	$(PYTHON) -m src.predict
 
 prepare:
 	$(PYTHON) -m src.prepare
-train: prepare
+
+train:
 	$(PYTHON) -m src.train
+
+test:
+	$(PYTHON) -m unittest discover -s tests -v
+
 demo-bad:
 	$(PYTHON) -m src.make_bad_batch
 	@status=0; $(PYTHON) -m src.ingest data/incoming/bad_batch.parquet || status=$$?; \
@@ -16,5 +35,6 @@ demo-bad:
 	   [ ! -s data/quarantine/bad_batch_errors.csv ]; then \
 		echo "Falha: quarentena ou relatório não confirmados" >&2; exit 1; \
 	fi
+
 demo-good:
 	$(PYTHON) -m src.ingest data/incoming/good_batch.parquet

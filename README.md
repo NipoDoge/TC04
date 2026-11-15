@@ -2,19 +2,21 @@
 
 Projeto acadêmico da Fase 4 do MLET/FIAP. O cenário é uma fintech cujo modelo de Credit Scoring pode sofrer degradação silenciosa diante de mudanças econômicas e do perfil dos clientes. O objetivo é validar dados, investigar mudanças de distribuição e definir como proteger dados e responder à degradação.
 
-Este README documenta a **Etapa 1 executada, com artefatos e evidências preservados**, e consolida a **proposta de governança da Etapa 4**, com base no enunciado e no código deste repositório. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
+Este README documenta a **Etapa 1 executada**, a **simulação e as predições já executadas da Etapa 2** e a **proposta de governança da Etapa 4**. A comparação estatística e o relatório de drift da Etapa 2 e a observabilidade da Etapa 3 ainda estão pendentes. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
 
 ## 1. Escopo e evidências disponíveis
 
 | Componente | Evidência no repositório | Situação |
 | --- | --- | --- |
-| Exploração e avaliação inicial de seleção | [Notebook](notebooks/01_exploracao.ipynb) | Código e algumas saídas disponíveis |
+| Exploração e avaliação inicial de seleção | [Notebook](notebooks/01_exploracao.ipynb) | Exploração auxiliar; saídas antigas removidas; leitura sem modificar dados |
 | Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória, sem simulação temporal |
 | Contrato de dados | [contract.py](src/contract.py) | Implementado em Pandera |
 | Bloqueio e quarentena | [ingest.py](src/ingest.py) | Implementados para falhas de validação do contrato |
 | Lotes de demonstração | [Log de aprovação](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt), [log de bloqueio](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) e [falhas](data/quarantine/bad_batch_errors.csv) | Executados: 500 linhas aprovadas e lote de 505 linhas em quarentena |
 | Treinamento e avaliação | [Modelo](models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib), [métricas](models/runs/32542e11c8c8477ea23d42db115efd0e/metrics.json) e [manifesto da execução](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) | Baseline treinado, métricas conferidas após recarregar o modelo e publicação por versão |
-| Simulação e detecção de drift | Sem scripts ou relatórios identificados | Pendentes |
+| Simulação de data drift | [simulate_drift.py](src/simulate_drift.py): controle e três períodos sintéticos pareados a partir do holdout | Implementada; não representa série temporal real |
+| Predições da Etapa 2 | [predict.py](src/predict.py): inferência com o modelo salvo na referência e nos quatro cenários | Implementadas; probabilidades e classes em arquivos separados |
+| Detecção de drift | Sem testes estatísticos de drift ou relatórios HTML implementados | Pendente |
 | Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
 | Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
 | Vídeo STAR | Seção 10 | Gravação e link pendentes |
@@ -61,13 +63,23 @@ data/raw/cs-training.csv
                         -> inválido: movimentação para data/quarantine,
                            CSV de falhas e retorno 1
                         -> falha operacional: log e retorno 2
+            -> src.simulate_drift: controle e intervenções pareadas em renda/dívida
+                -> data/production/scenarios/{t0_control,t1,t2,t3}.parquet
+                -> data/production/scenarios/manifest.json
+
+models/current/model.joblib + referência + quatro cenários
+    -> src.predict: contrato + seleção ordenada de FEATURE_COLUMNS
+        -> data/predictions/{reference,t0_control,t1,t2,t3}.parquet
+        -> data/predictions/manifest.json
 ```
+
+[config.py](src/config.py) centraliza alvo, seed, limiar de classificação e fatores dos períodos. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados na simulação e na inferência. A ordem das features continua definida apenas em [contract.py](src/contract.py).
 
 Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
 
 Modelo e métricas são gravados em um diretório temporário exclusivo dentro de `models/`. Somente após concluir ambas as gravações, a versão é movida para `models/runs/<execução>` e o link simbólico `models/current` é substituído atomicamente. Os caminhos publicados são `models/current/model.joblib` e `models/current/metrics.json`. Falhas de gravação ou publicação retornam 2 e preservam a versão anterior; temporários e versões não publicadas são removidos nas falhas tratadas. Versões publicadas anteriores permanecem disponíveis em `models/runs/`.
 
-Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Arquivos antigos diretamente em `models/model.joblib` ou `models/metrics.json` não são atualizados; os consumidores devem usar a estrutura publicada. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
+Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Todos os consumidores do projeto usam a estrutura publicada em `models/current` ou uma versão explícita de `models/runs`. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
 
 O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
 
@@ -93,7 +105,7 @@ Limitações que precisam orientar a operação:
 
 - O contrato exige `SeriousDlqin2yrs`; atende lotes históricos rotulados. Inferência real exige contrato próprio sem o alvo, pois o desfecho futuro ainda não é conhecido.
 - O contrato não reproduz todos os filtros da limpeza: não bloqueia especificamente 96/98 nem aplica limites superiores de renda, dívida ou utilização.
-- A remoção de outliers também filtra validação e holdout; as métricas descrevem a população retida. O relatório permite acompanhar as exclusões por partição. Valores extremos válidos devem ser considerados separadamente nas futuras simulações de drift.
+- A remoção de outliers também filtra validação e holdout; as métricas descrevem a população retida. O relatório permite acompanhar as exclusões por partição. A simulação atual não reaplica esse filtro após as intervenções, preservando as mudanças introduzidas.
 - O lote ruim contém idade 15, renda nula, dívida negativa, duplicatas e coluna ausente. Isso testa qualidade, não simula drift temporal.
 - A ingestão retorna 2 para falhas de leitura, validação inesperada, escrita ou movimentação. Se já houver lote ou relatório com o mesmo nome na quarentena, preserva a evidência anterior e o arquivo de entrada e retorna 2; é necessário resolver a colisão antes de repetir. O armazenamento de múltiplas ocorrências com identificadores únicos continua pendente.
 
@@ -143,7 +155,7 @@ Revisar mensalmente os vencimentos; registrar categoria, data, executor e result
 
 O dataset de treino tem 10.026 positivos em 150.000 registros, uma taxa de 6,684%. O treinamento usa `scale_pos_weight` para lidar com o desequilíbrio; isso não demonstra equidade entre grupos.
 
-A exclusão de registros sem renda ou dependentes pode mudar a população atendida. O notebook registra taxas de inadimplência de aproximadamente 5,61% para renda ausente e 6,95% para renda preenchida, indicando seleção potencialmente relevante. Os filtros de percentil também podem remover clientes de maior risco. Esses resultados justificam investigação, sem comprovar discriminação ou causalidade.
+A exclusão de registros sem renda ou dependentes pode mudar a população atendida. A análise do CSV bruto, reproduzível pelo notebook auxiliar, encontra taxas de inadimplência de aproximadamente 5,61% para renda ausente e 6,95% para renda preenchida, indicando seleção potencialmente relevante. Os filtros de percentil também podem remover clientes de maior risco. Esses resultados justificam investigação, sem comprovar discriminação ou causalidade.
 
 Antes de recomendar uso operacional, a política proposta é:
 
@@ -157,7 +169,7 @@ Não há atributos explícitos suficientes para auditar todos os grupos protegid
 
 ## 6. Causalidade: diagnóstico e hipóteses
 
-**Não há evidência de degradação temporal ou de causa econômica no código atual.** O holdout é uma amostra aleatória, e o gerador de lote ruim introduz violações de contrato. Não foram encontrados experimento causal, simulação de concept drift ou relatório estatístico de drift.
+**Não há evidência de degradação temporal real ou de causa econômica no código atual.** O holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O script `src.simulate_drift` cria cenários sintéticos de data drift a partir do holdout, descritos abaixo. Não há experimento causal, simulação de concept drift ou relatório estatístico de drift implementado.
 
 O mecanismo econômico a investigar é: mudança econômica pode afetar renda e endividamento, que podem alterar o risco de inadimplência; mudanças no público atendido e na política de aprovação também podem alterar a população observada. Essas relações são hipóteses de domínio, não conclusões obtidas neste projeto.
 
@@ -171,9 +183,74 @@ O mecanismo econômico a investigar é: mudança econômica pode afetar renda e 
 
 PSI ou um teste KS de duas amostras pode apontar mudança de distribuição; não identifica sua causa nem comprova concept drift. Queda de performance também exige investigar qualidade, seleção, mudança de política e maturação do alvo.
 
-Para a etapa experimental, registrar as intervenções em pelo menos duas features, sua intensidade e seed; comparar cenários controle e alterado e executar o mesmo modelo. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica. Um cenário de concept drift exige explicitar a alteração sintética do mecanismo do alvo ou obter novos desfechos observados.
+A etapa experimental já registra intervenções em duas features e sua intensidade, compara cenários pareados e executa o mesmo modelo. A simulação usa todo o holdout sem aleatoriedade; a seed 42 se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica. Um cenário de concept drift exige explicitar a alteração sintética do mecanismo do alvo ou obter novos desfechos observados.
 
 Como o alvo tem horizonte de dois anos, produção real requer política de maturação e acompanhamento de rótulos. Sem desfechos disponíveis, monitorar dados e scores e declarar a limitação de avaliação do modelo. O dataset local não permite reconstruir uma série temporal real de concessões.
+
+### Cenário de controle e períodos sintéticos da Etapa 2
+
+**O dataset não fornece uma série temporal real.** `t0`, `t1`, `t2` e `t3` são rótulos de cenários ordenados de um experimento, sem datas observadas, duração em meses ou alegação de evolução econômica real. Todos reutilizam os mesmos registros do holdout, na mesma ordem, para uma comparação pareada que mantém fixa a composição da amostra. Não representam safras independentes de clientes.
+
+O script [simulate_drift.py](src/simulate_drift.py) lê `data/production/holdout.parquet` e gera:
+
+| Arquivo em `data/production/scenarios/` | Cenário | Fator de MonthlyIncome | Fator de DebtRatio |
+| --- | --- | ---: | ---: |
+| `t0_control.parquet` | Controle: cópia integral do holdout, sem alterações de valores | 1,00 | 1,00 |
+| `t1.parquet` | Primeira intervenção sintética | 0,90 | 1,10 |
+| `t2.parquet` | Segunda intervenção sintética | 0,75 | 1,30 |
+| `t3.parquet` | Terceira intervenção sintética | 0,60 | 1,60 |
+
+Cada fator é aplicado diretamente ao holdout original, sem acumular intervenções entre períodos. São parâmetros ilustrativos para reduzir renda e aumentar endividamento; não são estimativas econômicas nem recalculam contabilmente `DebtRatio` a partir da renda. Valores zero permanecem zero. Todas as demais features e o alvo histórico `SeriousDlqin2yrs` são preservados. Manter esses rótulos após alterar as features permite estudar sensibilidade, mas não comprova concept drift nem desempenho futuro real.
+
+O controle não recebe intervenção; isso não garante ausência de diferenças estatísticas em relação ao treino. O holdout já passou pela limpeza da Etapa 1. Não há nova filtragem por p99 após as intervenções, para não remover a mudança introduzida. O script valida a entrada e todos os cenários com o contrato Pandera antes de publicar os arquivos. A referência de treino, a validação, o holdout e o modelo permanecem intactos; não há treinamento nessa operação.
+
+O `manifest.json` registra o caminho e o hash SHA-256 da entrada, fatores, número de registros, hashes dos arquivos gerados e limitações do experimento. O processo usa todo o holdout e não contém amostragem ou aleatoriedade; não requer seed. Metadados ficam no manifesto, fora dos Parquet, para preservar o contrato estrito.
+
+Na execução local, cada cenário contém 35.297 registros e passa pelo contrato. O [manifesto gerado](data/production/scenarios/manifest.json) registra os artefatos. A verificação SHA-256 antes/depois confirmou que os sete arquivos de referência, validação, holdout e modelo/métricas não foram alterados. O controle também coincidiu integralmente com o holdout após a leitura dos Parquet.
+
+Para gerar os cenários usando o holdout existente:
+
+```bash
+make simulate-drift PYTHON=.venv/bin/python
+```
+
+O alvo não depende de `prepare`, evitando regenerar a referência. Para outra entrada ou destino:
+
+```bash
+.venv/bin/python -m src.simulate_drift --holdout data/production/holdout.parquet --output-dir /tmp/tc04-scenarios
+```
+
+O destino deve ser inexistente; reexecuções não sobrescrevem cenários anteriores. Os quatro Parquet e o manifesto são publicados juntos após a gravação em diretório temporário. A inferência está descrita a seguir; detecção estatística com Evidently e relatório HTML permanecem pendentes para concluir a Etapa 2.
+
+### Predições na referência e nos cenários
+
+O script [predict.py](src/predict.py) carrega `models/current/model.joblib` uma única vez, resolvendo o apontador para a versão publicada, e executa o mesmo modelo na referência e em `t0_control`, `t1`, `t2` e `t3`. Não executa preparação ou treinamento e não altera os arquivos de entrada. Cada dataset é validado com Pandera. As entradas do modelo são selecionadas exclusivamente com `df.loc[:, FEATURE_COLUMNS]`, na ordem do contrato e sem o alvo; essa ordem também é conferida contra os nomes de features do modelo salvo.
+
+```bash
+make predict PYTHON=.venv/bin/python
+```
+
+Os resultados ficam em `data/predictions/{reference,t0_control,t1,t2,t3}.parquet`. Cada arquivo contém:
+
+| Coluna | Significado |
+| --- | --- |
+| `row_position` | Posição da linha no Parquet de origem, começando em zero; nenhuma linha é removida ou reordenada |
+| `SeriousDlqin2yrs` | Alvo histórico, copiado para permitir análises posteriores; não é entrada do modelo |
+| `probability_0` | Probabilidade estimada para a classe 0 |
+| `probability_1` | Probabilidade estimada para a classe 1 (inadimplência grave) |
+| `predicted_class` | 1 quando `probability_1 >= 0.5`, e 0 caso contrário, seguindo o limiar da avaliação do baseline |
+
+O `manifest.json` de predições registra a versão resolvida e o hash SHA-256 do modelo, horário UTC, ordem de features, regra de classificação, caminhos/hashes das entradas e hashes/quantidades das saídas. Para associar resultados às features, usar a posição das linhas no arquivo de origem indicado no manifesto e conferir seu hash. As predições ficam separadas dos dados para preservar o contrato estrito. O conjunto completo é publicado após concluir todos os arquivos; destino existente causa erro, preservando resultados anteriores.
+
+Para outro destino ou uma versão explícita de modelo:
+
+```bash
+.venv/bin/python -m src.predict --model models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib --output-dir /tmp/tc04-predictions
+```
+
+Os argumentos `--reference` e `--scenarios-dir` também permitem indicar outras entradas. As predições na referência são sobre dados usados no treinamento, sem representar avaliação independente. Nos períodos sintéticos, os rótulos históricos permanecem inalterados; resultados não comprovam concept drift nem desempenho futuro real.
+
+Na execução local com o modelo `32542e11c8c8477ea23d42db115efd0e`, foram salvas 65.867 predições na referência e 35.297 em cada cenário, totalizando 207.055. O [manifesto de inferência](data/predictions/manifest.json) registra a procedência. Após recarregar os cinco Parquet, probabilidades e classes coincidiram exatamente com uma nova inferência do modelo salvo; posições e rótulos também coincidiram com as entradas. Os hashes dos 12 arquivos de dados e modelo envolvidos permaneceram inalterados.
 
 ## 7. Monitoramento e resposta à degradação
 
@@ -212,11 +289,27 @@ Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entr
 | MLOps / Segurança | Execução, acessos, logs, versionamento, incidentes e rollback |
 | Privacidade / encarregado, na operação real | Validar plano de privacidade, apoiar direitos e avaliar incidentes |
 
-Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas. A coleta dessas evidências para cada execução futura ainda precisa ser automatizada.
+Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed quando houver aleatoriedade, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Simulação e inferência já geram manifestos próprios de entradas, saídas e parâmetros; a inferência também registra modelo e horário. A coleta de todos os campos dessa política em cada etapa ainda não está automatizada. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas.
 
 ## 9. Reprodução e ressalvas técnicas
 
-Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. A dependência NVIDIA NCCL é instalada somente no Linux; no macOS, o XGBoost utiliza CPU.
+Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém somente sete dependências diretas do pipeline e dos testes, nas versões usadas pelos artefatos existentes:
+
+| Dependência | Uso |
+| --- | --- |
+| NumPy | Validação de finitude, probabilidades e operações numéricas |
+| pandas | Leitura, transformação e escrita de datasets |
+| Pandera com extra `pandas` | Contrato de qualidade |
+| PyArrow | Engine de leitura e escrita de Parquet pelo pandas |
+| scikit-learn | Separação estratificada e métricas de classificação |
+| XGBoost | Treinamento e execução do classificador salvo |
+| joblib | Persistência e leitura do modelo |
+
+Dependências transitivas, como SciPy e Pydantic, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
+
+O arquivo fixa as versões diretas; não é um lockfile completo de dependências transitivas. O ambiente integral da execução histórica permanece registrado em `artifacts/stage1/` para auditoria.
+
+O notebook é auxiliar e não faz parte da execução do pipeline. Para executá-lo em um editor compatível com Jupyter, instalar opcionalmente `python -m pip install -r requirements-notebooks.txt`, que adiciona o IPython kernel às dependências do projeto. A raiz é localizada a partir da pasta do kernel; execute o notebook dentro do projeto. Suas saídas antigas foram removidas para evitar resultados e caminhos de outras máquinas.
 
 No macOS, instalar também o runtime OpenMP exigido pelo XGBoost:
 
@@ -240,9 +333,15 @@ python -m src.ingest data/incoming/bad_batch.parquet
 
 O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
 
-Com o ambiente ativado, também é possível usar `make prepare`, `make train`, `make demo-bad` e `make demo-good`. Para indicar o interpretador explicitamente, usar, por exemplo, `make train PYTHON=.venv/bin/python`. Cada script cria os diretórios necessários às suas saídas. O alvo `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador de lotes exige pelo menos 500 registros no holdout. Reexecutar preparação, treinamento ou geração de lotes sobrescreve suas saídas; a ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
+Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift` e `make predict`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação e inferência exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. Se regenerar partições ou trocar o modelo, gerar novos cenários e predições antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
 
-Os testes são executados com `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem também bloqueio do treinamento por contratos, partições vazias ou com uma classe, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e comparação de métricas e predições após reordenar colunas dos arquivos de treino e validação. Os testes de publicação simulam falhas na gravação do modelo, das métricas e na troca do apontador, verificando preservação integral do conjunto anterior, limpeza dos temporários e retorno 2 pelo treinamento. O [log dos 32 testes](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) foi preservado junto à execução definitiva.
+Os alvos `make demo-bad` e `make demo-good` demonstram o contrato da Etapa 1. `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador valida o holdout e exige pelo menos 500 registros; sua importação não lê nem grava arquivos. Para gerar lotes em outro local, usar `python -m src.make_bad_batch --output-dir /tmp/tc04-batches`. Cada script cria os diretórios necessários às suas saídas. Reexecutar preparação ou geração dos lotes sobrescreve suas saídas; o treinamento cria uma nova versão e troca o apontador publicado. A ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
+
+Os testes são executados com `make test` ou `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem bloqueio do treinamento, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e invariância à ordem das colunas. Os testes de publicação simulam falhas e conferem preservação da versão anterior e limpeza de temporários. Simulação e inferência têm testes de pareamento, preservação de entradas, hashes, ordem das features, exclusão do alvo, limiar 0,5, probabilidades inválidas e publicação sem resultados parciais. Também há cobertura para importação do gerador sem efeitos no filesystem, lotes de demonstração e execução explícita do Makefile.
+
+O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) e as cópias de código e requisitos em `artifacts/stage1/` são evidências imutáveis daquela execução, não a implementação atual. Não devem ser usados para instalar ou executar o pipeline atual.
+
+Na revisão atual, os **42 testes passaram** no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências de execução, reutilizando as versões já instaladas. A reprodução em diretórios temporários conferiu exatamente as três partições, os relatórios de limpeza, os lotes da Etapa 1, os quatro cenários, as 207.055 predições e as métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`. Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados, verificados por SHA-256.
 
 ### Resultados e evidências da Etapa 1
 
@@ -280,7 +379,7 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 | --- | --- | --- |
 | 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
 | 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena e modelo; após implementação, demonstrar simulação, relatório de drift e observabilidade; explicar privacidade e retenção |
+| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação e predições; após implementação, demonstrar relatório de drift e observabilidade; explicar privacidade e retenção |
 | 3:40–5:00 | Result | Mostrar métricas e alertas efetivamente gerados, interpretação, limitações causais, mitigação de vieses e resposta proposta |
 
 ### Antes da entrega
@@ -291,7 +390,9 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 - [ ] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos.
 - [ ] Atribuir responsáveis e validar as políticas propostas.
 - [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
-- [ ] Completar as Etapas 2 e 3 com simulação, relatório estatístico e observabilidade.
+- [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
+- [ ] Concluir a Etapa 2 com detecção estatística e relatório HTML de drift.
+- [ ] Implementar a observabilidade da Etapa 3.
 - [ ] Atualizar a análise causal com resultados observados, sem transformar correlação em causa.
 - [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
 - [ ] Publicar o vídeo STAR e inserir o link nesta seção.

@@ -1,0 +1,3 @@
+# Opcional: kernel para executar o notebook em um editor compatível com Jupyter.
+-r requirements.txt
+ipykernel==7.4.0

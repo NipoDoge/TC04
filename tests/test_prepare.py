@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.prepare import OUTLIER_COLUMNS, SEED, TARGET, filter_outliers, main, prepare_datasets
+from src.config import SEED, TARGET
+from src.prepare import OUTLIER_COLUMNS, filter_outliers, main, prepare_datasets
 
 
 class PrepareTests(unittest.TestCase):

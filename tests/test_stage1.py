@@ -293,12 +293,13 @@ class TrainingTests(WorkingDirectoryTests):
             self.assertEqual(train_main(), 2)
         ref = valid_dataset(); ref.loc[0, "age"] = 15
         self.write_partitions(ref, valid_dataset())
-        Path("models").mkdir()
-        previous_model = Path("models/model.joblib")
-        previous_model.write_bytes(b"previous valid model")
+        previous_run = publish_artifacts({"version": "previous"}, {"auc": 0.75}, "models")
+        previous_model = previous_run / "model.joblib"
+        previous_bytes = previous_model.read_bytes()
         with self.assertLogs("train", level="ERROR"):
             self.assertEqual(train_main(), 1)
-        self.assertEqual(previous_model.read_bytes(), b"previous valid model")
+        self.assertEqual(previous_model.read_bytes(), previous_bytes)
+        self.assertEqual(Path("models/current").resolve(), previous_run.resolve())
 
 
 class ArtifactPublicationTests(WorkingDirectoryTests):
@@ -367,6 +368,19 @@ class ArtifactPublicationTests(WorkingDirectoryTests):
 
 
 class MakefileTests(WorkingDirectoryTests):
+    def test_default_is_help_and_train_does_not_prepare_data(self):
+        for target in [[], ["train"]]:
+            result = subprocess.run(
+                ["make", "-n", "-f", str(ROOT / "Makefile"), *target],
+                capture_output=True, text=True, timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("-m src.prepare", result.stdout)
+            if target:
+                self.assertIn("-m src.train", result.stdout)
+            else:
+                self.assertNotIn("-m src.simulate_drift", result.stdout)
+
     def test_demo_requires_contract_exit_and_quarantine_evidence(self):
         driver = Path("driver.py").resolve()
         driver.write_text(

@@ -13,9 +13,9 @@ import pandera.pandas as pa
 from sklearn.metrics import recall_score, roc_auc_score, roc_curve
 from xgboost import XGBClassifier
 
+from src.config import SEED, TARGET, THRESHOLD
 from src.contract import FEATURE_COLUMNS, schema
 
-SEED, TARGET = 42, "SeriousDlqin2yrs"
 log = logging.getLogger("train")
 
 
@@ -75,7 +75,7 @@ def train(reference_path="data/reference/reference.parquet",
     fpr, tpr, _ = roc_curve(yte, p)
     metrics = {
         "auc": float(roc_auc_score(yte, p)),
-        "recall_at_0.5": float(recall_score(yte, p >= 0.5)),
+        f"recall_at_{THRESHOLD:g}": float(recall_score(yte, p >= THRESHOLD)),
         "ks": float((tpr - fpr).max()),
     }
     publish_artifacts(model, metrics, output_dir)

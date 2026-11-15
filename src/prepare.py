@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-SEED, TARGET = 42, "SeriousDlqin2yrs"
+from src.config import SEED, TARGET
+
 OUTLIER_COLUMNS = ["DebtRatio", "RevolvingUtilizationOfUnsecuredLines"]
 
 def clean(df):

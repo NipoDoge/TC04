@@ -1,12 +1,14 @@
 import numpy as np
 import pandera.pandas as pa
 
+from src.config import TARGET
+
 LATE = ["NumberOfTime30-59DaysPastDueNotWorse", "NumberOfTimes90DaysLate",
         "NumberOfTime60-89DaysPastDueNotWorse"]
 COUNTS = ["NumberOfOpenCreditLinesAndLoans", "NumberRealEstateLoansOrLines"]
 
 columns = {
-    "SeriousDlqin2yrs": pa.Column(int, pa.Check.isin([0, 1])),            # target binário
+    TARGET: pa.Column(int, pa.Check.isin([0, 1])),                        # target binário
     "age": pa.Column(int, pa.Check.in_range(18, 100)),                    # maioridade civil
     "MonthlyIncome": pa.Column(float, pa.Check.ge(0), nullable=False),    # renda obrigatória
     "DebtRatio": pa.Column(float, pa.Check.ge(0)),                        # razão não negativa
@@ -16,7 +18,7 @@ columns = {
 }
 
 # A lista também define a ordem de entrada usada pelo modelo.
-FEATURE_COLUMNS = [name for name in columns if name != "SeriousDlqin2yrs"]
+FEATURE_COLUMNS = [name for name in columns if name != TARGET]
 
 for column in columns.values():
     column.checks.append(pa.Check(np.isfinite, name="finite"))

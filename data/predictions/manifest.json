@@ -1,0 +1,79 @@
+{
+  "created_at_utc": "2026-11-14T23:59:29.984205+00:00",
+  "model": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+    "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
+  },
+  "feature_columns": [
+    "age",
+    "MonthlyIncome",
+    "DebtRatio",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfDependents",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+    "NumberOfTimes90DaysLate",
+    "NumberOfTime60-89DaysPastDueNotWorse",
+    "NumberOfOpenCreditLinesAndLoans",
+    "NumberRealEstateLoansOrLines"
+  ],
+  "probability_classes": [
+    0,
+    1
+  ],
+  "classification_rule": "predicted_class = int(probability_1 >= 0.5)",
+  "threshold": 0.5,
+  "row_mapping": "row_position é a posição zero-based no arquivo de origem, sem reordenação.",
+  "limitations": "A referência foi usada no treino; suas predições não são avaliação independente. Os cenários são sintéticos e preservam rótulos históricos. As predições não comprovam concept drift ou desempenho futuro real.",
+  "datasets": [
+    {
+      "name": "reference",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/reference/reference.parquet",
+        "sha256": "ea42310cca334ea19e4aece22e79dbfeb1349e9431dd1b554843ddf7beafe943"
+      },
+      "rows": 65867,
+      "file": "reference.parquet",
+      "sha256": "1ca968a4837ebe6ff1f062d6bff69182d900bf74fdd1afa69fb5d8077e234a03"
+    },
+    {
+      "name": "t0_control",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t0_control.parquet",
+        "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+      },
+      "rows": 35297,
+      "file": "t0_control.parquet",
+      "sha256": "45dd00fd0d53bde9fd56e325eefa75dc63b02c10ce204f644ff13164600b324d"
+    },
+    {
+      "name": "t1",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t1.parquet",
+        "sha256": "ffa9400bead1d958fc6342902574cc3bd8a97dcc5f33d9a6be4f719cea87e444"
+      },
+      "rows": 35297,
+      "file": "t1.parquet",
+      "sha256": "ad2f3d51722f19b5feffa192e6aad707d04d7adb0eeceb04949af4b43d083cb9"
+    },
+    {
+      "name": "t2",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t2.parquet",
+        "sha256": "5644aca6ba87598a111b0a39d73c49a4c93a703340f8d9bf45e4d1cbcf70f242"
+      },
+      "rows": 35297,
+      "file": "t2.parquet",
+      "sha256": "c9a3ce52f849b8e0c448b4984ab1c0a6e0d4f4c8a87ec39c5612c8d985d3dd69"
+    },
+    {
+      "name": "t3",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/scenarios/t3.parquet",
+        "sha256": "39ee6cc09466607a8218f77a24320e9f00b4bcf4780e4d3920e50cbfc422b640"
+      },
+      "rows": 35297,
+      "file": "t3.parquet",
+      "sha256": "c219feed56947faceeab24a15c80c168c6123c0def23d1240a6d6c3a2997ca71"
+    }
+  ]
+}
