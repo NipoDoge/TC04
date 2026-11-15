@@ -8,14 +8,22 @@ SEED = 42
 TARGET = "SeriousDlqin2yrs"
 THRESHOLD = 0.5
 
-# Fatores aplicados diretamente ao holdout original, sem acumulação.
+# Fatores aplicados diretamente ao holdout original, sem acumulação:
+# (nome, renda, endividamento, utilização do rotativo).
 PERIODS = (
-    ("t0_control", 1.0, 1.0),
-    ("t1", 0.90, 1.10),
-    ("t2", 0.75, 1.30),
-    ("t3", 0.60, 1.60),
+    ("t0_control", 1.0, 1.0, 1.0),
+    ("t1", 0.90, 1.10, 1.10),
+    ("t2", 0.75, 1.30, 1.30),
+    ("t3", 0.60, 1.60, 1.60),
 )
-SCENARIOS = tuple(name for name, _, _ in PERIODS)
+SCENARIOS = tuple(name for name, *_ in PERIODS)
+# Quem passa a usar todo o limite rotativo por causa do choque registra um atraso de 30-59 dias.
+# Com isso duas das variáveis de maior importância no modelo entram no experimento.
+DRIFT_LIMIT_USAGE = 1.0
+DRIFT_SHIFTED_COLUMNS = (
+    "MonthlyIncome", "DebtRatio", "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+)
 
 # Tipagem de monitoramento explícita, sem inferência por cardinalidade.
 DRIFT_CONTINUOUS_COLUMNS = (
@@ -24,6 +32,9 @@ DRIFT_CONTINUOUS_COLUMNS = (
 DRIFT_KS_THRESHOLD = 0.01
 DRIFT_PSI_THRESHOLD = 0.20
 DRIFT_SHARE = 0.20
+# Tamanho do efeito, ao lado do teste: PSI com faixas nos decis da referência.
+DRIFT_EFFECT_MODERATE = 0.10
+DRIFT_EFFECT_LARGE = 0.20
 
 # Experimento de concept drift: choque adicional apenas no segmento de menor renda.
 CONCEPT_INCOME_QUANTILE = 0.25
@@ -32,7 +43,21 @@ CONCEPT_SENSITIVITY_SEEDS = 5
 CONCEPT_AUC_DROP = 0.05
 CONCEPT_RECALL_DROP = 0.10
 
-# Monitoramento por lote: lotes mensais simulados, drift, alertas e observabilidade.
+# Produção ao longo do tempo: cada lote mensal recebe um nível de data drift (PERIODS)
+# e um de concept drift (CONCEPT_PERIODS), os mesmos dos experimentos pareados.
+MONTHLY_SCHEDULE = (
+    ("2026-01", "t0_control", "c0_control"),
+    ("2026-02", "t0_control", "c0_control"),
+    ("2026-03", "t0_control", "c0_control"),
+    ("2026-04", "t1", "c0_control"),
+    ("2026-05", "t1", "c1"),
+    ("2026-06", "t2", "c1"),
+    ("2026-07", "t2", "c2"),
+    ("2026-08", "t3", "c3"),
+)
+CORRUPTED_MONTH = "2026-05"          # mês que recebe antes uma entrega inválida
+
+# Monitoramento por lote: drift, alertas e observabilidade.
 SCORE, PREDICTION = "score", "prediction"
 
 REFERENCE = Path("data/reference/reference.parquet")     # usado no treino
@@ -65,9 +90,9 @@ EXPERIMENT_BASELINE = "tc04-baseline"
 EXPERIMENT_MONITORING = "tc04-monitoramento"
 
 # Regras de alerta do monitoramento (pontos de partida documentados no README, seção 7).
-# O PSI por lote usa faixas nos decis da referência; o alerta reaproveita o limiar de PSI
-# dos relatórios de cenários, e o KS, exibido como evidência, o mesmo p-valor.
-PSI_WARNING, PSI_ALERT = 0.10, DRIFT_PSI_THRESHOLD
+# O PSI por lote é o mesmo tamanho de efeito gravado nos relatórios de cenários, com os
+# mesmos limites; o KS, exibido como evidência, usa o mesmo p-valor.
+PSI_WARNING, PSI_ALERT = DRIFT_EFFECT_MODERATE, DRIFT_EFFECT_LARGE
 KS_ALPHA = DRIFT_KS_THRESHOLD
 AUC_DROP, RECALL_DROP = CONCEPT_AUC_DROP, CONCEPT_RECALL_DROP   # mesmos critérios do experimento de concept drift
 DEFAULT_RATE_FACTOR = 1.5            # inadimplência observada / inadimplência da referência
