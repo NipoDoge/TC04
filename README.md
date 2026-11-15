@@ -58,7 +58,7 @@ O calendário separa os dois mecanismos no tempo: abril só tem data drift fraco
 | 3 | Observabilidade | [observability.py](src/observability.py), [tracking.py](src/tracking.py), [dashboard.py](src/dashboard.py) | [Dashboard](reports/dashboard.html); log central e MLflow são recriados por `make report` | [docs/03](docs/03-monitoramento-e-observabilidade.md) |
 | 4 | Análise causal | [causal_analysis.py](src/causal_analysis.py) | [Resultado](reports/causal_analysis.json) | Seção 7 |
 | 4 | Governança | — | Seções 5 a 9 deste README | — |
-| 4 | Vídeo STAR | — | Gravação e link pendentes | Seção 10 |
+| 4 | Vídeo STAR | [gera_video.py](docs/video/gera_video.py) | [Vídeo](docs/video/tc04-star.mp4), [legendas](docs/video/tc04-star.srt) e [roteiro](docs/video/roteiro.md); link público pendente | Seção 10 |
 
 Documentação técnica:
 
@@ -84,7 +84,7 @@ make all
 
 ### Dados tratados e finalidade
 
-Os arquivos locais correspondem ao conjunto **Give Me Some Credit**, com 150.000 registros no `cs-training.csv`. A finalidade acadêmica é estimar o risco de inadimplência e estudar qualidade e confiabilidade. A origem de obtenção, a versão e os termos de uso devem ser registrados antes da entrega; a presença dos arquivos no Git não comprova autorização de redistribuição.
+Os arquivos locais correspondem ao conjunto **Give Me Some Credit**, com 150.000 registros no `cs-training.csv`. A finalidade acadêmica é estimar o risco de inadimplência e estudar qualidade e confiabilidade. A origem, a versão e os termos de uso estão registrados em “Origem, versão e termos de uso”, logo abaixo; a presença dos arquivos no Git não comprova autorização de redistribuição.
 
 O alvo `SeriousDlqin2yrs` representa inadimplência grave no horizonte de dois anos. As dez variáveis preditoras são:
 
@@ -99,11 +99,26 @@ Não há colunas de nome, CPF, telefone ou e-mail no arquivo de treino inspecion
 
 Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/glossario-anpd).
 
+### Origem, versão e termos de uso
+
+| Item | Registro |
+| --- | --- |
+| Origem | Competição [Give Me Some Credit](https://www.kaggle.com/competitions/GiveMeSomeCredit/overview), do Kaggle, promovida pela Credit Fusion de 19/09/2011 a 15/12/2011 |
+| Pacote versionado | `data/raw/GiveMeSomeCredit.zip`, SHA-256 `e7fab05b971f058cbf73df3839bae2e16ae366de41c142c55064344c0b9ccac8`, com `cs-training.csv`, `cs-test.csv`, `sampleEntry.csv` e `Data Dictionary.xls` (arquivos internos datados de 11/12/2019) |
+| Arquivo usado | `data/raw/cs-training.csv`, SHA-256 `1bd46da486a5708c58c7b01a034fae2a13b327f6f7b62ea7ba4fe3b5824b24ac`, idêntico ao do pacote: 150.000 registros e 12 colunas. Os demais arquivos do pacote não são usados |
+| Entrada no repositório | Commit `eb60251`, de 28/10/2026. A data e a conta do download não foram registradas |
+| Descrição do alvo | No dicionário de dados do pacote: pessoa com atraso de 90 dias ou mais (“Person experienced 90 days past due delinquency or worse”) |
+| Licença | O campo de licença da [página de dados](https://www.kaggle.com/competitions/GiveMeSomeCredit/data) informa “Subject to Competition Rules” |
+| Regras da competição | As [regras](https://www.kaggle.com/competitions/GiveMeSomeCredit/rules) tratam de contas, times, submissões e prazos. Sobre dados, só vedam o compartilhamento privado de código ou dados fora dos times. Não tratam de uso acadêmico nem de redistribuição |
+| Anonimização | As páginas consultadas não descrevem os dados como anonimizados, nem informam país, instituição de origem ou período de coleta |
+
+Consulta feita em 15/11/2026 às páginas públicas da competição e aos [termos de uso do Kaggle](https://www.kaggle.com/terms). No [fórum](https://www.kaggle.com/competitions/GiveMeSomeCredit/discussion/870), o organizador descreve a competição como voltada a pesquisa, sem fins comerciais. **Não encontramos autorização expressa para redistribuir os arquivos**, e os termos de uso do Kaggle vedam copiar ou distribuir conteúdo de terceiros sem consentimento do titular. Manter o pacote, o CSV e os Parquet derivados em um repositório público é, portanto, um risco em aberto. A alternativa conservadora é retirá-los do repositório, inclusive do histórico, e instruir o download na página da competição; o custo é que as evidências com hash deixam de ser conferíveis sem esse download. A decisão cabe ao grupo.
+
 ### Finalidades e enquadramento
 
 Na hipótese de operação real da fintech, a base legal proposta para avaliação de risco é **proteção do crédito, art. 7º, X, da LGPD**. O controlador deverá validar sua adequação à finalidade e aos dados tratados. Essa hipótese não autoriza automaticamente o reuso acadêmico ou a publicação da base. Finalidade acadêmica também exige observar os arts. 7º e 11, conforme art. 4º, II, b. Fonte: [texto atualizado da LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html).
 
-Para este estudo, permanece pendente documentar a procedência, os termos de uso e o enquadramento do tratamento. O caráter público de uma fonte não afasta, por si só, os cuidados com dados pessoais. Fonte: [perguntas frequentes da ANPD](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes).
+Para este estudo, a procedência e os termos de uso estão registrados acima. O tratamento tem finalidade exclusivamente acadêmica (hipótese do art. 4º, II, b), sem decisão sobre pessoas e sem tentativa de reidentificação; esse enquadramento não foi validado por um responsável jurídico. O caráter público de uma fonte não afasta, por si só, os cuidados com dados pessoais. Fonte: [perguntas frequentes da ANPD](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes).
 
 ### Privacy by Design e by Default
 
@@ -113,7 +128,7 @@ Para este estudo, permanece pendente documentar a procedência, os termos de uso
 | Segregação | Diretórios de dados brutos, referência e holdout | Separar ambientes, identidades e permissões; manter chaves de associação fora da área analítica |
 | Acesso | Sem controle de acesso implementado no projeto | Menor privilégio; dados detalhados restritos à equipe autorizada; revisão ao trocar integrantes |
 | Armazenamento e transporte | Arquivos locais; sem configuração de criptografia no código | Armazenamento e backups criptografados; TLS nas transferências; segredos fora do Git |
-| Publicação | CSV e Parquet estão versionados | Avaliar termos e risco; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
+| Publicação | CSV, pacote e Parquet estão versionados; termos consultados e risco registrado em “Origem, versão e termos de uso” | Avaliar termos e risco; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
 | Logs e relatórios | Log central, resumo do monitoramento, MLflow e dashboard gravam somente agregados por lote (um teste verifica que valores rejeitados não chegam ao log); o CSV de falhas da quarentena contém valores e, no monitoramento, fica fora do Git | Não registrar linhas de clientes; restringir quarentena e sanitizar valores antes de compartilhar relatórios ou vídeo |
 | Descarte | Sem rotina implementada | Aplicar a tabela de retenção, incluindo cópias, backups e histórico sob controle da equipe |
 
@@ -138,6 +153,21 @@ Os prazos abaixo são **propostas internas para o ambiente acadêmico**, contado
 | Modelos e metadados | Até 12 meses após a substituição | Ciência de Dados elimina versões sem necessidade de auditoria; acesso continua restrito |
 
 Revisar mensalmente os vencimentos; registrar categoria, data, executor e resultado do descarte. Incluir backups no ciclo de expiração. Exceções exigem motivo, aprovador e nova data de revisão. Um arquivo excluído da pasta de trabalho pode continuar no Git ou em clones: a limpeza do histórico e o alcance das cópias precisam ser avaliados separadamente. Nada disso está automatizado hoje.
+
+### Revisão do que está exposto
+
+Revisão dos arquivos versionados, feita em 15/11/2026:
+
+| O que foi verificado | Resultado |
+| --- | --- |
+| Registros individuais | Estão versionados o pacote e os CSV de `data/raw/`; os Parquet de referência, validação, holdout, cenários, predições e do experimento de concept drift; o lote de demonstração e a quarentena da Etapa 1, cujo `bad_batch_errors.csv` contém valores rejeitados. Todos derivam da base pública descrita acima e não têm identificadores diretos |
+| Relatórios, resumos, dashboard e documentação | Só agregados. Uma busca por 400 valores individuais de `DebtRatio` da referência e do holdout não encontrou nenhum nos 45 arquivos conferidos de `reports/`, `docs/` e `artifacts/` (HTML do Evidently, JSON, CSV de métricas e Markdown) |
+| Log central e MLflow | Só agregados, e ficam fora do Git. Um teste automatizado verifica que valores rejeitados não chegam ao resumo nem ao log |
+| Segredos e contatos | Nenhum token, chave ou e-mail nos arquivos de texto |
+| Caminhos locais | 13 arquivos (manifestos, o JSON da auditoria e os logs da Etapa 1) registram o caminho absoluto da máquina em que foram gerados, com o nome da pasta de usuário. É metadado de baixo risco e foi mantido porque os logs da Etapa 1 são evidência com hash; em novas execuções, preferir caminhos relativos nos manifestos |
+| Vídeo | Mostra capturas do dashboard, do Evidently e do MLflow e números agregados. Não mostra registros de clientes nem os integrantes do grupo |
+
+O ponto que continua aberto é o da primeira linha: manter ou retirar do repositório público os arquivos com registros individuais, pelos motivos de “Origem, versão e termos de uso”.
 
 ## 6. Vieses e uso responsável
 
@@ -262,7 +292,7 @@ O que não existe hoje: agendador, servidor de métricas, envio de alertas para 
 
 ## 9. Responsabilidades e rastreabilidade
 
-Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entrega; não há pessoas ou contatos presumidos.
+Os papéis abaixo descrevem a divisão de responsabilidades proposta para uma operação real, em que cada um teria um responsável nomeado. Neste projeto acadêmico eles não estão associados a pessoas; não há pessoas ou contatos presumidos.
 
 | Papel | Responsabilidade proposta |
 | --- | --- |
@@ -276,29 +306,34 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 
 ## 10. Vídeo STAR e checklist de entrega
 
-**Link do vídeo: pendente de gravação e publicação pelo grupo.** Substituir esta indicação por um link acessível antes da entrega. Duração máxima: 5 minutos.
+**Vídeo: [docs/video/tc04-star.mp4](docs/video/tc04-star.mp4)**, com 4min50s (o limite é de 5 minutos), em 1920×1080. A narração é sintetizada, as frases aparecem como legenda na própria imagem e os integrantes do grupo não aparecem. O [roteiro](docs/video/roteiro.md) traz o texto e os tempos de cada frase; as [legendas](docs/video/tc04-star.srt) também estão em arquivo separado.
 
-| Tempo | STAR | Conteúdo sugerido |
+**Link público (YouTube ou Drive): a inserir aqui depois que o grupo publicar o arquivo.** O enunciado pede um link acessível; o arquivo no repositório fica como cópia.
+
+| Tempo | STAR | Conteúdo do vídeo |
 | --- | --- | --- |
-| 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
-| 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar o contrato e o bloqueio da entrega corrompida; os cenários de data drift e de concept drift e os lotes mensais; o mapa de PSI e os relatórios do Evidently; o dashboard, o log central e o MLflow; explicar privacidade e retenção |
-| 3:40–5:00 | Result | AUC de 0,857 para 0,618 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; nos cenários pareados, o data drift muda as decisões (24,8% para 38,5% de sinalizados) mais do que a ordenação; os 21 alertas; a decomposição causal; limitações (tudo é simulação), mitigação de vieses e resposta proposta |
+| 0:00–0:08 | Abertura | Título do trabalho |
+| 0:08–0:43 | Situation | Cenário da fintech, risco de degradação silenciosa, base de dados e modelo de referência |
+| 0:43–1:14 | Task | As quatro etapas: validar dados, simular e detectar drift, observar o processamento e documentar a governança |
+| 1:14–3:24 | Action | O contrato e o bloqueio da entrega corrompida; os níveis de data drift e de concept drift e os lotes mensais; a detecção com o Evidently e o tamanho do efeito; o log central, o MLflow e o dashboard; a governança |
+| 3:24–4:50 | Result | AUC de 0,85 para 0,62 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; o data drift muda as decisões (25% para 38% de sinalizados) mais do que a ordenação; a decomposição causal; os 21 alertas; limites (tudo é simulação) e conclusão |
 
 ### Antes da entrega
 
 - [x] Documentar arquitetura e distinguir controles implementados de políticas propostas.
 - [x] Explicar tratamento de dados, base legal proposta, minimização e retenção.
 - [x] Documentar riscos de viés, hipóteses causais e plano de resposta.
-- [ ] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos.
-- [ ] Atribuir responsáveis e validar as políticas propostas.
+- [x] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos (seção 5).
+- [x] Definir os papéis e as responsabilidades propostos (seção 9).
 - [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
 - [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
 - [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
 - [x] Executar experimento próprio de concept drift em `P(Y|X)` e analisar o modelo com features fixas.
 - [x] Implementar a observabilidade da Etapa 3.
 - [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
-- [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
-- [ ] Publicar o vídeo STAR e inserir o link nesta seção.
+- [x] Revisar os dados e valores expostos no repositório, relatórios e vídeo (seção 5).
+- [x] Produzir o vídeo STAR, com legendas e roteiro (`docs/video/`).
+- [ ] Publicar o vídeo em um endereço acessível e inserir o link nesta seção.
+- [ ] Decidir se os arquivos com registros individuais permanecem no repositório público (seção 5).
 
-As Etapas 1 a 3 possuem execução e evidências versionadas; a documentação de governança cobre a proposta teórica da Etapa 4. As pendências de governança marcadas acima e o vídeo ainda precisam ser concluídos pelo grupo para a entrega completa do projeto.
+As Etapas 1 a 3 possuem execução e evidências versionadas; a documentação de governança cobre a proposta teórica da Etapa 4, e o vídeo está pronto em `docs/video/`. Restam duas ações que dependem do grupo: publicar o vídeo e inserir o link, e decidir sobre a permanência dos dados no repositório público. Atribuir os papéis da seção 9 a pessoas e validar as políticas com um controlador só se aplicam a uma operação real e ficam fora desta entrega.

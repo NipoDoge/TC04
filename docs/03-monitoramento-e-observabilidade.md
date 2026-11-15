@@ -102,6 +102,8 @@ Três camadas, alimentadas pelo mesmo pipeline:
 2. **MLflow** local em SQLite ([tracking.py](../src/tracking.py)). O experimento `tc04-baseline` guarda parâmetros, métricas e artefatos de cada treino. O experimento `tc04-monitoramento` guarda uma execução por rodada do monitor, com 25 métricas por lote em série (AUC, recall, KS, PSI de cada variável, linhas, duração, alertas por severidade), e uma execução aninhada por lote com os níveis simulados e o HTML do Evidently. Abrir com `make mlflow-ui`. O MLflow é auxiliar: se estiver indisponível, o pipeline segue e o log central continua sendo gravado.
 3. **Dashboard** em [reports/dashboard.html](../reports/dashboard.html) ([dashboard.py](../src/dashboard.py)): um arquivo único, sem servidor nem CDN, gerado a partir do resumo do monitoramento, do impacto dos cenários pareados, da análise causal e do log central. Abre com o veredito do último lote e um quadro de sinais (lotes nas colunas, grupos de regras nas linhas). Tem tooltips nos gráficos, no quadro e no mapa de PSI, navegação por teclado, tabela de dados para cada gráfico, filtro de alertas por severidade e temas claro e escuro. Acrescentar `?secao=drift` ao endereço (ou `tempo`, `pipeline`, `cenarios`, `modelo`, `alertas`, `causal`) mostra uma seção por vez, útil para apresentar.
 
+![MLflow: métricas por lote da execução do monitoramento, em série (alertas por severidade, AUC, inadimplência e duração)](img/mlflow-metricas.png)
+
 Exemplo de evento do log central, da etapa de drift do último lote:
 
 ```json
