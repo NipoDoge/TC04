@@ -15,7 +15,7 @@ Este README documenta as **Etapas 1 a 3 executadas, com artefatos e evidências 
 - **Decomposição nos lotes mensais** (experimento contrafactual): a mudança na relação entre variáveis e inadimplência derruba a AUC em 0,189; a mudança só nos dados, em 0,064, mas dobra a parcela de clientes sinalizados (24% para 50%).
 - **Observabilidade**: 58 eventos no log central da execução, 23 alertas (1 crítico, 17 alertas, 5 avisos), métricas por lote no MLflow e um [dashboard HTML](reports/dashboard.html) autocontido.
 
-![Visão geral do dashboard: indicadores, AUC por lote e PSI máximo por lote](docs/img/dashboard-visao-geral.png)
+![Abertura do dashboard: veredito do último lote, quadro de sinais por lote e indicadores da execução](docs/img/dashboard-visao-geral.png)
 
 O GitHub não renderiza HTML: para navegar no dashboard, baixe o repositório e abra `reports/dashboard.html` no navegador.
 
@@ -59,7 +59,7 @@ O alvo `SeriousDlqin2yrs` representa inadimplência grave no horizonte de dois a
 
 Não há colunas de nome, CPF, telefone ou e-mail no arquivo de treino inspecionado. A coluna `Unnamed: 0`, um índice do arquivo, é removida na preparação. **Essa remoção não comprova anonimização**: não há avaliação de reidentificação ou técnica de anonimização implementada.
 
-Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/documentos-e-publicacoes/glossario-anpd).
+Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/glossario-anpd).
 
 ### Fluxo implementado
 
@@ -189,7 +189,7 @@ O CSV de falhas pode conter valores rejeitados. Quarentena é uma área restrita
 
 ### Direitos e decisões automatizadas
 
-Em uma operação real, disponibilizar canal de privacidade para acesso, correção e demais solicitações aplicáveis; manter registro de atendimento. Solicitações de revisão de decisões automatizadas devem receber procedimento documentado, com informação sobre critérios e parâmetros, respeitados os segredos comercial e industrial. Fonte: [direitos dos titulares, ANPD](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados-1/direito-dos-titulares).
+Em uma operação real, disponibilizar canal de privacidade para acesso, correção e demais solicitações aplicáveis; manter registro de atendimento. Solicitações de revisão de decisões automatizadas devem receber procedimento documentado, com informação sobre critérios e parâmetros, respeitados os segredos comercial e industrial. Fonte: [direitos dos titulares, ANPD](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares).
 
 Como política do projeto para uma implantação futura, decisões contestadas ou com alerta crítico serão encaminhadas a análise humana, com justificativa registrada. O protótipo atual não possui cadastro de titulares, canal de atendimento ou sistema de decisão de crédito.
 
@@ -498,6 +498,8 @@ As seis variáveis não alteradas ficaram em no máximo 0,005 em todos os meses.
 
 ![PSI por variável e por lote, com os limites de aviso e alerta](docs/img/dashboard-drift.png)
 
+![AUC por lote e PSI máximo por lote, na mesma linha do tempo](docs/img/dashboard-tempo.png)
+
 **Degradação silenciosa.** Em maio a AUC já tinha caído 0,078 (de 0,857 para 0,780), e o maior PSI era 0,085, abaixo do limite de aviso. O alerta de AUC depende do rótulo: no caso real, a inadimplência grave leva até dois anos para maturar. Sem rótulo, o primeiro sinal pelas regras atuais seria o aviso de PSI de junho, e o primeiro alerta, o de julho. Três consequências práticas: os limites de 0,10 e 0,20 chegam tarde neste cenário; o PSI do score (0,071 em maio) e a parcela sinalizada (35,5% contra 24,6% na referência) merecem acompanhamento próprio, porque se movem sem precisar de rótulo; e o KS, que já acusava em abril, é um candidato a aviso precoce.
 
 ![Recall, KS do modelo, inadimplência observada, score médio e parcela sinalizada por lote](docs/img/dashboard-modelo.png)
@@ -530,7 +532,7 @@ Três camadas, alimentadas pelo mesmo pipeline:
 
 1. **Log central de eventos**, em `logs/pipeline_events.jsonl` ([observability.py](src/observability.py)). Cada etapa de cada script grava uma linha JSON com o mesmo esquema: `ts`, `run_id`, `stage`, `batch`, `status`, `level`, `duration_s`, `rows` e `details`. As etapas são `prepare`, `train`, `simulate`, `ingest`, `score`, `drift`, `evaluate`, `alert`, `monitor`, `scenario`, `causal` e `dashboard`. Uma falha de escrita no log não derruba o pipeline. Há também um log de texto em `logs/pipeline.log`. A geração dos cenários pareados, das predições, dos relatórios offline de drift e do experimento de concept drift (`src.simulate_drift`, `src.predict`, `src.detect_drift` e `src.concept_drift`) não grava no log central; a rastreabilidade delas está nos próprios manifestos, com hashes.
 2. **MLflow** local em SQLite ([tracking.py](src/tracking.py)). O experimento `tc04-baseline` guarda parâmetros, métricas e artefatos de cada treino. O experimento `tc04-monitoramento` guarda uma execução por rodada do monitor, com 25 métricas por lote em série (AUC, recall, KS, PSI de cada variável, linhas, duração, alertas por severidade), e uma execução aninhada por lote com o HTML do Evidently. Abrir com `make mlflow-ui`. O MLflow é auxiliar: se estiver indisponível, o pipeline segue e o log central continua sendo gravado.
-3. **Dashboard** em [reports/dashboard.html](reports/dashboard.html) ([dashboard.py](src/dashboard.py)): um arquivo único, sem servidor nem CDN, gerado a partir do resumo do monitoramento, do impacto dos cenários pareados, da análise causal e do log central. Tem tooltips nos gráficos e no mapa de PSI, leitura por teclado, tabela de dados para cada gráfico, filtro de alertas por severidade e temas claro e escuro.
+3. **Dashboard** em [reports/dashboard.html](reports/dashboard.html) ([dashboard.py](src/dashboard.py)): um arquivo único, sem servidor nem CDN, gerado a partir do resumo do monitoramento, do impacto dos cenários pareados, da análise causal e do log central. Abre com o veredito do último lote e um quadro de sinais (lotes nas colunas, grupos de regras nas linhas). Tem tooltips nos gráficos, no quadro e no mapa de PSI, navegação por teclado, tabela de dados para cada gráfico, filtro de alertas por severidade e temas claro e escuro. Acrescentar `?secao=drift` ao endereço (ou `tempo`, `pipeline`, `cenarios`, `modelo`, `alertas`, `causal`) mostra uma seção por vez, útil para apresentar.
 
 Exemplo de evento do log central, da etapa de drift do último lote:
 
@@ -614,7 +616,7 @@ Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instal
 | scikit-learn | Separação estratificada e métricas de classificação |
 | XGBoost | Treinamento e execução do classificador salvo |
 | joblib | Persistência e leitura do modelo |
-| Evidently AI | Testes estatísticos e relatórios HTML/JSON de data drift |
+| Evidently AI | Testes estatísticos de data drift e relatórios HTML/JSON de drift e desempenho de classificação |
 | SciPy | Teste KS de duas amostras no drift por lote |
 | MLflow | Rastreamento do baseline e do monitoramento |
 
@@ -684,7 +686,9 @@ Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto
 
 A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
 
-Com o monitoramento e a observabilidade, a suíte tem **132 testes**: os 51 anteriores e 81 novos. Os novos cobrem o PSI por decis (amostras iguais, deslocamento, baixa cardinalidade, faixas vazias e a limitação das faixas das pontas), os lotes mensais (intensidade zero não altera nada, determinismo por seed, direção de cada mudança, rótulo só muda de bom para mau, lotes com drift passam no contrato e a entrega corrompida reprova), cada regra de alerta nos seus limites, o log central (esquema do evento, falha registrada e relançada, log indisponível não derruba o pipeline) e o dashboard (seções, escape de texto, execução sem lotes válidos). Dois testes de integração treinam um modelo em dados sintéticos pequenos e rodam, em diretório temporário, o monitoramento completo com o Evidently de verdade e o impacto nos cenários pareados; conferem que o PSI do resumo é o mesmo do HTML do Evidently, que os cenários de entrada não são alterados e que resumos e log não carregam valores de clientes.
+Com o monitoramento e a observabilidade, a suíte tem **134 testes**: os 51 anteriores e 83 novos. Os novos cobrem o PSI por decis (amostras iguais, deslocamento, baixa cardinalidade, faixas vazias e a limitação das faixas das pontas), os lotes mensais (intensidade zero não altera nada, determinismo por seed, direção de cada mudança, rótulo só muda de bom para mau, lotes com drift passam no contrato e a entrega corrompida reprova), cada regra de alerta nos seus limites, o log central (esquema do evento, falha registrada e relançada, log indisponível não derruba o pipeline) e o dashboard (seções, escape de texto, execução sem lotes válidos). Dois testes de integração treinam um modelo em dados sintéticos pequenos e rodam, em diretório temporário, o monitoramento completo com o Evidently de verdade e o impacto nos cenários pareados; conferem que o PSI do resumo é o mesmo do HTML do Evidently, que os cenários de entrada não são alterados e que resumos e log não carregam valores de clientes.
+
+A [auditoria consolidada das Etapas 1 e 2](artifacts/audit_stage1_stage2/audit.json) registra a nova execução dos 51 testes no ambiente atual e em um ambiente isolado, a reprodução dos dois experimentos, a integridade dos manifestos e a conferência dos links. Foram atualizados dois endereços da ANPD que redirecionavam e removidos metadados antigos de Python 3.14.4 do notebook. Não foi identificado fluxo legado ativo; as fontes em `artifacts/stage1/` são evidências históricas. Os commits anteriores à padronização ainda têm mensagens não semânticas, sem reescrita do histórico. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente de auditoria. A validação de execução cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
 
 ### Resultados e evidências da Etapa 1
 

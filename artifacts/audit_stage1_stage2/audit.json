@@ -1,0 +1,230 @@
+{
+  "created_at_utc": "2026-11-15T01:59:23.019582+00:00",
+  "base_commit": "a7b5a4754224524fc0a2024dd8ad68d3c6883779",
+  "scope": "Repositório atual, código ativo, dependências, evidências arquivadas, links e requisitos técnicos das Etapas 1 e 2.",
+  "specification": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/4-Model_Monitoring/MLET - Tech Challenge - Fase 4.pdf",
+    "sha256": "bc53a9b2a816796bf216d110449f917666989cdd13ff86a5b4cd1d2457ccd46e",
+    "relevant_pages": [
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "conclusion": "Sem bloqueios técnicos identificados para as Etapas 1 e 2; projeto completo ainda depende das etapas posteriores e pendências gerais.",
+  "tests": {
+    "current_environment": {
+      "count": 51,
+      "status": "passed",
+      "log": "tests.txt"
+    },
+    "isolated_environment": {
+      "count": 51,
+      "status": "passed",
+      "log": "minimal_tests.txt",
+      "method": "Venv isolado com links somente para dependências declaradas e seu fechamento transitivo, reutilizando versões instaladas; não é instalação nova a partir do índice."
+    }
+  },
+  "runtime": {
+    "python": "Python 3.12.14",
+    "platform": "macOS ARM64",
+    "direct_dependencies": {
+      "joblib": "1.6.0",
+      "numpy": "2.5.4",
+      "pandas": "2.3.3",
+      "pandera": "0.35.0",
+      "pyarrow": "26.0.0",
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "evidently": "0.7.23"
+    },
+    "pip_check": "passed"
+  },
+  "artifact_checks": {
+    "hash_checks": 87,
+    "protected_files": 90,
+    "data_drift_feature_checks": 40,
+    "concept_prediction_rows": 141188,
+    "concept_sensitivity_evaluations": 20
+  },
+  "links": {
+    "local_checked": 55,
+    "broken_local": [],
+    "external_checked": 8,
+    "external_status": "As oito páginas foram acessíveis pela ferramenta web; não foram inferidos códigos HTTP.",
+    "external_urls": [
+      "https://arxiv.org/abs/1909.11251",
+      "https://docs.evidentlyai.com/docs/library/report",
+      "https://docs.evidentlyai.com/metrics/customize_data_drift",
+      "https://docs.evidentlyai.com/metrics/preset_classification",
+      "https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes",
+      "https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares",
+      "https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/glossario-anpd",
+      "https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html"
+    ]
+  },
+  "requirements": [
+    {
+      "stage": 1,
+      "requirement": "Dataset financeiro de classificação binária com pelo menos 5.000 registros",
+      "status": "passed",
+      "evidence": "150.000 registros brutos; 65.867 no treino/referência"
+    },
+    {
+      "stage": 1,
+      "requirement": "Classificador baseline treinado em dados limpos",
+      "status": "passed",
+      "evidence": "XGBClassifier preservado; treinamento, AUC, recall e KS reproduzidos"
+    },
+    {
+      "stage": 1,
+      "requirement": "Contrato Pandera com pelo menos três regras rígidas",
+      "status": "passed",
+      "evidence": "Idade 18–100, renda não nula e não negativa, unicidade, finitude, tipos e colunas estritos"
+    },
+    {
+      "stage": 1,
+      "requirement": "Lote inválido demonstra falha e bloqueio de ingestão",
+      "status": "passed",
+      "evidence": "505 linhas rejeitadas, retorno 1, quarentena e CSV; evidências históricas conferidas e testes de CLI aprovados"
+    },
+    {
+      "stage": 1,
+      "requirement": "Script de validação operante e baseline salvo",
+      "status": "passed",
+      "evidence": "src.ingest, src.train, models/current e versão models/runs; todos conferidos"
+    },
+    {
+      "stage": 2,
+      "requirement": "Referência e produção separadas",
+      "status": "passed",
+      "evidence": "Partições disjuntas e limites de limpeza ajustados somente no treino"
+    },
+    {
+      "stage": 2,
+      "requirement": "Simular períodos com mudança em pelo menos duas features",
+      "status": "passed",
+      "evidence": "Controle e t1/t2/t3; MonthlyIncome e DebtRatio; declaração explícita de tempo sintético"
+    },
+    {
+      "stage": 2,
+      "requirement": "Gerar predições para o dataset de produção",
+      "status": "passed",
+      "evidence": "207.055 predições de referência/cenários, ordem FEATURE_COLUMNS, alvo excluído do modelo, limiar 0,5"
+    },
+    {
+      "stage": 2,
+      "requirement": "Comparar referência e produção com Evidently",
+      "status": "passed",
+      "evidence": "Evidently 0.7.23, quatro comparações executadas e reproduzidas"
+    },
+    {
+      "stage": 2,
+      "requirement": "Identificar features com drift por testes estatísticos",
+      "status": "passed",
+      "evidence": "40 comparações KS/PSI; controle sem detecção, renda/dívida detectadas nos três cenários"
+    },
+    {
+      "stage": 2,
+      "requirement": "Entregar HTML/painel indicando variáveis com drift",
+      "status": "passed",
+      "evidence": "reports/drift/{t0_control,t1,t2,t3}.html, JSONs, summary.csv e manifesto"
+    },
+    {
+      "stage": "contexto geral",
+      "requirement": "Simular concept drift e analisar comportamento do modelo",
+      "status": "passed",
+      "evidence": "P(Y|X) alterado com X fixo; quatro cenários, 141.188 predições, 20 avaliações de sensibilidade, relatórios e métricas reproduzidos"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "low",
+      "status": "fixed",
+      "location": "notebooks/01_exploracao.ipynb",
+      "finding": "Kernel e language_info ainda indicavam Python 3.14.4, divergindo do ambiente 3.12.14 validado.",
+      "change": "Nome genérico Python 3 (TC04), sem versão histórica fixa no language_info."
+    },
+    {
+      "severity": "low",
+      "status": "fixed",
+      "location": "README.md",
+      "finding": "Duas URLs da ANPD usavam endereços antigos com redirecionamento.",
+      "change": "Links atualizados para os destinos canônicos; não eram links indisponíveis."
+    },
+    {
+      "severity": "info",
+      "status": "documented",
+      "location": "artifacts/stage1/",
+      "finding": "Fontes, requisitos e ambiente antigos preservados como evidência histórica; nenhum fluxo legado ativo identificado."
+    },
+    {
+      "severity": "low",
+      "status": "documented",
+      "location": "git history",
+      "finding": "Commits 7752860, dee8eec, eb60251 e dcced73 têm mensagens anteriores ao padrão semântico; commits recentes seguem feat/fix/docs.",
+      "change": "Histórico preservado; o requisito global de padronização não é integral em todos os commits antigos."
+    }
+  ],
+  "remaining_outside_stage1_stage2": [
+    "Observabilidade contínua, centralização de logs/métricas e ambiente de rastreamento da Etapa 3.",
+    "Registrar origem, versão e termos de uso dos dados e validar enquadramento acadêmico.",
+    "Atribuir responsáveis e validar as políticas de governança.",
+    "Revisar exposição dos dados e publicar o vídeo STAR da entrega."
+  ],
+  "limits": [
+    "Validação funcional executada em macOS ARM64/Python 3.12; outros sistemas não foram executados.",
+    "HTML conferido por estrutura, links, hashes e métricas nativas; inspeção visual indisponível porque não havia navegador conectado.",
+    "Cenários de drift são sintéticos e não comprovam degradação temporal ou causa econômica real.",
+    "Requisitos diretos fixados, sem lockfile completo de transitivas."
+  ],
+  "active_source_hashes": {
+    ".gitignore": "cda09706fed3c478427a431f5f1b52307ae0e3cdcea2c7f60c6e29959b3e529d",
+    "Makefile": "1106f1eab17fc2d79b1cc9c50b03844684ddee6a17754edb541fbf83699349d9",
+    "README.md": "94d7a082e79f57abb319281049c603e964c21a65c4b255c91be56011bee20d10",
+    "notebooks/01_exploracao.ipynb": "64a6dab216252e1ba25eb1b6567c15d6e99ef010bc5d84eeaa6b7a3c50f596da",
+    "requirements-notebooks.txt": "f63d84cabc29f8967b81a1e8f7f28d71cf6ab2d4355b39a1bcbb6228801839e7",
+    "requirements.txt": "95cfe6e3d401bee42f6ece13975e003a2f28a8b1d77f480475a37e20589b4bb0",
+    "src/artifacts.py": "849073f5b593aa95248485e8bbb82af2b80bb3457dbd99bd8226a6925ec465d5",
+    "src/concept_drift.py": "72549739b6132c1340455edf5f0bbc90b213b736e4a1f31a52e80963bd145b29",
+    "src/config.py": "394414f4bc1832b45f720c1f183f84f73ffbc0678ff37a76d328a923df852235",
+    "src/contract.py": "c5161ccc273b71f5b306e6540442b9ba99c068aadaac6b98bbe83aa3d0fcf19a",
+    "src/detect_drift.py": "8ecef4f3a299399755dc4c6710ceb37392f462f6c4d20cb36fb9283abe82007c",
+    "src/ingest.py": "9bc7ae2fa9d67819d2da317876ec3f04d96a1971842120d13b332fda4a04423b",
+    "src/make_bad_batch.py": "c0cbb1052431e356c50a7795e3b48ff1686273a1f0023586515e4ba8ab3f1b8b",
+    "src/predict.py": "919ba8b4148ccc3d25f792f50f1e1c68726069d14c359ed1fa16155bc8347201",
+    "src/prepare.py": "befdec4bd88349e2dc0ac3b677f61fa28099ae7d5926e3d57a2c2ab800b0ce3e",
+    "src/simulate_drift.py": "f60b2d827dc87f45be1d03f30b6783de518ce67df3dafb2fb0211b83e90a83cb",
+    "src/train.py": "950701792ef8d9d4dadfb570abc5438a9aa296c61e523e1344ee2e7de2af4367",
+    "tests/test_concept_drift.py": "a5f66054dc8378f176bf31e2009805fac9f5f2c740d3eba4347bb0d1585c0095",
+    "tests/test_detect_drift.py": "61d2816f518aa5e53105b770ccd6de166f0ebfa71bd681a2ac4a5a9b0c1c8109",
+    "tests/test_make_bad_batch.py": "1d5c81d23a95d652fe9507c51b2c2a1f1285055e19d9ded9d92bcc8119e82b8c",
+    "tests/test_predict.py": "f1809ac3eadc380a761ddefeffe7b01f4b7904f9e9817c856d186c94c8e4fe02",
+    "tests/test_prepare.py": "3369bdd53dfbddb3d10d9c0b80056f0375c49364bce68e8eff6852990897fe3b",
+    "tests/test_simulate_drift.py": "43a07e9a427328f57f77698954582bd77474c5ce623c2921c7b1849ec938fc49",
+    "tests/test_stage1.py": "a49e248bd0fb31907b7c5c15e91b4614bf876c23d0664e0ecd9b8c6be3469858"
+  },
+  "logs": [
+    {
+      "file": "tests.txt",
+      "sha256": "4ae045c70e2b91c7030170d230022a4a46e0c07059fa0193cd056fedb7b84f64"
+    },
+    {
+      "file": "minimal_tests.txt",
+      "sha256": "1a377fbc242412b7c4155a4251d9fc9f6864db207ee22b42c2daae781c398ff8"
+    },
+    {
+      "file": "minimal_environment.txt",
+      "sha256": "65fd7ce4041f033ed60b2d9497d2d1746b6d0afbd90fb5575d9ee82ecd098133"
+    },
+    {
+      "file": "reproduction.txt",
+      "sha256": "13133483c72b0b0069c83d40b995327791da4383c53796f06581ee7402a1982f"
+    },
+    {
+      "file": "artifact_integrity.txt",
+      "sha256": "01a991527d79e46432724ababfcd61ec0591f0c960405ac98ddd782f3e7479ed"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+train 65867 preparação reproduzida exatamente
+validation 16480 preparação reproduzida exatamente
+holdout 35297 preparação reproduzida exatamente
+Lotes da Etapa 1 e cenários sintéticos reproduzidos exatamente.
+207.055 predições conferidas; manifesto e associações de linhas válidos.
+Treinamento reproduzido: métricas e probabilidades idênticas ao baseline.
+Notebook: todas as células executadas a partir da raiz e de notebooks/.
+79 arquivos de dados, modelos e evidências permaneceram intactos.
