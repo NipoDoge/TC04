@@ -19,10 +19,11 @@ import pandas as pd
 
 from src.artifacts import sha256, snapshot
 from src.config import (
-    DRIFT_CONTINUOUS_COLUMNS, DRIFT_KS_THRESHOLD, DRIFT_PSI_THRESHOLD,
-    DRIFT_SHARE, SCENARIOS,
+    DRIFT_CONTINUOUS_COLUMNS, DRIFT_EFFECT_LARGE, DRIFT_EFFECT_MODERATE,
+    DRIFT_KS_THRESHOLD, DRIFT_PSI_THRESHOLD, DRIFT_SHARE, SCENARIOS,
 )
 from src.contract import FEATURE_COLUMNS, schema
+from src.drift_stats import ks, psi
 
 
 def compare_datasets(reference, current):
@@ -73,6 +74,27 @@ def summarize(evaluation, scenario):
     return rows
 
 
+def effect_level(effect_psi):
+    """Faixa usual do PSI: abaixo de 0,10 pequeno; até 0,20 moderado; acima, grande."""
+    if effect_psi >= DRIFT_EFFECT_LARGE:
+        return "grande"
+    return "moderado" if effect_psi >= DRIFT_EFFECT_MODERATE else "pequeno"
+
+
+def add_effect_sizes(rows, reference, current):
+    """Acrescenta a cada feature o tamanho da mudança, que o p-valor não informa.
+
+    O PSI usa faixas fixas nos decis da referência (uma faixa por valor em contagens)
+    e a estatística D do KS é a maior distância entre as distribuições acumuladas.
+    Não substituem os testes do Evidently nem alteram ``drift_detected``."""
+    for row in rows:
+        feature = row["feature"]
+        row["effect_psi"] = psi(reference[feature], current[feature])
+        row["effect_level"] = effect_level(row["effect_psi"])
+        row["ks_statistic"] = ks(reference[feature], current[feature])[0]
+    return rows
+
+
 def detect_drift(reference_path="data/reference/reference.parquet",
                  scenarios_dir="data/production/scenarios", output_dir="reports/drift"):
     output_dir = Path(output_dir)
@@ -91,12 +113,18 @@ def detect_drift(reference_path="data/reference/reference.parquet",
             "continuous_method": "ks", "ks_p_value_threshold": DRIFT_KS_THRESHOLD,
             "categorical_method": "psi", "psi_threshold": DRIFT_PSI_THRESHOLD,
             "dataset_drift_share_threshold": DRIFT_SHARE,
+            "effect_size": {
+                "measure": "PSI com faixas nos decis da referência (effect_psi) e estatística D do KS",
+                "moderate_from": DRIFT_EFFECT_MODERATE, "large_from": DRIFT_EFFECT_LARGE,
+                "note": "Informa o tamanho da mudança; não altera drift_detected.",
+            },
         },
         "limitations": (
             "Os períodos são sintéticos, sem série temporal real. O controle pode diferir "
             "da referência por amostragem. Data drift não comprova degradação de desempenho, "
             "concept drift ou causalidade. Alvo e predições não são monitorados neste relatório. "
-            "Os limiares são critérios iniciais do experimento, sem ajuste de múltiplas comparações."
+            "Os limiares são critérios iniciais do experimento, sem ajuste de múltiplas comparações. "
+            "Com amostras grandes o p-valor acusa mudanças pequenas: ler junto com o tamanho do efeito."
         ),
         "scenarios": [],
     }
@@ -109,17 +137,20 @@ def detect_drift(reference_path="data/reference/reference.parquet",
             payload, source = snapshot(Path(scenarios_dir) / f"{name}.parquet")
             current = pd.read_parquet(BytesIO(payload))
             evaluation = compare_datasets(reference, current)
-            rows = summarize(evaluation, name)
+            rows = add_effect_sizes(summarize(evaluation, name), reference, current)
             all_rows.extend(rows)
             html_path, json_path = staging / f"{name}.html", staging / f"{name}.json"
             evaluation.save_html(str(html_path))
             evaluation.save_json(str(json_path))
             drifted = [r["feature"] for r in rows if r["drift_detected"]]
             share = len(drifted) / len(FEATURE_COLUMNS)
+            largest = max(rows, key=lambda r: r["effect_psi"])
             manifest["scenarios"].append({
                 "name": name, "source": source, "rows": len(current),
                 "drifted_features": drifted, "drift_share": share,
                 "dataset_drift_detected": share >= DRIFT_SHARE,
+                "largest_effect": {"feature": largest["feature"], "effect_psi": largest["effect_psi"],
+                                   "effect_level": largest["effect_level"]},
                 "reports": [
                     {"file": p.name, "sha256": sha256(p)} for p in [html_path, json_path]
                 ],
@@ -142,7 +173,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     manifest = detect_drift(args.reference, args.scenarios_dir, args.output_dir)
     for scenario in manifest["scenarios"]:
-        print(f"{scenario['name']}: drift em {scenario['drifted_features']}; relatório={args.output_dir}/{scenario['name']}.html")
+        largest = scenario["largest_effect"]
+        print(f"{scenario['name']}: drift em {scenario['drifted_features']}; maior efeito em {largest['feature']} "
+              f"(PSI {largest['effect_psi']:.3f}, {largest['effect_level']}); relatório={args.output_dir}/{scenario['name']}.html")
     # Drift é um resultado do experimento; falhas operacionais propagam erro.
     return 0
 

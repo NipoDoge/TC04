@@ -10,7 +10,7 @@ import pandera.pandas as pa
 from src.artifacts import sha256
 from src.config import SCENARIOS, TARGET
 from src.contract import FEATURE_COLUMNS, schema
-from src.detect_drift import compare_datasets, detect_drift, summarize
+from src.detect_drift import add_effect_sizes, compare_datasets, detect_drift, effect_level, summarize
 
 
 class DetectDriftTests(unittest.TestCase):
@@ -50,6 +50,28 @@ class DetectDriftTests(unittest.TestCase):
         pd.testing.assert_frame_equal(self.reference, original_reference)
         pd.testing.assert_frame_equal(current, original_current)
 
+    def test_effect_size_tells_how_large_the_shift_is(self):
+        rows = add_effect_sizes(summarize(compare_datasets(self.reference, self.reference), "control"),
+                                self.reference, self.reference)
+        self.assertTrue(all(r["effect_psi"] == 0 and r["ks_statistic"] == 0 and r["effect_level"] == "pequeno" for r in rows))
+        sizes = {}
+        for factor in (0.98, 0.7, 0.3):                              # mudança mínima, moderada e forte na renda
+            current = self.reference.copy(deep=True)
+            current["MonthlyIncome"] *= factor
+            evaluation = compare_datasets(self.reference, current)
+            detected = {r["feature"]: r for r in add_effect_sizes(summarize(evaluation, "shift"), self.reference, current)}
+            sizes[factor] = detected["MonthlyIncome"]
+            self.assertEqual(detected["DebtRatio"]["effect_psi"], 0)
+            self.assertEqual(set(detected["MonthlyIncome"]) - {"effect_psi", "effect_level", "ks_statistic"},
+                             {"scenario", "feature", "method", "score", "score_kind", "threshold", "drift_detected"})
+        self.assertLess(sizes[0.98]["effect_psi"], sizes[0.7]["effect_psi"])
+        self.assertLess(sizes[0.7]["effect_psi"], sizes[0.3]["effect_psi"])
+        self.assertLess(sizes[0.98]["ks_statistic"], sizes[0.3]["ks_statistic"])
+        self.assertEqual(sizes[0.98]["effect_level"], "pequeno")
+        self.assertEqual(sizes[0.3]["effect_level"], "grande")
+        self.assertEqual([effect_level(v) for v in (0.0, 0.0999, 0.10, 0.1999, 0.20, 3.0)],
+                         ["pequeno", "pequeno", "moderado", "moderado", "grande", "grande"])
+
     def test_report_publication_hashes_and_no_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -65,6 +87,10 @@ class DetectDriftTests(unittest.TestCase):
             summary = pd.read_csv(output / "summary.csv")
             self.assertEqual(len(summary), 4 * len(FEATURE_COLUMNS))
             self.assertFalse(summary.drift_detected.any())
+            self.assertTrue(summary.effect_psi.eq(0).all())           # cenários idênticos à referência
+            self.assertEqual(set(summary.effect_level), {"pequeno"})
+            self.assertIn("effect_size", manifest["settings"])
+            self.assertEqual(manifest["scenarios"][0]["largest_effect"]["effect_psi"], 0)
             self.assertEqual(sha256(output / manifest["summary"]["file"]), manifest["summary"]["sha256"])
             self.assertEqual(manifest["reference"]["sha256"], before[reference])
             for scenario in manifest["scenarios"]:

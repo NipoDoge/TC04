@@ -1,15 +1,14 @@
-"""Estatísticas de drift: PSI com faixas fixadas na referência e teste KS.
+"""Tamanho do drift: PSI com faixas fixadas na referência e estatística do KS.
 
-O PSI nativo do Evidently usa faixas de largura igual sobre referência + produção.
-Em variáveis de cauda longa (renda, endividamento) quase toda a massa cai na
-primeira faixa e o índice fica insensível. Aqui as faixas são os decis da
-referência, prática usual em risco de crédito, e o teste é registrado no
-Evidently com o nome ``psi_decis`` para aparecer nos relatórios HTML.
+Os relatórios do Evidently (``src.detect_drift``) dizem se há drift; estas
+medidas dizem quanto, e são usadas tanto no resumo dos cenários pareados quanto
+nas regras de alerta do monitoramento por lote. As faixas do PSI são os decis da
+referência, prática usual em risco de crédito: em variáveis de cauda longa
+(renda, endividamento) faixas de largura igual concentram quase toda a massa na
+primeira e deixam o índice insensível.
 """
 import numpy as np
 from scipy.stats import ks_2samp
-
-PSI_METHOD = "psi_decis"
 
 
 def bin_edges(reference, bins=10):
@@ -42,20 +41,3 @@ def ks(reference, current):
     """Teste Kolmogorov-Smirnov de duas amostras: (estatística D, p-valor)."""
     result = ks_2samp(reference, current)
     return float(result.statistic), float(result.pvalue)
-
-
-def register_evidently_psi(threshold=0.2):
-    """Registra o PSI por decis como teste estatístico do Evidently."""
-    from evidently.legacy.calculations.stattests.registry import StatTest, register_stattest
-    from evidently.legacy.core import ColumnType
-
-    def implementation(reference, current, feature_type, limit):
-        value = psi(reference, current)
-        return value, value >= limit
-
-    register_stattest(
-        StatTest(name=PSI_METHOD, display_name="PSI (decis da referência)",
-                 allowed_feature_types=[ColumnType.Numerical], default_threshold=threshold),
-        default_impl=implementation,
-    )
-    return PSI_METHOD
