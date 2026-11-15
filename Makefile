@@ -1,11 +1,22 @@
 PYTHON ?= python
 .DEFAULT_GOAL := help
-.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift concept-drift test
+.PHONY: help all report prepare train demo-bad demo-good simulate-drift predict detect-drift concept-drift test \
+        scenario-impact simulate-batches monitor causal dashboard mlflow-ui
+.NOTPARALLEL:
 
 help:
 	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, concept-drift, test"
+	@echo "       scenario-impact, simulate-batches, monitor, causal, dashboard, report, all, mlflow-ui"
 	@echo "Sequência: prepare -> train -> simulate-drift -> predict -> detect-drift"
+	@echo "Monitoramento e observabilidade: report = scenario-impact + monitor + causal + dashboard"
+	@echo "Fluxo completo a partir do CSV bruto: all = prepare + train + report + test"
 	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
+
+# Fluxo completo. O treino publica uma nova versão em models/runs/.
+all: prepare train report test
+
+# Monitoramento e observabilidade com o modelo já publicado em models/current.
+report: scenario-impact monitor causal dashboard
 
 # Usa o holdout existente; não executa prepare nem altera a referência.
 simulate-drift:
@@ -44,3 +55,24 @@ demo-bad:
 
 demo-good:
 	$(PYTHON) -m src.ingest data/incoming/good_batch.parquet
+
+# PSI por decis e impacto no modelo nos cenários pareados já gerados por simulate-drift.
+scenario-impact:
+	$(PYTHON) -m src.scenario_impact
+
+# Lotes mensais com choque progressivo e uma entrega corrompida.
+simulate-batches:
+	$(PYTHON) -m src.simulate_batches
+
+# A ingestão move a entrega corrompida para a quarentena: os lotes são recriados a cada execução.
+monitor: simulate-batches
+	$(PYTHON) -m src.monitor
+
+causal:
+	$(PYTHON) -m src.causal_analysis
+
+dashboard:
+	$(PYTHON) -m src.dashboard
+
+mlflow-ui:
+	$(PYTHON) -m mlflow ui --backend-store-uri sqlite:///mlflow.db
