@@ -56,11 +56,11 @@ demo-bad:
 demo-good:
 	$(PYTHON) -m src.ingest data/incoming/good_batch.parquet
 
-# PSI por decis e impacto no modelo nos cenários pareados já gerados por simulate-drift.
+# Impacto dos cenários pareados no modelo, lido de reports/drift e data/predictions (não recalcula).
 scenario-impact:
 	$(PYTHON) -m src.scenario_impact
 
-# Lotes mensais com choque progressivo e uma entrega corrompida.
+# Lotes mensais nos níveis do calendário de src/config.py e uma entrega corrompida.
 simulate-batches:
 	$(PYTHON) -m src.simulate_batches
 
