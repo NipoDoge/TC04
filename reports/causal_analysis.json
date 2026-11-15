@@ -1,0 +1,248 @@
+{
+  "intensity": 1.0,
+  "seed": 49,
+  "rows": 4412,
+  "scenarios": {
+    "controle": {
+      "description": "Sem choque: os mesmos clientes, como chegaram",
+      "metrics": {
+        "auc": 0.8285091199170236,
+        "ks": 0.5311881090031021,
+        "recall": 0.7153024911032029,
+        "precision": 0.18645640074211503,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.32402104139328003,
+        "flagged_rate": 0.2443336355394379
+      },
+      "effect": {
+        "auc": 0.0,
+        "recall": 0.0,
+        "precision": 0.0,
+        "ks": 0.0,
+        "default_rate": 0.0,
+        "mean_score": 0.0,
+        "flagged_rate": 0.0
+      },
+      "auc_effect_ci95": null,
+      "psi_score": 0.0016828105015429494,
+      "drifted_features": []
+    },
+    "data_drift": {
+      "description": "Só P(X): variáveis alteradas, rótulos originais",
+      "metrics": {
+        "auc": 0.7650039498247345,
+        "ks": 0.39580431267450084,
+        "recall": 0.8256227758007118,
+        "precision": 0.10478771454381211,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.48579567670822144,
+        "flagged_rate": 0.5018132366273799
+      },
+      "effect": {
+        "auc": -0.06350517009228906,
+        "recall": 0.11032028469750887,
+        "precision": -0.08166868619830292,
+        "ks": -0.13538379632860126,
+        "default_rate": 0.0,
+        "mean_score": 0.1617746353149414,
+        "flagged_rate": 0.257479601087942
+      },
+      "auc_effect_ci95": [
+        -0.07791150283363042,
+        -0.046508786851074194
+      ],
+      "psi_score": 0.3904436593410623,
+      "drifted_features": [
+        "MonthlyIncome",
+        "DebtRatio",
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTime30-59DaysPastDueNotWorse"
+      ]
+    },
+    "concept_drift": {
+      "description": "Só P(Y|X): rótulos alterados, variáveis originais",
+      "metrics": {
+        "auc": 0.6399200206398349,
+        "ks": 0.23550739594083248,
+        "recall": 0.4362745098039216,
+        "precision": 0.24768089053803338,
+        "default_rate": 0.1387126019945603,
+        "mean_score": 0.32402104139328003,
+        "flagged_rate": 0.2443336355394379
+      },
+      "effect": {
+        "auc": -0.1885890992771887,
+        "recall": -0.2790279812992813,
+        "precision": 0.06122448979591835,
+        "ks": -0.2956807130622696,
+        "default_rate": 0.07502266545784224,
+        "mean_score": 0.0,
+        "flagged_rate": 0.0
+      },
+      "auc_effect_ci95": [
+        -0.2190544666341014,
+        -0.16381495653208356
+      ],
+      "psi_score": 0.0016828105015429494,
+      "drifted_features": []
+    },
+    "ambos": {
+      "description": "Choque completo, igual ao último mês simulado",
+      "metrics": {
+        "auc": 0.6906858445132439,
+        "ks": 0.2785517715858273,
+        "recall": 0.7303921568627451,
+        "precision": 0.2018970189701897,
+        "default_rate": 0.1387126019945603,
+        "mean_score": 0.48579567670822144,
+        "flagged_rate": 0.5018132366273799
+      },
+      "effect": {
+        "auc": -0.1378232754037797,
+        "recall": 0.015089665759542181,
+        "precision": 0.01544061822807466,
+        "ks": -0.2526363374172748,
+        "default_rate": 0.07502266545784224,
+        "mean_score": 0.1617746353149414,
+        "flagged_rate": 0.257479601087942
+      },
+      "auc_effect_ci95": [
+        -0.16034946062192695,
+        -0.11522749892868057
+      ],
+      "psi_score": 0.3904436593410623,
+      "drifted_features": [
+        "MonthlyIncome",
+        "DebtRatio",
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTime30-59DaysPastDueNotWorse"
+      ]
+    }
+  },
+  "feature_interventions": {
+    "MonthlyIncome": {
+      "description": "Intervenção isolada em MonthlyIncome, rótulos originais",
+      "metrics": {
+        "auc": 0.8263976650807067,
+        "ks": 0.527000519464409,
+        "recall": 0.7402135231316725,
+        "precision": 0.18588025022341376,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.33253541588783264,
+        "flagged_rate": 0.25362647325475973
+      },
+      "effect": {
+        "auc": -0.002111454836316917,
+        "recall": 0.02491103202846967,
+        "precision": -0.0005761505187012739,
+        "ks": -0.004187589538693137,
+        "default_rate": 0.0,
+        "mean_score": 0.008514374494552612,
+        "flagged_rate": 0.009292837715321828
+      },
+      "auc_effect_ci95": [
+        -0.004899868766522741,
+        0.000703106149489489
+      ],
+      "psi_score": 0.0019250710437143442,
+      "drifted_features": [
+        "MonthlyIncome"
+      ]
+    },
+    "DebtRatio": {
+      "description": "Intervenção isolada em DebtRatio, rótulos originais",
+      "metrics": {
+        "auc": 0.8238050811027808,
+        "ks": 0.522156492314425,
+        "recall": 0.7615658362989324,
+        "precision": 0.1742671009771987,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.3526659905910492,
+        "flagged_rate": 0.2783318223028105
+      },
+      "effect": {
+        "auc": -0.00470403881424275,
+        "recall": 0.0462633451957295,
+        "precision": -0.01218929976491634,
+        "ks": -0.009031616688677135,
+        "default_rate": 0.0,
+        "mean_score": 0.028644949197769165,
+        "flagged_rate": 0.0339981867633726
+      },
+      "auc_effect_ci95": [
+        -0.00887259895056389,
+        -0.0005599483660647835
+      ],
+      "psi_score": 0.021433615532332643,
+      "drifted_features": [
+        "DebtRatio"
+      ]
+    },
+    "RevolvingUtilizationOfUnsecuredLines": {
+      "description": "Intervenção isolada em RevolvingUtilizationOfUnsecuredLines, rótulos originais",
+      "metrics": {
+        "auc": 0.8023468075336985,
+        "ks": 0.4825988037673661,
+        "recall": 0.7722419928825622,
+        "precision": 0.14466666666666667,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.40471529960632324,
+        "flagged_rate": 0.3399818676337262
+      },
+      "effect": {
+        "auc": -0.026162312383325115,
+        "recall": 0.05693950177935936,
+        "precision": -0.041789734075448365,
+        "ks": -0.04858930523573601,
+        "default_rate": 0.0,
+        "mean_score": 0.08069425821304321,
+        "flagged_rate": 0.09564823209428827
+      },
+      "auc_effect_ci95": [
+        -0.0352118487892785,
+        -0.016488348280378658
+      ],
+      "psi_score": 0.1800624205458084,
+      "drifted_features": [
+        "RevolvingUtilizationOfUnsecuredLines"
+      ]
+    },
+    "NumberOfTime30-59DaysPastDueNotWorse": {
+      "description": "Intervenção isolada em NumberOfTime30-59DaysPastDueNotWorse, rótulos originais",
+      "metrics": {
+        "auc": 0.8091536865174433,
+        "ks": 0.4890150076110581,
+        "recall": 0.7544483985765125,
+        "precision": 0.15351194786386677,
+        "default_rate": 0.06368993653671805,
+        "mean_score": 0.3766619861125946,
+        "flagged_rate": 0.3130099728014506
+      },
+      "effect": {
+        "auc": -0.019355433399580235,
+        "recall": 0.039145907473309594,
+        "precision": -0.032944452878248265,
+        "ks": -0.042173101392044,
+        "default_rate": 0.0,
+        "mean_score": 0.052640944719314575,
+        "flagged_rate": 0.0686763372620127
+      },
+      "auc_effect_ci95": [
+        -0.028052192842173453,
+        -0.009534567097129578
+      ],
+      "psi_score": 0.04842040922696614,
+      "drifted_features": [
+        "NumberOfTime30-59DaysPastDueNotWorse"
+      ]
+    }
+  },
+  "auc_decomposition": {
+    "data_drift": -0.06350517009228906,
+    "concept_drift": -0.1885890992771887,
+    "interaction": 0.11427099396569806,
+    "total": -0.1378232754037797
+  },
+  "month": "2026-08",
+  "model_version": "32542e11c8c8477ea23d42db115efd0e"
+}

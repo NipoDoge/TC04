@@ -1,0 +1,1520 @@
+{
+  "run_id": "mon-20261115T020052Z-71f373",
+  "generated_at": "2026-11-15T02:01:15+00:00",
+  "model_version": "32542e11c8c8477ea23d42db115efd0e",
+  "features": [
+    "age",
+    "MonthlyIncome",
+    "DebtRatio",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfDependents",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+    "NumberOfTimes90DaysLate",
+    "NumberOfTime60-89DaysPastDueNotWorse",
+    "NumberOfOpenCreditLinesAndLoans",
+    "NumberRealEstateLoansOrLines"
+  ],
+  "baseline": {
+    "auc": 0.8572078813187844,
+    "recall": 0.7722681359044995,
+    "ks": 0.5675944207671723,
+    "default_rate": 0.06561707683665569,
+    "mean_score": 0.32701125741004944,
+    "flagged_rate": 0.2457983512229189,
+    "rows": 65867
+  },
+  "thresholds": {
+    "psi_warning": 0.1,
+    "psi_alert": 0.2,
+    "auc_drop": 0.05,
+    "recall_drop": 0.1,
+    "default_rate_factor": 1.5,
+    "min_rows": 500,
+    "latency_factor": 2.0,
+    "decision_threshold": 0.5
+  },
+  "simulation": {
+    "generated_at": "2026-11-15T02:00:47+00:00",
+    "source": "data/production/holdout.parquet",
+    "seed": 42,
+    "parameters": {
+      "stress_share": 0.5,
+      "income_erosion": 0.15,
+      "stress_income_range": [
+        0.4,
+        0.8
+      ],
+      "interest_increase": 0.15,
+      "utilization_range": [
+        0.2,
+        0.9
+      ],
+      "delay_probability": 0.5,
+      "default_stress": 0.15,
+      "default_silent": 0.02
+    },
+    "shocked_features": [
+      "MonthlyIncome",
+      "DebtRatio",
+      "RevolvingUtilizationOfUnsecuredLines",
+      "NumberOfTime30-59DaysPastDueNotWorse"
+    ]
+  },
+  "totals": {
+    "batches": 9,
+    "success": 8,
+    "rejected": 1,
+    "failed": 0,
+    "rows_processed": 35297,
+    "rows_blocked": 4612,
+    "median_duration_s": 1.3150723749859026,
+    "alerts": {
+      "critical": 1,
+      "alert": 17,
+      "warning": 5
+    }
+  },
+  "batches": [
+    {
+      "batch": "2026-01",
+      "month": "2026-01",
+      "intensity": 0.0,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.0570265419955831
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.013565583009039983
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 6.16034887501155
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007813499978510663
+        }
+      },
+      "alerts": [],
+      "status": "success",
+      "rows": 4413,
+      "duration_s": 6.238754499994684,
+      "report": "reports/batches/2026-01.html",
+      "drift": {
+        "age": {
+          "psi": 0.0034248293757631458,
+          "ks_stat": 0.020074808201329453,
+          "ks_pvalue": 0.07036923967712627,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.81871742578745,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.0011098669182205362,
+          "ks_stat": 0.008984389093196044,
+          "ks_pvalue": 0.8891631628439005,
+          "status": "ok",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 6696.157489236347,
+          "ref_median": 5446.0,
+          "cur_median": 5416.0
+        },
+        "DebtRatio": {
+          "psi": 0.0030515391962995376,
+          "ks_stat": 0.012162899416983952,
+          "ks_pvalue": 0.569071100940695,
+          "status": "ok",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 2.7004521940974398,
+          "ref_median": 0.29312192,
+          "cur_median": 0.294970503
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.0010024297202080826,
+          "ks_stat": 0.009032498455960936,
+          "ks_pvalue": 0.8853955170811076,
+          "status": "ok",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.3243742363389984,
+          "ref_median": 0.17311226,
+          "cur_median": 0.170209614
+        },
+        "NumberOfDependents": {
+          "psi": 0.00043695024527942434,
+          "ks_stat": 0.0029248593507263942,
+          "ks_pvalue": 0.9999999999999765,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8450033990482665,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.0009916686130573358,
+          "ks_stat": 0.004670430377985535,
+          "ks_pvalue": 0.9999880308877579,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.2608203036483118,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.003024469747314402,
+          "ks_stat": 0.0008158328215607247,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.08565601631543168,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0013408377022289203,
+          "ks_stat": 0.005543926316630254,
+          "ks_pvalue": 0.9995117575732034,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.06730115567641061,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.002477639905064149,
+          "ks_stat": 0.011270523030480761,
+          "ks_pvalue": 0.6652706564768114,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.792431452526627,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.00021790954538595774,
+          "ks_stat": 0.006353982849569562,
+          "ks_pvalue": 0.9958684557964973,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0487196918196238,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.001305117975443164,
+          "ks_stat": 0.009638063609600067,
+          "ks_pvalue": 0.833296000957489,
+          "status": "ok",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.32744747400283813,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.24259580671787262
+        }
+      },
+      "performance": {
+        "auc": 0.8535010011631914,
+        "ks": 0.5477164269219092,
+        "recall": 0.75,
+        "precision": 0.19381255686988172,
+        "default_rate": 0.0643553138454566,
+        "mean_score": 0.32744747400283813,
+        "flagged_rate": 0.2490369363244958
+      }
+    },
+    {
+      "batch": "2026-02",
+      "month": "2026-02",
+      "intensity": 0.0,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.00682462498662062
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.01122454198775813
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.2096622080134694
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.00731383400852792
+        }
+      },
+      "alerts": [],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.235025208996376,
+      "report": "reports/batches/2026-02.html",
+      "drift": {
+        "age": {
+          "psi": 0.002628102448990471,
+          "ks_stat": 0.008611982736551393,
+          "ks_pvalue": 0.9162991324265107,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.44084315503173,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.0015385388558738116,
+          "ks_stat": 0.008946987060837353,
+          "ks_pvalue": 0.8921334954058371,
+          "status": "ok",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 6568.229147778785,
+          "ref_median": 5446.0,
+          "cur_median": 5460.5
+        },
+        "DebtRatio": {
+          "psi": 0.003439114085826025,
+          "ks_stat": 0.014353734697744785,
+          "ks_pvalue": 0.35838701732357425,
+          "status": "ok",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 1.7488292095002267,
+          "ref_median": 0.29312192,
+          "cur_median": 0.29830019799999996
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.0011595490286871587,
+          "ks_stat": 0.010672572126409707,
+          "ks_pvalue": 0.7296917599591297,
+          "status": "ok",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.32781255522552133,
+          "ref_median": 0.17311226,
+          "cur_median": 0.179421909
+        },
+        "NumberOfDependents": {
+          "psi": 0.0021084044654222827,
+          "ks_stat": 0.007377317991869137,
+          "ks_pvalue": 0.9768102052860521,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.871713508612874,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.0018074060327770655,
+          "ks_stat": 0.0067178390927919995,
+          "ks_pvalue": 0.9916141182533796,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.271532184950136,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.003282764906723876,
+          "ks_stat": 0.006963984031063575,
+          "ks_pvalue": 0.987295149475336,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.09451495920217588,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.002716097828155253,
+          "ks_stat": 0.004548583376366433,
+          "ks_pvalue": 0.9999940614661591,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.07003626473254759,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.0009728882332632577,
+          "ks_stat": 0.00788249132661778,
+          "ks_pvalue": 0.9575867579008698,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.804170444242974,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.00046978425815189645,
+          "ks_stat": 0.010108545750612208,
+          "ks_pvalue": 0.787992425290381,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.083408884859474,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.002274899432087729,
+          "ks_stat": 0.016244232654571533,
+          "ks_pvalue": 0.22283391654491425,
+          "status": "ok",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.3344413638114929,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.25012442469596863
+        }
+      },
+      "performance": {
+        "auc": 0.8469783898989584,
+        "ks": 0.5706886065508481,
+        "recall": 0.7720364741641338,
+        "precision": 0.22144725370531823,
+        "default_rate": 0.07456935630099729,
+        "mean_score": 0.3344413638114929,
+        "flagged_rate": 0.2599728014505893
+      }
+    },
+    {
+      "batch": "2026-03",
+      "month": "2026-03",
+      "intensity": 0.0,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.006634707999182865
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.01971391699044034
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.33198108401848
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007312417001230642
+        }
+      },
+      "alerts": [],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.3656421260093339,
+      "report": "reports/batches/2026-03.html",
+      "drift": {
+        "age": {
+          "psi": 0.003269642092591104,
+          "ks_stat": 0.020727688001072386,
+          "ks_pvalue": 0.05647586475909061,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.81595648232094,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.0023136625796592292,
+          "ks_stat": 0.007837529984493996,
+          "ks_pvalue": 0.9596040809509072,
+          "status": "ok",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 6563.797144152312,
+          "ref_median": 5446.0,
+          "cur_median": 5452.5
+        },
+        "DebtRatio": {
+          "psi": 0.0017137722253932038,
+          "ks_stat": 0.013689183625218204,
+          "ks_pvalue": 0.41684066757242877,
+          "status": "ok",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 1.621828779203309,
+          "ref_median": 0.29312192,
+          "cur_median": 0.296755806
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.0019033891955193406,
+          "ks_stat": 0.01336879362972454,
+          "ks_pvalue": 0.4469074794379414,
+          "status": "ok",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.32874083303037166,
+          "ref_median": 0.17311226,
+          "cur_median": 0.17940035650000002
+        },
+        "NumberOfDependents": {
+          "psi": 0.0030941842041216374,
+          "ks_stat": 0.01309055016096683,
+          "ks_pvalue": 0.4739376149504273,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8089301903898459,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.0018746110521632498,
+          "ks_stat": 0.005357911622257072,
+          "ks_pvalue": 0.9997423902062551,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.2665457842248413,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.002533224045588086,
+          "ks_stat": 0.0024032880016835456,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.09519492293744333,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0010528952580036786,
+          "ks_stat": 0.0009221101216067007,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.06346328195829556,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.002370275143631563,
+          "ks_stat": 0.0104172119367828,
+          "ks_pvalue": 0.7564897947875879,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.853354487760653,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.0006220721511910631,
+          "ks_stat": 0.010913211313311577,
+          "ks_pvalue": 0.7040075505512464,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0591568449682685,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.00220274658369714,
+          "ks_stat": 0.013539135456085205,
+          "ks_pvalue": 0.43077588081359863,
+          "status": "ok",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.32836630940437317,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.2397744059562683
+        }
+      },
+      "performance": {
+        "auc": 0.8444102890255105,
+        "ks": 0.5516125761583911,
+        "recall": 0.7452830188679245,
+        "precision": 0.21624087591240876,
+        "default_rate": 0.07207615593834996,
+        "mean_score": 0.32836630940437317,
+        "flagged_rate": 0.2484134179510426
+      }
+    },
+    {
+      "batch": "2026-04",
+      "month": "2026-04",
+      "intensity": 0.2,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.008299875014927238
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.01256945898057893
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.2429845829901751
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007344290992477909
+        }
+      },
+      "alerts": [],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.2711982079781592,
+      "report": "reports/batches/2026-04.html",
+      "drift": {
+        "age": {
+          "psi": 0.0008199995353651134,
+          "ks_stat": 0.010737725811682308,
+          "ks_pvalue": 0.7227723613414605,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.57796917497733,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.020611656953186484,
+          "ks_stat": 0.05860160714809498,
+          "ks_pvalue": 8.732508788256268e-13,
+          "status": "ok",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 6294.973708068903,
+          "ref_median": 5446.0,
+          "cur_median": 5057.0
+        },
+        "DebtRatio": {
+          "psi": 0.020467677882647015,
+          "ks_stat": 0.058712530832723875,
+          "ks_pvalue": 7.839714989989554e-13,
+          "status": "ok",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 2.212503505839706,
+          "ref_median": 0.29312192,
+          "cur_median": 0.323152493072165
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.028389881740964015,
+          "ks_stat": 0.06886132018475477,
+          "ks_pvalue": 1.7099149630008676e-17,
+          "status": "ok",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.3647043777590748,
+          "ref_median": 0.17311226,
+          "cur_median": 0.23656208569575954
+        },
+        "NumberOfDependents": {
+          "psi": 0.002748243033309228,
+          "ks_stat": 0.005744890239474221,
+          "ks_pvalue": 0.9990960457979597,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8429283771532184,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.01226357280664246,
+          "ks_stat": 0.040520117458047955,
+          "ks_pvalue": 2.457281782219558e-06,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.31958295557570265,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.0008964352962188785,
+          "ks_stat": 0.0032354719979481583,
+          "ks_pvalue": 0.9999999999901888,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.07502266545784225,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0019301603886113555,
+          "ks_stat": 0.0048698577331739434,
+          "ks_pvalue": 0.9999666028562546,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.05961015412511333,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.0024251048174115087,
+          "ks_stat": 0.012653734170569142,
+          "ks_pvalue": 0.5179237989863612,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.953082502266545,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 2.432104926054879e-05,
+          "ks_stat": 0.00530389676022458,
+          "ks_pvalue": 0.9997886782908508,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0747960108794197,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.018598517730265197,
+          "ks_stat": 0.059718549251556396,
+          "ks_pvalue": 2.920407242857498e-13,
+          "status": "ok",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.35894808173179626,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.28617432713508606
+        }
+      },
+      "performance": {
+        "auc": 0.8214819109381455,
+        "ks": 0.4934042013976886,
+        "recall": 0.7295774647887324,
+        "precision": 0.19770992366412213,
+        "default_rate": 0.08046237533998186,
+        "mean_score": 0.35894808173179626,
+        "flagged_rate": 0.2969174977334542
+      }
+    },
+    {
+      "batch": "2026-05-entrega-corrompida",
+      "month": "2026-05",
+      "intensity": 0.4,
+      "kind": "corrupted",
+      "stages": {
+        "ingest": {
+          "status": "rejected",
+          "duration_s": 0.08733825001399964
+        }
+      },
+      "alerts": [
+        {
+          "batch": "2026-05-entrega-corrompida",
+          "severity": "critical",
+          "rule": "contrato_violado",
+          "message": "Lote bloqueado pelo contrato de dados: linhas duplicadas (400 linhas); MonthlyIncome: valor nulo (120 linhas); age: fora do intervalo de 18 a 100 (40 linhas); DebtRatio: menor que 0 (20 linhas)"
+        }
+      ],
+      "status": "rejected",
+      "rows": 4612,
+      "duration_s": 0.08733825001399964,
+      "violations": [
+        {
+          "column": null,
+          "check": "linhas duplicadas",
+          "rows": 400
+        },
+        {
+          "column": "MonthlyIncome",
+          "check": "not_nullable",
+          "rows": 120
+        },
+        {
+          "column": "age",
+          "check": "in_range(18, 100)",
+          "rows": 40
+        },
+        {
+          "column": "DebtRatio",
+          "check": "greater_than_or_equal_to(0)",
+          "rows": 20
+        }
+      ],
+      "quarantine": "data/quarantine/mon-20261115T020052Z-71f373/2026-05-entrega-corrompida.parquet",
+      "error": null
+    },
+    {
+      "batch": "2026-05",
+      "month": "2026-05",
+      "intensity": 0.4,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.006415124982595444
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.025350707990583032
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.2588871250045486
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007927166996523738
+        }
+      },
+      "alerts": [
+        {
+          "batch": "2026-05",
+          "severity": "alert",
+          "rule": "queda_auc",
+          "message": "AUC caiu de 0,857 para 0,780 (queda de 0,078, limite 0,05)",
+          "value": 0.7796823451708593,
+          "threshold": 0.8072078813187844
+        },
+        {
+          "batch": "2026-05",
+          "severity": "alert",
+          "rule": "inadimplencia_elevada",
+          "message": "Inadimplência observada de 10,4%, 1,6x a da referência (6,6%)",
+          "value": 0.10448776065276519,
+          "threshold": 0.09842561525498353
+        }
+      ],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.2985801249742508,
+      "report": "reports/batches/2026-05.html",
+      "drift": {
+        "age": {
+          "psi": 0.0019564991375346716,
+          "ks_stat": 0.015119071990190469,
+          "ks_pvalue": 0.2979948260233002,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.685856754306435,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.05742708075022764,
+          "ks_stat": 0.1075741781967538,
+          "ks_pvalue": 3.99544827929685e-42,
+          "status": "ok",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 5973.918177697189,
+          "ref_median": 5446.0,
+          "cur_median": 4700.0
+        },
+        "DebtRatio": {
+          "psi": 0.08495687450006731,
+          "ks_stat": 0.123839678383736,
+          "ks_pvalue": 9.925317285163843e-56,
+          "status": "ok",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 2.3491278717566098,
+          "ref_median": 0.29312192,
+          "cur_median": 0.3592476345319149
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.07036194470015314,
+          "ks_stat": 0.1158067768118839,
+          "ks_pvalue": 9.067154252154065e-49,
+          "status": "ok",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.3996672988877559,
+          "ref_median": 0.17311226,
+          "cur_median": 0.3090926665
+        },
+        "NumberOfDependents": {
+          "psi": 0.0025451798762057974,
+          "ks_stat": 0.011888321174042038,
+          "ks_pvalue": 0.5985693873030652,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8320489573889392,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.0573720681047324,
+          "ks_stat": 0.09514387085786669,
+          "ks_pvalue": 4.975743405664804e-33,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.40457842248413417,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.001328808457652075,
+          "ks_stat": 0.002102199105835756,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.0813689936536718,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0014027826009587099,
+          "ks_stat": 0.0021500027921041998,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.06368993653671805,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.0024641362853408,
+          "ks_stat": 0.015789149460654572,
+          "ks_pvalue": 0.2513103978854182,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.771758839528559,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 6.449917110819515e-05,
+          "ks_stat": 0.002718660881241508,
+          "ks_pvalue": 0.9999999999999999,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0441976427923845,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.070653293647074,
+          "ks_stat": 0.12155455350875854,
+          "ks_pvalue": 0.0,
+          "status": "ok",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.39261752367019653,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.33978205919265747
+        }
+      },
+      "performance": {
+        "auc": 0.7796823451708593,
+        "ks": 0.42082539306065464,
+        "recall": 0.7245119305856833,
+        "precision": 0.21301020408163265,
+        "default_rate": 0.10448776065276519,
+        "mean_score": 0.39261752367019653,
+        "flagged_rate": 0.35539437896645515
+      }
+    },
+    {
+      "batch": "2026-06",
+      "month": "2026-06",
+      "intensity": 0.6,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.006445542006986216
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.01422179100336507
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.3032999169954564
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007597374991746619
+        }
+      },
+      "alerts": [
+        {
+          "batch": "2026-06",
+          "severity": "warning",
+          "rule": "drift_feature",
+          "message": "Drift em MonthlyIncome: PSI 0,119 (limite 0,10)",
+          "column": "MonthlyIncome",
+          "value": 0.11878946738262353,
+          "threshold": 0.1
+        },
+        {
+          "batch": "2026-06",
+          "severity": "warning",
+          "rule": "drift_feature",
+          "message": "Drift em DebtRatio: PSI 0,154 (limite 0,10)",
+          "column": "DebtRatio",
+          "value": 0.1541104430066552,
+          "threshold": 0.1
+        },
+        {
+          "batch": "2026-06",
+          "severity": "warning",
+          "rule": "drift_feature",
+          "message": "Drift em RevolvingUtilizationOfUnsecuredLines: PSI 0,131 (limite 0,10)",
+          "column": "RevolvingUtilizationOfUnsecuredLines",
+          "value": 0.13096507413414937,
+          "threshold": 0.1
+        },
+        {
+          "batch": "2026-06",
+          "severity": "warning",
+          "rule": "drift_predicao",
+          "message": "Drift do score do modelo: PSI 0,127 (limite 0,10)",
+          "column": "score",
+          "value": 0.1272160153346911,
+          "threshold": 0.1
+        },
+        {
+          "batch": "2026-06",
+          "severity": "alert",
+          "rule": "queda_auc",
+          "message": "AUC caiu de 0,857 para 0,751 (queda de 0,106, limite 0,05)",
+          "value": 0.7507612474437628,
+          "threshold": 0.8072078813187844
+        },
+        {
+          "batch": "2026-06",
+          "severity": "alert",
+          "rule": "inadimplencia_elevada",
+          "message": "Inadimplência observada de 11,3%, 1,7x a da referência (6,6%)",
+          "value": 0.11332728921124206,
+          "threshold": 0.09842561525498353
+        }
+      ],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.3315646249975543,
+      "report": "reports/batches/2026-06.html",
+      "drift": {
+        "age": {
+          "psi": 0.003521700726440995,
+          "ks_stat": 0.014712403429637089,
+          "ks_pvalue": 0.3291451346152915,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.58227561196736,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.11878946738262353,
+          "ks_stat": 0.1547638768368374,
+          "ks_pvalue": 5.900342274057705e-87,
+          "status": "warning",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 5351.242293744333,
+          "ref_median": 5446.0,
+          "cur_median": 4288.0
+        },
+        "DebtRatio": {
+          "psi": 0.1541104430066552,
+          "ks_stat": 0.16172961926724483,
+          "ks_pvalue": 5.769673612469482e-95,
+          "status": "warning",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 1.5882197032162433,
+          "ref_median": 0.29312192,
+          "cur_median": 0.3928230038461539
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.13096507413414937,
+          "ks_stat": 0.1649454667026541,
+          "ks_pvalue": 8.740911050495325e-99,
+          "status": "warning",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.4334193138115014,
+          "ref_median": 0.17311226,
+          "cur_median": 0.3838526010082015
+        },
+        "NumberOfDependents": {
+          "psi": 0.001976363353113117,
+          "ks_stat": 0.005837603651447365,
+          "ks_pvalue": 0.9988238410304338,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8393019038984587,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.08834288723371708,
+          "ks_stat": 0.12075583821960734,
+          "ks_pvalue": 5.307183855671933e-53,
+          "status": "ok",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.4385766092475068,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.00048492840228240425,
+          "ks_stat": 0.0016828535527533273,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.07751586582048957,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0010574347876635495,
+          "ks_stat": 0.0028299665273716634,
+          "ks_pvalue": 0.9999999999999976,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.06323662737987307,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.005271308228968411,
+          "ks_stat": 0.02271587676041764,
+          "ks_pvalue": 0.02760735950898785,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.635992747053491,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.0001440314211556175,
+          "ks_stat": 0.0034336102253695877,
+          "ks_pvalue": 0.9999999997976017,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.056663644605621,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.1272160153346911,
+          "ks_stat": 0.1621190309524536,
+          "ks_pvalue": 0.0,
+          "status": "warning",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.4179964065551758,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.3917703628540039
+        }
+      },
+      "performance": {
+        "auc": 0.7507612474437628,
+        "ks": 0.3750184049079755,
+        "recall": 0.718,
+        "precision": 0.20467502850627137,
+        "default_rate": 0.11332728921124206,
+        "mean_score": 0.4179964065551758,
+        "flagged_rate": 0.3975521305530372
+      }
+    },
+    {
+      "batch": "2026-07",
+      "month": "2026-07",
+      "intensity": 0.8,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.007642166019650176
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.01255187499918975
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.4047949999803677
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007511499978136271
+        }
+      },
+      "alerts": [
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em MonthlyIncome: PSI 0,237 (limite 0,20)",
+          "column": "MonthlyIncome",
+          "value": 0.23698040717716057,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em DebtRatio: PSI 0,299 (limite 0,20)",
+          "column": "DebtRatio",
+          "value": 0.29883856745583925,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em RevolvingUtilizationOfUnsecuredLines: PSI 0,230 (limite 0,20)",
+          "column": "RevolvingUtilizationOfUnsecuredLines",
+          "value": 0.23030784856134215,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-07",
+          "severity": "warning",
+          "rule": "drift_feature",
+          "message": "Drift em NumberOfTime30-59DaysPastDueNotWorse: PSI 0,152 (limite 0,10)",
+          "column": "NumberOfTime30-59DaysPastDueNotWorse",
+          "value": 0.15239758929041472,
+          "threshold": 0.1
+        },
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "drift_predicao",
+          "message": "Drift do score do modelo: PSI 0,225 (limite 0,20)",
+          "column": "score",
+          "value": 0.22459890258976378,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "queda_auc",
+          "message": "AUC caiu de 0,857 para 0,743 (queda de 0,114, limite 0,05)",
+          "value": 0.7427620085400731,
+          "threshold": 0.8072078813187844
+        },
+        {
+          "batch": "2026-07",
+          "severity": "alert",
+          "rule": "inadimplencia_elevada",
+          "message": "Inadimplência observada de 13,0%, 2,0x a da referência (6,6%)",
+          "value": 0.1298730734360834,
+          "threshold": 0.09842561525498353
+        }
+      ],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.432500540977344,
+      "report": "reports/batches/2026-07.html",
+      "drift": {
+        "age": {
+          "psi": 0.002243384742157167,
+          "ks_stat": 0.012717349686552804,
+          "ks_pvalue": 0.5114097764277685,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.66727107887579,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.23698040717716057,
+          "ks_stat": 0.20781651246685867,
+          "ks_pvalue": 4.082653700546201e-157,
+          "status": "alert",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 4831.562783318223,
+          "ref_median": 5446.0,
+          "cur_median": 3888.5
+        },
+        "DebtRatio": {
+          "psi": 0.29883856745583925,
+          "ks_stat": 0.22684584822507164,
+          "ks_pvalue": 1.77733275422708e-187,
+          "status": "alert",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 3.192945698558931,
+          "ref_median": 0.29312192,
+          "cur_median": 0.4504474474401474
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.23030784856134215,
+          "ks_stat": 0.21285843181252873,
+          "ks_pvalue": 6.865282552474055e-165,
+          "status": "alert",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.4619254556291681,
+          "ref_median": 0.17311226,
+          "cur_median": 0.45528678183827803
+        },
+        "NumberOfDependents": {
+          "psi": 0.0023440595311390346,
+          "ks_stat": 0.011888321174042038,
+          "ks_pvalue": 0.5985693873030652,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8374886672710788,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.15239758929041472,
+          "ks_stat": 0.1638202081198794,
+          "ks_pvalue": 1.9356805522801266e-97,
+          "status": "warning",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.5124660018132366,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.004177452955395561,
+          "ks_stat": 0.0025739800585263817,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.08476881233000906,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0013608266254618703,
+          "ks_stat": 0.006456439782131396,
+          "ks_pvalue": 0.9948983784358822,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.05530371713508613,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.0014561981084157765,
+          "ks_stat": 0.009869475702850808,
+          "ks_pvalue": 0.8115201583422865,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.733454215775158,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.0005037232009537436,
+          "ks_stat": 0.009779938421199175,
+          "ks_pvalue": 0.8200992312169725,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0439709882139618,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.22459890258976378,
+          "ks_stat": 0.2091662883758545,
+          "ks_pvalue": 0.0,
+          "status": "alert",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.44687938690185547,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.4421706795692444
+        }
+      },
+      "performance": {
+        "auc": 0.7427620085400731,
+        "ks": 0.3684360065043844,
+        "recall": 0.7556719022687609,
+        "precision": 0.22435233160621762,
+        "default_rate": 0.1298730734360834,
+        "mean_score": 0.44687938690185547,
+        "flagged_rate": 0.4374433363553944
+      }
+    },
+    {
+      "batch": "2026-08",
+      "month": "2026-08",
+      "intensity": 1.0,
+      "kind": "regular",
+      "stages": {
+        "ingest": {
+          "status": "success",
+          "duration_s": 0.006835334002971649
+        },
+        "score": {
+          "status": "success",
+          "duration_s": 0.010989375005010515
+        },
+        "drift": {
+          "status": "success",
+          "duration_s": 1.2214445419958793
+        },
+        "evaluate": {
+          "status": "success",
+          "duration_s": 0.007269541994901374
+        }
+      },
+      "alerts": [
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em MonthlyIncome: PSI 0,379 (limite 0,20)",
+          "column": "MonthlyIncome",
+          "value": 0.37874463912770634,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em DebtRatio: PSI 0,427 (limite 0,20)",
+          "column": "DebtRatio",
+          "value": 0.42691446991279847,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em RevolvingUtilizationOfUnsecuredLines: PSI 0,429 (limite 0,20)",
+          "column": "RevolvingUtilizationOfUnsecuredLines",
+          "value": 0.4286832814229222,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "drift_feature",
+          "message": "Drift em NumberOfTime30-59DaysPastDueNotWorse: PSI 0,246 (limite 0,20)",
+          "column": "NumberOfTime30-59DaysPastDueNotWorse",
+          "value": 0.2461621359925272,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "drift_predicao",
+          "message": "Drift do score do modelo: PSI 0,390 (limite 0,20)",
+          "column": "score",
+          "value": 0.3904436593410623,
+          "threshold": 0.2
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "queda_auc",
+          "message": "AUC caiu de 0,857 para 0,691 (queda de 0,167, limite 0,05)",
+          "value": 0.6906858445132439,
+          "threshold": 0.8072078813187844
+        },
+        {
+          "batch": "2026-08",
+          "severity": "alert",
+          "rule": "inadimplencia_elevada",
+          "message": "Inadimplência observada de 13,9%, 2,1x a da referência (6,6%)",
+          "value": 0.1387126019945603,
+          "threshold": 0.09842561525498353
+        }
+      ],
+      "status": "success",
+      "rows": 4412,
+      "duration_s": 1.2465387929987628,
+      "report": "reports/batches/2026-08.html",
+      "drift": {
+        "age": {
+          "psi": 0.002937413530895236,
+          "ks_stat": 0.013459222154879269,
+          "ks_pvalue": 0.4383031736754842,
+          "status": "ok",
+          "ref_mean": 51.34788285484385,
+          "cur_mean": 51.339755213055305,
+          "ref_median": 51.0,
+          "cur_median": 51.0
+        },
+        "MonthlyIncome": {
+          "psi": 0.37874463912770634,
+          "ks_stat": 0.2661578317778507,
+          "ks_pvalue": 4.3844264084715887e-259,
+          "status": "alert",
+          "ref_mean": 6755.913279791094,
+          "cur_mean": 4598.305757026292,
+          "ref_median": 5446.0,
+          "cur_median": 3477.5
+        },
+        "DebtRatio": {
+          "psi": 0.42691446991279847,
+          "ks_stat": 0.27686068897788907,
+          "ks_pvalue": 1.0922792906704021e-280,
+          "status": "alert",
+          "ref_mean": 1.9869480187732094,
+          "cur_mean": 2.9892210680795364,
+          "ref_median": 0.29312192,
+          "cur_median": 0.5005085876470587
+        },
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "psi": 0.4286832814229222,
+          "ks_stat": 0.2935976707423313,
+          "ks_pvalue": 2.5979838e-316,
+          "status": "alert",
+          "ref_mean": 0.322831945594501,
+          "cur_mean": 0.518722571009647,
+          "ref_median": 0.17311226,
+          "cur_median": 0.5543550213400733
+        },
+        "NumberOfDependents": {
+          "psi": 0.0019686696577234804,
+          "ks_stat": 0.013904455062683563,
+          "ks_pvalue": 0.3973124463547366,
+          "status": "ok",
+          "ref_mean": 0.8537962864560402,
+          "cur_mean": 0.8213961922030825,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime30-59DaysPastDueNotWorse": {
+          "psi": 0.2461621359925272,
+          "ks_stat": 0.2116443241670235,
+          "ks_pvalue": 5.326826195913591e-163,
+          "status": "alert",
+          "ref_mean": 0.2523873867035086,
+          "cur_mean": 0.5845421577515866,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "psi": 0.0005632264082939159,
+          "ks_stat": 0.0014561989743308024,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.08331941639971457,
+          "cur_mean": 0.07842248413417952,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfTime60-89DaysPastDueNotWorse": {
+          "psi": 0.0009225385700696421,
+          "ks_stat": 0.00169669363525915,
+          "ks_pvalue": 1.0,
+          "status": "ok",
+          "ref_mean": 0.0628235687066361,
+          "cur_mean": 0.06119673617407072,
+          "ref_median": 0.0,
+          "cur_median": 0.0
+        },
+        "NumberOfOpenCreditLinesAndLoans": {
+          "psi": 0.0015711931207202747,
+          "ks_stat": 0.010487582321478284,
+          "ks_pvalue": 0.749162132072743,
+          "status": "ok",
+          "ref_mean": 8.80413560660118,
+          "cur_mean": 8.803490480507707,
+          "ref_median": 8.0,
+          "cur_median": 8.0
+        },
+        "NumberRealEstateLoansOrLines": {
+          "psi": 0.0003214929982328993,
+          "ks_stat": 0.007286738058551845,
+          "ks_pvalue": 0.9794869648185786,
+          "status": "ok",
+          "ref_mean": 1.05772237994747,
+          "cur_mean": 1.0333182230281053,
+          "ref_median": 1.0,
+          "cur_median": 1.0
+        },
+        "score": {
+          "psi": 0.3904436593410623,
+          "ks_stat": 0.27491915225982666,
+          "ks_pvalue": 0.0,
+          "status": "alert",
+          "ref_mean": 0.32701125741004944,
+          "cur_mean": 0.48579567670822144,
+          "ref_median": 0.24205584824085236,
+          "cur_median": 0.5030618906021118
+        }
+      },
+      "performance": {
+        "auc": 0.6906858445132439,
+        "ks": 0.2785517715858273,
+        "recall": 0.7303921568627451,
+        "precision": 0.2018970189701897,
+        "default_rate": 0.1387126019945603,
+        "mean_score": 0.48579567670822144,
+        "flagged_rate": 0.5018132366273799
+      }
+    }
+  ]
+}
