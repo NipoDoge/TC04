@@ -1,0 +1,277 @@
+{
+  "created_at_utc": "2026-11-15T01:47:19.975872+00:00",
+  "sources": {
+    "reference": {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/reference/reference.parquet",
+      "sha256": "ea42310cca334ea19e4aece22e79dbfeb1349e9431dd1b554843ddf7beafe943"
+    },
+    "holdout": {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/data/production/holdout.parquet",
+      "sha256": "83a49fea827504af140c00fcae9f751adfa6335ebf28aa8ed7da824f892330d3"
+    },
+    "model": {
+      "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+      "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
+    }
+  },
+  "versions": {
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "evidently": "0.7.23"
+  },
+  "settings": {
+    "seed": 42,
+    "sensitivity_seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "income_quantile": 0.25,
+    "income_cutoff": 3500.0,
+    "periods": [
+      {
+        "name": "c0_control",
+        "shock_probability": 0.0
+      },
+      {
+        "name": "c1",
+        "shock_probability": 0.1
+      },
+      {
+        "name": "c2",
+        "shock_probability": 0.25
+      },
+      {
+        "name": "c3",
+        "shock_probability": 0.5
+      }
+    ],
+    "classification_threshold": 0.5,
+    "auc_drop_alert": 0.05,
+    "recall_drop_alert": 0.1
+  },
+  "mechanism": "Yq = Y0 OR (MonthlyIncome <= cutoff AND U < q); U ~ Uniform(0,1), compartilhado entre períodos.",
+  "limitations": "Experimento sintético, sem série temporal real ou inferência de causa econômica. O mecanismo de alteração dos rótulos é uma hipótese controlada, não desfechos observados. As métricas comparam o mesmo holdout com o seu controle histórico, não com a validação. Nenhum parâmetro do modelo ou limiar de classificação é ajustado neste experimento. As cinco seeds avaliam sensibilidade aos sorteios; não são intervalos de confiança. Na operação real, métricas supervisionadas exigem rótulos maturados no horizonte do alvo.",
+  "invariants": {
+    "features_identical": true,
+    "probabilities_identical": true,
+    "predicted_classes_identical": true
+  },
+  "income_segment_rows": 9147,
+  "results": [
+    {
+      "scenario": "c0_control",
+      "shock_probability": 0.0,
+      "changed_labels": 0,
+      "rows": 35297,
+      "positive_labels": 2335,
+      "prevalence": 0.06615293084398108,
+      "mean_score": 0.32679033279418945,
+      "predicted_positive_rate": 0.24826472504745445,
+      "auc": 0.8432570982067857,
+      "average_precision": 0.3593542801280131,
+      "ks_classification": 0.5331301880680979,
+      "recall": 0.7408993576017131,
+      "precision": 0.19742097455209404,
+      "f1": 0.31176788610560463,
+      "accuracy": 0.7836076720401167,
+      "false_positive_rate": 0.2133669073478551,
+      "false_negative_rate": 0.25910064239828695,
+      "brier": 0.14759500324726105,
+      "log_loss": 0.45970743894577026,
+      "tn": 25929,
+      "fp": 7033,
+      "fn": 605,
+      "tp": 1730,
+      "auc_drop": 0.0,
+      "recall_drop": 0.0,
+      "performance_alert": false
+    },
+    {
+      "scenario": "c1",
+      "shock_probability": 0.1,
+      "changed_labels": 815,
+      "rows": 35297,
+      "positive_labels": 3150,
+      "prevalence": 0.08924271184519932,
+      "mean_score": 0.32679033279418945,
+      "predicted_positive_rate": 0.24826472504745445,
+      "auc": 0.7680764701438481,
+      "average_precision": 0.33265813547223083,
+      "ks_classification": 0.4144242643293877,
+      "recall": 0.6222222222222222,
+      "precision": 0.22366769371219902,
+      "f1": 0.3290522958112986,
+      "accuracy": 0.7735501600702609,
+      "false_positive_rate": 0.21162161321429682,
+      "false_negative_rate": 0.37777777777777777,
+      "brier": 0.15491412580013275,
+      "log_loss": 0.47908422350883484,
+      "tn": 25344,
+      "fp": 6803,
+      "fn": 1190,
+      "tp": 1960,
+      "auc_drop": 0.07518062806293768,
+      "recall_drop": 0.11867713537949087,
+      "performance_alert": true
+    },
+    {
+      "scenario": "c2",
+      "shock_probability": 0.25,
+      "changed_labels": 2062,
+      "rows": 35297,
+      "positive_labels": 4397,
+      "prevalence": 0.12457149332804487,
+      "mean_score": 0.32679033279418945,
+      "predicted_positive_rate": 0.24826472504745445,
+      "auc": 0.7100688907485466,
+      "average_precision": 0.3267899655937672,
+      "ks_classification": 0.32153494623062356,
+      "recall": 0.5249033431885376,
+      "precision": 0.26338012096314045,
+      "f1": 0.3507598784194529,
+      "accuracy": 0.7579397682522594,
+      "false_positive_rate": 0.20889967637540452,
+      "false_negative_rate": 0.47509665681146235,
+      "brier": 0.16581472754478455,
+      "log_loss": 0.508340060710907,
+      "tn": 24445,
+      "fp": 6455,
+      "fn": 2089,
+      "tp": 2308,
+      "auc_drop": 0.13318820745823912,
+      "recall_drop": 0.2159960144131755,
+      "performance_alert": true
+    },
+    {
+      "scenario": "c3",
+      "shock_probability": 0.5,
+      "changed_labels": 4123,
+      "rows": 35297,
+      "positive_labels": 6458,
+      "prevalence": 0.18296172479247527,
+      "mean_score": 0.32679033279418945,
+      "predicted_positive_rate": 0.24826472504745445,
+      "auc": 0.6696259573995079,
+      "average_precision": 0.36044638590507244,
+      "ks_classification": 0.25875171125230423,
+      "recall": 0.4535459894704243,
+      "precision": 0.33424626269542396,
+      "f1": 0.38486301819854146,
+      "accuracy": 0.7347366631725076,
+      "false_positive_rate": 0.2022955026179826,
+      "false_negative_rate": 0.5464540105295758,
+      "brier": 0.18235425651073456,
+      "log_loss": 0.553311824798584,
+      "tn": 23005,
+      "fp": 5834,
+      "fn": 3529,
+      "tp": 2929,
+      "auc_drop": 0.17363114080727782,
+      "recall_drop": 0.2873533681312888,
+      "performance_alert": true
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "analysis.html",
+      "sha256": "5e16442ce7de3d2507a5c31af17ba590e5669be30ec33c175a2b4e0b85c83096"
+    },
+    {
+      "file": "classification_c0_control.html",
+      "sha256": "692e7ac541323f6e60d4aa64dbb483281d10ec03a89c7b81957d1e40ce08f2c8"
+    },
+    {
+      "file": "classification_c0_control.json",
+      "sha256": "3cc521a7518f67452158c4a4115de8ff1a1303f904153ae166e0aa59302cdcab"
+    },
+    {
+      "file": "classification_c1.html",
+      "sha256": "a1a25ad8033c9c6d8f4514fe108dc7608375e6cba85388ae8666825f07861790"
+    },
+    {
+      "file": "classification_c1.json",
+      "sha256": "752ac9b8b239aa9f29b3135011a6d11b1868a29c9ead9175c877e9090c203efa"
+    },
+    {
+      "file": "classification_c2.html",
+      "sha256": "e55399b7c3214bb32cef448f6ba8bba99ff024265299519857a4b808462de551"
+    },
+    {
+      "file": "classification_c2.json",
+      "sha256": "a44ac5c2cbc78d58cc008f5b42d972cc8dee27922edcdaf6bbe08be2292a29d5"
+    },
+    {
+      "file": "classification_c3.html",
+      "sha256": "0230d5a261d55f07d41ffada18625a32603a6221d09e21ddbd9ef5c6ec9f87f7"
+    },
+    {
+      "file": "classification_c3.json",
+      "sha256": "9a5cc0c51722874284e54fa2c254526278eea7704c845733d3dc78abd31d661d"
+    },
+    {
+      "file": "datasets/c0_control.parquet",
+      "sha256": "cd6d28373e8b2d062a638e88e70a359e54322a6fc5315560ba2ccd19f6d74d4d"
+    },
+    {
+      "file": "datasets/c1.parquet",
+      "sha256": "bb8c87539b5cc8d595a84549f00e419a40542ca76ff6dc5c1c95768c5261eb87"
+    },
+    {
+      "file": "datasets/c2.parquet",
+      "sha256": "48ca2f0ede2b4e1b4edfd765e052ec4e1ba986f613ae9dbadd2c9d50edffe919"
+    },
+    {
+      "file": "datasets/c3.parquet",
+      "sha256": "f7cce9707f764e405e34f76b658ba85da4bc916f4202d152c993a27d5f5db1e0"
+    },
+    {
+      "file": "feature_drift.csv",
+      "sha256": "5a7ade41a20bdba25e34c5c1e09603b8ee8f01acd3bca387353a35c8a39fdab4"
+    },
+    {
+      "file": "feature_drift.html",
+      "sha256": "68572b1c52b53a27c76ac3d4910160418374d220854547b43944d3312302b72b"
+    },
+    {
+      "file": "feature_drift.json",
+      "sha256": "cd422a616a72698ace1d4104e81f8205d371997d020463e33365aa355a9563ec"
+    },
+    {
+      "file": "interventions.parquet",
+      "sha256": "903e0f2bbf92c480edd432b2ad4a5a7aea2c553ee75b71bafed8865091473cda"
+    },
+    {
+      "file": "metrics.csv",
+      "sha256": "8629620ab20cd86afd3d59dc7de081893d88edd0096ca87c54bd8b7bed006157"
+    },
+    {
+      "file": "predictions/c0_control.parquet",
+      "sha256": "a67023ec4606170c778a081d14620a5b987d6939f745aba8646779421e4d855f"
+    },
+    {
+      "file": "predictions/c1.parquet",
+      "sha256": "96162896a7d9437a3ceb6623a422d17818a9756b6b3e8dbe55863b99f8aee21d"
+    },
+    {
+      "file": "predictions/c2.parquet",
+      "sha256": "c962d291db8b3a46d3f4f679f10dc764dcfdd33312c679f6d71d0750626d3ad2"
+    },
+    {
+      "file": "predictions/c3.parquet",
+      "sha256": "035ae36149faf9fd3e76fdd10bd92f99088d2396f06262ac861f49d69e8080e8"
+    },
+    {
+      "file": "segment_metrics.csv",
+      "sha256": "5e6b9d7c3276038bcebfbe341f63cef999904d3fec5d51b43459a09b110793ff"
+    },
+    {
+      "file": "sensitivity.csv",
+      "sha256": "4817576aa98664acfdb30381102ff0b2f377eb0b69108f3ff3bee47ff80f616a"
+    }
+  ]
+}

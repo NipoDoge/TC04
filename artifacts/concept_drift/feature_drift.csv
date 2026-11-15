@@ -1,0 +1,11 @@
+scenario,feature,method,score,score_kind,threshold,drift_detected
+c3_vs_control,age,psi,0.0,psi,0.2,False
+c3_vs_control,MonthlyIncome,ks,1.0,p_value,0.01,False
+c3_vs_control,DebtRatio,ks,1.0,p_value,0.01,False
+c3_vs_control,RevolvingUtilizationOfUnsecuredLines,ks,1.0,p_value,0.01,False
+c3_vs_control,NumberOfDependents,psi,0.0,psi,0.2,False
+c3_vs_control,NumberOfTime30-59DaysPastDueNotWorse,psi,0.0,psi,0.2,False
+c3_vs_control,NumberOfTimes90DaysLate,psi,0.0,psi,0.2,False
+c3_vs_control,NumberOfTime60-89DaysPastDueNotWorse,psi,0.0,psi,0.2,False
+c3_vs_control,NumberOfOpenCreditLinesAndLoans,psi,0.0,psi,0.2,False
+c3_vs_control,NumberRealEstateLoansOrLines,psi,0.0,psi,0.2,False
