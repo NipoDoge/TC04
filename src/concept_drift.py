@@ -40,6 +40,16 @@ LIMITATIONS = (
 )
 
 
+def shift_target(data, segment, draws, probability):
+    """Yq = Y0 OR (segmento AND U < q): só rótulos 0 do segmento podem virar 1.
+
+    Devolve a cópia alterada e a máscara das linhas cujo rótulo mudou."""
+    current = data.copy(deep=True)
+    changed = np.asarray(segment) & (data[TARGET].to_numpy() == 0) & (np.asarray(draws) < probability)
+    current.loc[changed, TARGET] = 1
+    return current, changed
+
+
 def build_concept_scenarios(holdout, income_cutoff, seed=SEED):
     """Yq = Y0 OR (income <= cutoff AND U < q); não utiliza scores do modelo."""
     schema.validate(holdout, lazy=True)
@@ -58,9 +68,7 @@ def build_concept_scenarios(holdout, income_cutoff, seed=SEED):
     })
     scenarios = {}
     for name, probability in CONCEPT_PERIODS:
-        current = holdout.copy(deep=True)
-        changed = segment & (original == 0) & (draws < probability)
-        current.loc[changed, TARGET] = 1
+        current, changed = shift_target(holdout, segment, draws, probability)
         scenarios[name] = schema.validate(current, lazy=True)
         if current[TARGET].nunique() != 2:
             raise ValueError(f"O cenário {name} precisa conter as duas classes para avaliar discriminação")

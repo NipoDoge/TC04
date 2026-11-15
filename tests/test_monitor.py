@@ -18,8 +18,10 @@ from src.observability import read_events
 from src.train import train
 from support import enter_temp_dir, synthetic_credit
 
-MONTHS = ["2026-01", "2026-02", "2026-03"]
-UTILIZATION = "RevolvingUtilizationOfUnsecuredLines"
+# Três meses bastam: controle, níveis intermediários (com entrega corrompida antes) e níveis máximos.
+SCHEDULE = (("2026-01", "t0_control", "c0_control"), ("2026-02", "t2", "c1"), ("2026-03", "t3", "c3"))
+MONTHS = [month for month, _, _ in SCHEDULE]
+INCOME = "MonthlyIncome"
 
 
 class MonitoringPipelineTests(unittest.TestCase):
@@ -31,8 +33,7 @@ class MonitoringPipelineTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             synthetic_credit(rows, seed).to_parquet(path)
         cls.baseline_metrics = train()
-        # Três meses bastam: controle, choque parcial (com entrega corrompida antes) e choque completo.
-        with patch.multiple(simulate_batches, MONTHS=MONTHS, INTENSITY=[0.0, 0.5, 1.0], CORRUPTED_MONTH="2026-02"):
+        with patch.object(config, "MONTHLY_SCHEDULE", SCHEDULE), patch.object(config, "CORRUPTED_MONTH", "2026-02"):
             cls.manifest = simulate_batches.main()
         with patch("src.tracking.start", return_value=None):       # sem MLflow: o pipeline não depende dele
             cls.summary = monitor.run()
@@ -65,18 +66,20 @@ class MonitoringPipelineTests(unittest.TestCase):
         control, shocked = self.batches["2026-01"], self.batches["2026-03"]
         self.assertEqual([a for a in control["alerts"] if a["rule"].startswith("drift")], [])
         self.assertLess(max(item["psi"] for item in control["drift"].values()), config.PSI_WARNING)
-        self.assertEqual(shocked["drift"][UTILIZATION]["status"], "alert")
+        self.assertEqual(shocked["drift"][INCOME]["status"], "alert")
         self.assertEqual(shocked["drift"]["age"]["status"], "ok")                # variável não alterada
-        self.assertIn(("drift_feature", UTILIZATION),
+        self.assertIn(("drift_feature", INCOME),
                       [(a["rule"], a.get("column")) for a in shocked["alerts"]])
+        self.assertEqual((shocked["data_level"], shocked["concept_level"]), ("t3", "c3"))
+        self.assertEqual((control["data_level"], control["concept_level"]), ("t0_control", "c0_control"))
         self.assertGreater(shocked["performance"]["default_rate"], control["performance"]["default_rate"])
         self.assertGreater(shocked["performance"]["flagged_rate"], control["performance"]["flagged_rate"])
 
-    def test_reported_psi_matches_the_statistic_registered_in_evidently(self):
+    def test_reported_psi_is_the_effect_size_of_the_scored_batch(self):
         model, _ = load_model()
         reference = score(model, pd.read_parquet(config.REFERENCE))
         scored = pd.read_parquet(config.SCORED_DIR / "2026-03.parquet")
-        for column in (UTILIZATION, "MonthlyIncome", config.SCORE):
+        for column in ("RevolvingUtilizationOfUnsecuredLines", INCOME, config.SCORE):
             with self.subTest(column=column):
                 self.assertAlmostEqual(self.batches["2026-03"]["drift"][column]["psi"],
                                        psi(reference[column], scored[column]), places=9)
@@ -86,11 +89,12 @@ class MonitoringPipelineTests(unittest.TestCase):
             report = Path(self.batches[name]["report"])
             self.assertEqual(report, config.BATCH_REPORTS / f"{name}.html")
             self.assertGreater(report.stat().st_size, 100_000)
-        # O HTML mostra o PSI por decis (mesmo número do resumo), não o PSI nativo do Evidently.
-        page = (config.BATCH_REPORTS / "2026-03.html").read_text(encoding="utf-8")
-        self.assertTrue("PSI (decis da refer" in page, "método de drift ausente do relatório")
-        value = round(self.batches["2026-03"]["drift"][UTILIZATION]["psi"], 6)
-        self.assertTrue(f'"drift_score": {value}' in page, f"PSI {value} ausente do relatório")
+        # O relatório é o mesmo dos cenários pareados; o veredito dele vai para o resumo, por feature.
+        shocked, control = self.batches["2026-03"]["drift"], self.batches["2026-01"]["drift"]
+        self.assertIs(shocked[INCOME]["evidently_drift"], True)
+        self.assertIs(shocked["age"]["evidently_drift"], False)
+        self.assertIsNone(shocked[config.SCORE]["evidently_drift"])               # o score fica fora do relatório
+        self.assertEqual({item["evidently_drift"] for column, item in control.items() if column != config.SCORE}, {False})
 
     def test_baseline_comes_from_the_published_model_version(self):
         model_dir = config.MODEL_DIR.resolve()
@@ -125,7 +129,7 @@ class MonitoringPipelineTests(unittest.TestCase):
         self.assertLess(config.SUMMARY.stat().st_size, 60_000)
 
     def test_monitor_survives_without_mlflow_and_reports_operational_failure(self):
-        entry = {"batch": "2026-09", "month": "2026-09", "intensity": 0.0, "kind": "regular",
+        entry = {"batch": "2026-09", "month": "2026-09", "data_level": "t0_control", "concept_level": "c0_control", "kind": "regular",
                  "file": str(config.BATCH_DIR / "2026-03.parquet")}
         model, _ = load_model()
         reference = score(model, pd.read_parquet(config.REFERENCE))
@@ -142,8 +146,14 @@ class MonitoringPipelineTests(unittest.TestCase):
     def test_causal_scenarios_isolate_each_mechanism(self):
         model, _ = load_model()
         reference = score(model, pd.read_parquet(config.REFERENCE))
-        raw = simulate_batches.split_months(pd.read_parquet(config.HOLDOUT))[-1]
-        result = analyse(model, reference, raw, seed=config.SEED + 2)
+        raw = simulate_batches.split_months(pd.read_parquet(config.HOLDOUT), months=len(SCHEDULE))[-1]
+        cutoff = simulate_batches.income_cutoff(pd.read_parquet(config.REFERENCE))
+        result = analyse(model, reference, raw, config.SEED + 2, "t3", "c3", cutoff)
+        # O cenário completo reproduz o lote de março que o monitor processou.
+        march = pd.read_parquet(config.SCORED_DIR / "2026-03.parquet")
+        self.assertAlmostEqual(result["scenarios"]["ambos"]["metrics"]["auc"],
+                               self.batches["2026-03"]["performance"]["auc"], places=12)
+        self.assertEqual(result["rows"], len(march))
         scenarios, parts = result["scenarios"], result["auc_decomposition"]
         self.assertEqual(scenarios["controle"]["effect"]["auc"], 0.0)
         self.assertIsNone(scenarios["controle"]["auc_effect_ci95"])
@@ -151,13 +161,14 @@ class MonitoringPipelineTests(unittest.TestCase):
         self.assertEqual(scenarios["concept_drift"]["effect"]["mean_score"], 0.0)      # só Y|X: scores intactos
         self.assertEqual(scenarios["concept_drift"]["effect"]["flagged_rate"], 0.0)
         self.assertEqual(scenarios["concept_drift"]["drifted_features"], [])
-        self.assertIn(UTILIZATION, scenarios["data_drift"]["drifted_features"])
+        self.assertIn(INCOME, scenarios["data_drift"]["drifted_features"])
         self.assertAlmostEqual(parts["data_drift"] + parts["concept_drift"] + parts["interaction"], parts["total"])
         self.assertEqual(scenarios["ambos"]["metrics"]["mean_score"], scenarios["data_drift"]["metrics"]["mean_score"])
         low, high = scenarios["ambos"]["auc_effect_ci95"]
         self.assertLess(low, high)
         self.assertTrue(low <= parts["total"] <= high)
-        self.assertEqual(set(result["feature_interventions"]), set(simulate_batches.SHOCKED_FEATURES))
+        self.assertEqual(set(result["feature_interventions"]), set(config.DRIFT_SHIFTED_COLUMNS))
+        self.assertEqual((result["data_level"], result["concept_level"]), ("t3", "c3"))
         self.assertEqual(result["feature_interventions"]["MonthlyIncome"]["effect"]["default_rate"], 0.0)
 
     def test_dashboard_is_generated_from_the_run(self):

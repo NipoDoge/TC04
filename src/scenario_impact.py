@@ -1,12 +1,12 @@
-"""Magnitude do drift e impacto no modelo nos cenários pareados da Etapa 2.
+"""Impacto do data drift no modelo, nos cenários pareados da Etapa 2.
 
-``src.detect_drift`` já responde se há drift em cada cenário (KS e PSI do
-Evidently, por feature). Este script complementa aquela resposta com duas
-medidas que o relatório não traz: o tamanho da mudança, pelo PSI com faixas nos
-decis da referência (o mesmo do monitoramento por lote), e o efeito no modelo,
-pelo PSI do score e pelas métricas de classificação. Como os cenários preservam
-os rótulos históricos, uma queda de desempenho aqui mede só a sensibilidade do
-modelo ao data drift; não representa concept drift.
+``src.detect_drift`` publica, por feature, se há drift e de que tamanho.
+``src.predict`` publica as probabilidades do modelo em cada cenário. Este script
+junta as duas evidências, sem recalcular nenhuma: lê o resumo de drift e as
+predições e mede o que muda nas decisões (PSI do score, métricas de
+classificação e parcela sinalizada). Como os cenários preservam os rótulos
+históricos, o resultado mede a sensibilidade do modelo ao data drift; não
+representa concept drift.
 """
 import argparse
 from datetime import datetime, timezone
@@ -17,56 +17,56 @@ import sys
 import pandas as pd
 
 from src import config
-from src.batch_drift import load_model, score, status_for
+from src.batch_drift import status_for
 from src.drift_stats import psi
 from src.monitor import performance
 from src.observability import new_run_id, setup_logging, track
 
 NOTE = ("Cenários sintéticos pareados sobre o mesmo holdout, com rótulos históricos preservados. "
         "As métricas medem sensibilidade ao data drift; não demonstram concept drift nem desempenho futuro.")
+PREDICTIONS = Path("data/predictions")
 
 
-def evidently_verdicts(report_dir):
-    """Features apontadas pelo relatório do Evidently, se ``src.detect_drift`` já rodou."""
-    manifest = Path(report_dir) / "manifest.json"
-    if not manifest.exists():
-        return {}
-    scenarios = json.loads(manifest.read_text(encoding="utf-8")).get("scenarios", [])
-    return {item["name"]: item["drifted_features"] for item in scenarios}
+def scored(path):
+    """Predições publicadas por ``src.predict``, no formato usado pelas métricas."""
+    data = pd.read_parquet(path)
+    return pd.DataFrame({config.TARGET: data[config.TARGET], config.SCORE: data["probability_1"]})
 
 
-def run(scenarios_dir=config.SCENARIO_DIR, report_dir=config.SCENARIO_REPORTS,
+def run(report_dir=config.SCENARIO_REPORTS, predictions_dir=PREDICTIONS,
         summary_path=config.SCENARIO_IMPACT, names=config.SCENARIOS):
-    """Compara cada cenário com a referência e grava o resumo (somente agregados)."""
-    scenarios_dir, report_dir, summary_path = Path(scenarios_dir), Path(report_dir), Path(summary_path)
+    """Reúne drift por feature e impacto nas predições de cada cenário (somente agregados)."""
+    report_dir, predictions_dir, summary_path = Path(report_dir), Path(predictions_dir), Path(summary_path)
     run_id = new_run_id("scn")
-    model, model_dir = load_model()
-    columns = list(model.feature_names_in_) + [config.SCORE]
-    reference = score(model, pd.read_parquet(config.REFERENCE))
-    factors = {name: {"MonthlyIncome": income, "DebtRatio": debt} for name, income, debt in config.PERIODS}
-    verdicts = evidently_verdicts(report_dir)
+    drift = pd.read_csv(report_dir / "summary.csv")
+    manifest = json.loads((predictions_dir / "manifest.json").read_text(encoding="utf-8"))
+    reference = scored(predictions_dir / "reference.parquet")
+    factors = {name: dict(zip(config.DRIFT_SHIFTED_COLUMNS, values)) for name, *values in config.PERIODS}
     results = []
     for name in names:
-        path = scenarios_dir / f"{name}.parquet"
         with track("scenario", batch=name) as info:
-            scored = score(model, pd.read_parquet(path))
-            drift = {}
-            for column in columns:
-                value = psi(reference[column], scored[column])
-                drift[column] = {"psi": value, "status": status_for(value)}
-            info.update(rows=len(scored), max_psi=max(item["psi"] for item in drift.values()),
-                        alert=[c for c, item in drift.items() if item["status"] == "alert"],
-                        warning=[c for c, item in drift.items() if item["status"] == "warning"])
-        results.append({"scenario": name, "file": str(path), "rows": len(scored), "factors": factors.get(name),
-                        "report": str(report_dir / f"{name}.html"), "evidently_drifted": verdicts.get(name),
-                        "drift": drift, "performance": performance(scored)})
+            current = scored(predictions_dir / f"{name}.parquet")
+            rows = drift[drift["scenario"] == name]
+            features = {row.feature: {"psi": float(row.effect_psi), "status": status_for(row.effect_psi),
+                                      "evidently_drift": bool(row.drift_detected)} for row in rows.itertuples()}
+            score_psi = psi(reference[config.SCORE], current[config.SCORE])
+            info.update(rows=len(current), score_psi=score_psi,
+                        drifted=[feature for feature, item in features.items() if item["evidently_drift"]])
+        results.append({
+            "scenario": name, "rows": len(current), "factors": factors.get(name),
+            "report": str(report_dir / f"{name}.html"),
+            "evidently_drifted": [feature for feature, item in features.items() if item["evidently_drift"]],
+            "drift": {**features, config.SCORE: {"psi": score_psi, "status": status_for(score_psi)}},
+            "performance": performance(current),
+        })
     summary = {
         "run_id": run_id,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "model_version": model_dir.name,
+        "model": manifest["model"],
         "reference_rows": len(reference),
         "thresholds": {"psi_warning": config.PSI_WARNING, "psi_alert": config.PSI_ALERT,
                        "decision_threshold": config.THRESHOLD},
+        "shifted_columns": list(config.DRIFT_SHIFTED_COLUMNS),
         "note": NOTE,
         "scenarios": results,
     }
@@ -76,18 +76,20 @@ def run(scenarios_dir=config.SCENARIO_DIR, report_dir=config.SCENARIO_REPORTS,
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="PSI por decis e impacto no modelo nos cenários pareados.")
-    parser.add_argument("--scenarios-dir", default=str(config.SCENARIO_DIR))
+    parser = argparse.ArgumentParser(description="Impacto do data drift dos cenários pareados nas predições.")
     parser.add_argument("--report-dir", default=str(config.SCENARIO_REPORTS),
-                        help="Diretório dos relatórios de src.detect_drift (só leitura)")
+                        help="Diretório publicado por src.detect_drift (só leitura)")
+    parser.add_argument("--predictions-dir", default=str(PREDICTIONS),
+                        help="Diretório publicado por src.predict (só leitura)")
     parser.add_argument("--summary", default=str(config.SCENARIO_IMPACT))
     args = parser.parse_args(argv)
-    summary = run(args.scenarios_dir, args.report_dir, args.summary)
-    print(f"{'cenário':<12}{'AUC':>7}{'recall':>8}{'sinaliz.':>10}{'PSI renda':>11}{'PSI dívida':>12}{'PSI score':>11}")
+    summary = run(args.report_dir, args.predictions_dir, args.summary)
+    print(f"{'cenário':<12}{'AUC':>7}{'recall':>8}{'sinaliz.':>10}{'PSI score':>11}  maior efeito nas variáveis")
     for item in summary["scenarios"]:
         metrics, drift = item["performance"], item["drift"]
+        feature, largest = max(((c, d) for c, d in drift.items() if c != config.SCORE), key=lambda pair: pair[1]["psi"])
         print(f"{item['scenario']:<12}{metrics['auc']:>7.3f}{metrics['recall']:>8.3f}{metrics['flagged_rate']:>10.1%}"
-              f"{drift['MonthlyIncome']['psi']:>11.3f}{drift['DebtRatio']['psi']:>12.3f}{drift[config.SCORE]['psi']:>11.3f}")
+              f"{drift[config.SCORE]['psi']:>11.3f}  {feature} (PSI {largest['psi']:.3f})")
     print(f"Resumo: {args.summary}")
     return 0
 

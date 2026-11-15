@@ -1,23 +1,14 @@
-"""Simula lotes mensais de produção com um choque econômico progressivo.
+"""Simula lotes mensais de produção com os mecanismos dos experimentos pareados.
 
-Complementa ``src.simulate_drift``, que gera cenários pareados sobre o holdout
-inteiro (só data drift, com fatores fixos). Aqui o holdout vira uma sequência de
-lotes, como chegariam em produção, com data drift, concept drift e uma entrega
-corrompida: é a entrada do monitoramento (``src.monitor``).
+Os experimentos pareados aplicam um mecanismo de cada vez ao holdout inteiro:
+``src.simulate_drift`` muda as variáveis (data drift) e ``src.concept_drift`` muda
+o rótulo de um segmento (concept drift). Aqui o holdout é embaralhado e repartido
+em meses, e cada mês recebe os níveis definidos em ``config.MONTHLY_SCHEDULE``.
+Assim o monitoramento observa, lote a lote, as mesmas intervenções que os
+experimentos medem isoladamente. Um dos meses recebe antes uma entrega
+corrompida, para exercitar o contrato de dados.
 
-O holdout (nunca visto no treino) é dividido em lotes mensais. Os três primeiros
-meses ficam intactos (período de controle); a partir do quarto, a intensidade ``t``
-do choque cresce até 1. Tudo é sintético, determinístico (seed) e registrado no
-manifesto, para que a detecção seja comparada com intervenções conhecidas.
-
-Mecanismo simulado, por cliente:
-  * uma fração ``stress_share * t`` das famílias entra em estresse financeiro
-    (variável latente, não observada pelo modelo);
-  * data drift, P(X): renda cai (inflação para todos, perda de emprego nas
-    famílias em estresse), o comprometimento de renda sobe, o uso do rotativo
-    aumenta e surgem novos atrasos de 30-59 dias;
-  * concept drift, P(Y|X): bons pagadores em estresse passam a inadimplir, e uma
-    parcela pequena dos demais também, sem qualquer sinal nas variáveis.
+Tudo é sintético, determinístico (seed) e registrado no manifesto.
 """
 from datetime import datetime, timezone
 import json
@@ -27,80 +18,38 @@ import numpy as np
 import pandas as pd
 
 from src import config
+from src.concept_drift import shift_target
 from src.observability import new_run_id, setup_logging, track
+from src.simulate_drift import shift_features
 
-MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"]
-INTENSITY = [0.0, 0.0, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-CORRUPTED_MONTH = "2026-05"          # mês que recebe uma primeira entrega inválida
-
-INCOME, DEBT = "MonthlyIncome", "DebtRatio"
-UTILIZATION, DELAYS = "RevolvingUtilizationOfUnsecuredLines", "NumberOfTime30-59DaysPastDueNotWorse"
-SHOCKED_FEATURES = (INCOME, DEBT, UTILIZATION, DELAYS)
-
-PARAMS = {
-    "stress_share": 0.50,              # famílias em estresse financeiro quando t = 1
-    "income_erosion": 0.15,            # perda real de renda de todos quando t = 1
-    "stress_income_range": [0.4, 0.8], # renda remanescente das famílias em estresse
-    "interest_increase": 0.15,         # encarecimento das parcelas quando t = 1
-    "utilization_range": [0.2, 0.9],   # fração do limite livre consumida sob estresse
-    "delay_probability": 0.50,         # famílias em estresse com novo atraso de 30-59 dias
-    "default_stress": 0.15,            # bons pagadores em estresse que inadimplem
-    "default_silent": 0.02,            # demais bons pagadores que inadimplem quando t = 1
-}
+INCOME, DEBT, UTILIZATION, DELAYS = config.DRIFT_SHIFTED_COLUMNS
 
 
-def draw_latent(n, t, seed, params=PARAMS):
-    """Sorteia o estado latente dos clientes. A mesma seed gera o mesmo estado."""
-    rng = np.random.default_rng(seed)
-    stress = rng.random(n) < params["stress_share"] * t
-    remaining = rng.uniform(*params["stress_income_range"], n)
-    utilization = rng.uniform(*params["utilization_range"], n)
-    delayed = rng.random(n) < params["delay_probability"]
-    extra_delays = 1 + rng.poisson(0.3, n)
-    return {
-        "stress": stress,
-        "income_factor": (1 - params["income_erosion"] * t) * np.where(stress, remaining, 1.0),
-        "utilization_fraction": np.where(stress, utilization, 0.0),
-        "new_delays": np.where(stress & delayed, extra_delays, 0),
-        "default_draw": rng.random(n),
-    }
+def income_cutoff(reference):
+    """Corte do segmento de menor renda, ajustado somente na referência."""
+    return float(reference[INCOME].quantile(config.CONCEPT_INCOME_QUANTILE))
 
 
-def apply_shock(df, t, seed, features=SHOCKED_FEATURES, concept=True, params=PARAMS):
-    """Aplica o choque de intensidade ``t``. ``features`` e ``concept`` permitem
-    intervir em uma parte do mecanismo por vez (análise causal contrafactual)."""
-    out = df.copy()
-    if t <= 0:
-        return out
-    latent = draw_latent(len(out), t, seed, params)
-    factor = latent["income_factor"]
-    if INCOME in features:
-        out[INCOME] = np.round(df[INCOME].to_numpy() * factor)
-    if DEBT in features:
-        # Parcela fixa sobre renda menor, mais juros. Sem renda declarada a coluna
-        # guarda o valor absoluto da dívida, que só sofre o efeito dos juros.
-        has_income = df[INCOME].to_numpy() > 0
-        out[DEBT] = (df[DEBT].to_numpy() * (1 + params["interest_increase"] * t)
-                     / np.where(has_income, factor, 1.0))
-    if UTILIZATION in features:
-        used = df[UTILIZATION].to_numpy()
-        room = np.clip(1 - used, 0, None)          # quem já estourou o limite não muda
-        out[UTILIZATION] = used + latent["utilization_fraction"] * room
-    if DELAYS in features:
-        out[DELAYS] = df[DELAYS].to_numpy() + latent["new_delays"]
-    if concept:
-        good = df[config.TARGET].to_numpy() == 0
-        draw, stress = latent["default_draw"], latent["stress"]
-        flip = good & np.where(stress, draw < params["default_stress"],
-                               draw < params["default_silent"] * t)
-        out.loc[flip, config.TARGET] = 1
-    return out
+def apply_levels(data, data_level, concept_level, cutoff, seed, columns=config.DRIFT_SHIFTED_COLUMNS, concept=True):
+    """Aplica a um conjunto de clientes um nível de data drift e um de concept drift.
+
+    ``columns`` e ``concept`` permitem ligar uma parte do choque por vez (análise
+    contrafactual). O segmento do concept drift usa a renda original do cliente, e a
+    mesma seed gera o mesmo sorteio em todos os cenários."""
+    factors = {name: values for name, *values in config.PERIODS}[data_level]
+    shifted = shift_features(data, *factors, columns=columns)
+    probability = dict(config.CONCEPT_PERIODS)[concept_level] if concept else 0.0
+    segment = data[INCOME].le(cutoff).to_numpy()
+    draws = np.random.default_rng(seed).random(len(data))
+    shifted, _ = shift_target(shifted, segment, draws, probability)
+    return shifted
 
 
-def split_months(holdout, seed=config.SEED):
+def split_months(holdout, seed=config.SEED, months=None):
     """Embaralha o holdout e o reparte em fatias mensais de tamanho quase igual."""
+    months = len(config.MONTHLY_SCHEDULE) if months is None else months
     shuffled = holdout.sample(frac=1, random_state=seed).reset_index(drop=True)
-    chunks = np.array_split(np.arange(len(shuffled)), len(MONTHS))
+    chunks = np.array_split(np.arange(len(shuffled)), months)
     return [shuffled.iloc[chunk].reset_index(drop=True) for chunk in chunks]
 
 
@@ -114,24 +63,26 @@ def corrupt(df, seed):
     return pd.concat([bad, bad.iloc[rows[180:380]]], ignore_index=True)   # reenvio duplicado
 
 
-def build_batches(holdout, seed=config.SEED):
+def build_batches(holdout, cutoff, seed=config.SEED):
     """Devolve os lotes na ordem de chegada: [(metadados, dataframe), ...]."""
+    schedule = config.MONTHLY_SCHEDULE
     batches = []
-    for index, (month, t, part) in enumerate(zip(MONTHS, INTENSITY, split_months(holdout, seed))):
-        shocked = apply_shock(part, t, seed + index).drop_duplicates().reset_index(drop=True)
-        if month == CORRUPTED_MONTH:
+    for index, ((month, data_level, concept_level), part) in enumerate(zip(schedule, split_months(holdout, seed, len(schedule)))):
+        shocked = apply_levels(part, data_level, concept_level, cutoff, seed + index)
+        shocked = shocked.drop_duplicates().reset_index(drop=True)
+        levels = {"month": month, "data_level": data_level, "concept_level": concept_level}
+        if month == config.CORRUPTED_MONTH:
             bad = corrupt(shocked, seed)
-            batches.append(({"batch": f"{month}-entrega-corrompida", "month": month,
-                             "intensity": t, "kind": "corrupted", "rows": len(bad)}, bad))
-        batches.append(({"batch": month, "month": month, "intensity": t,
-                         "kind": "regular", "rows": len(shocked)}, shocked))
+            batches.append(({"batch": f"{month}-entrega-corrompida", **levels, "kind": "corrupted", "rows": len(bad)}, bad))
+        batches.append(({"batch": month, **levels, "kind": "regular", "rows": len(shocked)}, shocked))
     return batches
 
 
-def main(holdout_path=config.HOLDOUT, batch_dir=config.BATCH_DIR, seed=config.SEED):
+def main(holdout_path=config.HOLDOUT, batch_dir=config.BATCH_DIR, seed=config.SEED, reference_path=config.REFERENCE):
     batch_dir = Path(batch_dir)
     with track("simulate") as info:
-        batches = build_batches(pd.read_parquet(holdout_path), seed)
+        cutoff = income_cutoff(pd.read_parquet(reference_path))
+        batches = build_batches(pd.read_parquet(holdout_path), cutoff, seed)
         batch_dir.mkdir(parents=True, exist_ok=True)
         for old in batch_dir.glob("*.parquet"):
             old.unlink()
@@ -142,8 +93,13 @@ def main(holdout_path=config.HOLDOUT, batch_dir=config.BATCH_DIR, seed=config.SE
             entries.append({**meta, "file": str(path)})
         manifest = {
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "source": str(holdout_path), "seed": seed, "parameters": PARAMS,
-            "shocked_features": list(SHOCKED_FEATURES), "batches": entries,
+            "source": str(holdout_path), "seed": seed,
+            "schedule": [{"month": month, "data_level": data, "concept_level": concept}
+                         for month, data, concept in config.MONTHLY_SCHEDULE],
+            "data_drift_levels": {name: dict(zip((INCOME, DEBT, UTILIZATION), values)) for name, *values in config.PERIODS},
+            "concept_drift_levels": dict(config.CONCEPT_PERIODS),
+            "income_cutoff": cutoff,
+            "shocked_features": list(config.DRIFT_SHIFTED_COLUMNS), "batches": entries,
         }
         (batch_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -156,4 +112,4 @@ if __name__ == "__main__":
     new_run_id("sim")
     result = main()
     for entry in result["batches"]:
-        print(f"{entry['batch']:<28} t={entry['intensity']:.1f} linhas={entry['rows']}")
+        print(f"{entry['batch']:<28} dados={entry['data_level']:<11} rótulo={entry['concept_level']:<11} linhas={entry['rows']}")

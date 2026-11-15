@@ -67,8 +67,8 @@ def run_stage(result, name, action):
 def process_batch(entry, *, model, reference, baseline, quarantine_dir, previous_durations=()):
     """Processa um lote e devolve o registro consolidado (sem dados de clientes)."""
     batch, path = entry["batch"], Path(entry["file"])
-    columns = list(model.feature_names_in_) + [config.SCORE]
-    result = {"batch": batch, "month": entry.get("month"), "intensity": entry.get("intensity"),
+    result = {"batch": batch, "month": entry.get("month"), "data_level": entry.get("data_level"),
+              "concept_level": entry.get("concept_level"),
               "kind": entry.get("kind", "regular"), "stages": {}, "alerts": []}
 
     ingest = validate_batch(path, quarantine_dir)
@@ -90,7 +90,7 @@ def process_batch(entry, *, model, reference, baseline, quarantine_dir, previous
 
         def do_drift(info):
             html = config.BATCH_REPORTS / f"{batch}.html"
-            summary = drift_report(reference, scored, columns, html)
+            summary = drift_report(reference, scored, html, batch)
             info.update(rows=len(scored), report=str(html),
                         max_psi=max(item["psi"] for item in summary.values()),
                         alert=[c for c, item in summary.items() if item["status"] == "alert"],
@@ -140,7 +140,7 @@ def track_batch(mlflow, result, step):
     with mlflow.start_run(run_name=result["batch"], nested=True):
         mlflow.set_tags({"status": result["status"], "mes": result["month"], "tipo": result["kind"],
                          "severidade": worst})
-        mlflow.log_param("intensidade_simulada", result["intensity"])
+        mlflow.log_params({"nivel_data_drift": result["data_level"], "nivel_concept_drift": result["concept_level"]})
         mlflow.log_metrics(metrics)
         mlflow.log_dict({"alerts": result["alerts"], "violations": result.get("violations", [])},
                         "alertas.json")

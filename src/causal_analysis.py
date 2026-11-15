@@ -1,9 +1,10 @@
 """Análise causal por intervenção: o que derruba o modelo, P(X) ou P(Y|X)?
 
-Como o choque é simulado, é possível aplicar cada parte dele isoladamente aos
-mesmos clientes, com o mesmo sorteio (seed). A diferença entre cenários é o
-efeito causal daquela intervenção *dentro da simulação*: nada mais muda. O
-intervalo de confiança vem de bootstrap pareado sobre os clientes.
+Os experimentos pareados medem cada mecanismo sozinho no holdout inteiro. Aqui os
+dois níveis aplicados ao último lote mensal são ligados um de cada vez, aos mesmos
+clientes e com o mesmo sorteio (seed). A diferença entre cenários é o efeito
+daquela intervenção *dentro da simulação*, inclusive a interação entre as duas
+mudanças. O intervalo de confiança vem de bootstrap pareado sobre os clientes.
 
 Isso não identifica a causa de uma degradação real; mostra como o diagnóstico
 seria conduzido e quanto cada mecanismo pesa no cenário construído.
@@ -19,7 +20,7 @@ from src.batch_drift import load_model, score
 from src.drift_stats import psi
 from src.monitor import performance
 from src.observability import new_run_id, setup_logging, track
-from src.simulate_batches import MONTHS, SHOCKED_FEATURES, apply_shock, split_months
+from src.simulate_batches import apply_levels, income_cutoff, split_months
 
 SCENARIOS = {
     "controle": "Sem choque: os mesmos clientes, como chegaram",
@@ -42,15 +43,18 @@ def paired_auc_interval(control, treated, draws=300, seed=config.SEED):
     return [float(np.percentile(deltas, 2.5)), float(np.percentile(deltas, 97.5))]
 
 
-def analyse(model, reference, raw, seed, t=1.0):
+def analyse(model, reference, raw, seed, data_level, concept_level, cutoff):
     features = list(model.feature_names_in_)
+
+    def shock(**options):
+        return apply_levels(raw, data_level, concept_level, cutoff, seed, **options)
+
     frames = {
         "controle": raw,
-        "data_drift": apply_shock(raw, t, seed, concept=False),
-        "concept_drift": apply_shock(raw, t, seed, features=()),
-        "ambos": apply_shock(raw, t, seed),
-        **{f"do({feature})": apply_shock(raw, t, seed, features=(feature,), concept=False)
-           for feature in SHOCKED_FEATURES},
+        "data_drift": shock(concept=False),
+        "concept_drift": shock(columns=()),
+        "ambos": shock(),
+        **{f"do({feature})": shock(columns=(feature,), concept=False) for feature in config.DRIFT_SHIFTED_COLUMNS},
     }
     scored = {name: score(model, frame) for name, frame in frames.items()}
     control = performance(scored["controle"])
@@ -68,7 +72,7 @@ def analyse(model, reference, raw, seed, t=1.0):
         }
     data, concept, both = (results[name]["effect"]["auc"] for name in ("data_drift", "concept_drift", "ambos"))
     return {
-        "intensity": t, "seed": seed, "rows": len(raw),
+        "data_level": data_level, "concept_level": concept_level, "seed": seed, "rows": len(raw),
         "scenarios": {name: results[name] for name in SCENARIOS},
         "feature_interventions": {name[3:-1]: results[name] for name in results if name.startswith("do(")},
         "auc_decomposition": {"data_drift": data, "concept_drift": concept,
@@ -79,11 +83,14 @@ def analyse(model, reference, raw, seed, t=1.0):
 def main():
     with track("causal") as info:
         model, model_dir = load_model()
-        reference = score(model, pd.read_parquet(config.REFERENCE))
+        reference_data = pd.read_parquet(config.REFERENCE)
+        reference = score(model, reference_data)
+        month, data_level, concept_level = config.MONTHLY_SCHEDULE[-1]
         raw = split_months(pd.read_parquet(config.HOLDOUT))[-1]
         # Mesma seed do último mês simulado: o cenário "ambos" reproduz aquele lote.
-        result = analyse(model, reference, raw, seed=config.SEED + len(MONTHS) - 1)
-        result.update(month=MONTHS[-1], model_version=model_dir.name)
+        result = analyse(model, reference, raw, config.SEED + len(config.MONTHLY_SCHEDULE) - 1,
+                         data_level, concept_level, income_cutoff(reference_data))
+        result.update(month=month, model_version=model_dir.name)
         config.CAUSAL.parent.mkdir(parents=True, exist_ok=True)
         config.CAUSAL.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         info.update(rows=len(raw), **result["auc_decomposition"])
