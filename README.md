@@ -306,7 +306,7 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 
 ## 10. Vídeo STAR e checklist de entrega
 
-**Vídeo: [docs/video/tc04-star.mp4](docs/video/tc04-star.mp4)**, com 4min09s (o limite é de 5 minutos), em 1920×1080, com as frases da narração como legenda na própria imagem. O [roteiro](docs/video/roteiro.md) traz o texto e os tempos de cada frase; as [legendas](docs/video/tc04-star.srt) também estão em arquivo separado.
+**Vídeo: [docs/video/tc04-star.mp4](docs/video/tc04-star.mp4)**, com 4min08s (o limite é de 5 minutos), em 1920×1080, com as frases da narração como legenda na própria imagem. O [roteiro](docs/video/roteiro.md) traz o texto e os tempos de cada frase; as [legendas](docs/video/tc04-star.srt) também estão em arquivo separado.
 
 **Link público (YouTube ou Drive): a inserir aqui depois que o grupo publicar o arquivo.** O enunciado pede um link acessível; o arquivo no repositório fica como cópia.
 
@@ -316,7 +316,7 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 | 0:07–0:38 | Situation | Cenário da fintech, risco de degradação silenciosa, base de dados e modelo de referência |
 | 0:38–1:05 | Task | As quatro etapas: validar dados, simular e detectar drift, observar o processamento e documentar a governança |
 | 1:05–2:54 | Action | O contrato e o bloqueio da entrega corrompida; os níveis de data drift e de concept drift e os lotes mensais; a detecção com o Evidently e o tamanho do efeito; o log central, o MLflow e o dashboard; a governança |
-| 2:54–4:09 | Result | AUC de 0,85 para 0,62 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; o data drift muda as decisões (25% para 38% de sinalizados) mais do que a ordenação; a decomposição causal; os 21 alertas; limites (tudo é simulação) e conclusão |
+| 2:54–4:08 | Result | AUC de 0,85 para 0,62 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; o data drift muda as decisões (25% para 38% de sinalizados) mais do que a ordenação; a decomposição causal; os 21 alertas; limites (tudo é simulação) e conclusão |
 
 ### Antes da entrega
 
