@@ -179,6 +179,7 @@ th,td{text-align:left;padding:8px 14px 8px 0;vertical-align:top}
 .seq-5{background:var(--seq-5);color:var(--seq-5-ink)}
 .scale{margin-top:10px}
 .pill{display:inline-block;min-width:64px;padding:2px 8px;border-radius:3px;text-align:center}
+.factors{display:block;font-size:12px;color:var(--text-secondary);white-space:normal;max-width:30ch}
 
 /* controles */
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 8px}

@@ -20,10 +20,12 @@ BASELINE = {"auc": 0.857, "recall": 0.772, "ks": 0.568, "default_rate": 0.066, "
 
 def good_batch(name, auc, psi_income, alerts=()):
     drift = {column: {"psi": value, "ks_stat": 0.1, "ks_pvalue": 0.01, "status": status_for(value),
+                      "evidently_drift": None if column == config.SCORE else value >= 0.2,
                       "ref_mean": 1.0, "cur_mean": 1.2, "ref_median": 1.0, "cur_median": 1.1}
              for column, value in {"MonthlyIncome": psi_income, "age": 0.002, config.SCORE: psi_income / 2}.items()}
     stages = {stage: {"status": "success", "duration_s": 0.25} for stage in ("ingest", "score", "drift", "evaluate")}
-    return {"batch": name, "month": name, "intensity": 0.0, "kind": "regular", "status": "success", "rows": 4412,
+    return {"batch": name, "month": name, "data_level": "t1", "concept_level": "c1", "kind": "regular",
+            "status": "success", "rows": 4412,
             "duration_s": 1.0, "stages": stages, "alerts": list(alerts), "drift": drift,
             "performance": {"auc": auc, "ks": 0.5, "recall": 0.75, "precision": 0.2, "default_rate": 0.07,
                             "mean_score": 0.33, "flagged_rate": 0.25}}
@@ -32,7 +34,8 @@ def good_batch(name, auc, psi_income, alerts=()):
 def rejected_batch(name="2026-02-entrega-corrompida"):
     alert = {"batch": name, "severity": "critical", "rule": "contrato_violado",
              "message": "Lote bloqueado pelo contrato de dados: age: valor nulo (3 linhas)"}
-    return {"batch": name, "month": "2026-02", "intensity": 0.0, "kind": "corrupted", "status": "rejected",
+    return {"batch": name, "month": "2026-02", "data_level": "t1", "concept_level": "c1", "kind": "corrupted",
+            "status": "rejected",
             "rows": 4612, "duration_s": 0.1, "stages": {"ingest": {"status": "rejected", "duration_s": 0.1}},
             "alerts": [alert], "violations": [{"column": "age", "check": "not_nullable", "rows": 3}]}
 
@@ -43,7 +46,8 @@ def make_summary(batches):
     return {
         "run_id": "mon-teste", "generated_at": "2026-11-14T23:41:49+00:00", "model_version": "abc123",
         "features": ["MonthlyIncome", "age"], "baseline": BASELINE, "thresholds": THRESHOLDS,
-        "simulation": {"seed": 42, "source": "data/production/holdout.parquet", "parameters": {"stress_share": 0.5},
+        "simulation": {"seed": 42, "source": "data/production/holdout.parquet",
+                       "schedule": [{"month": "2026-01", "data_level": "t1", "concept_level": "c1"}],
                        "shocked_features": ["MonthlyIncome"]},
         "totals": {"batches": len(batches), "success": len(done), "rejected": len(batches) - len(done), "failed": 0,
                    "rows_processed": sum(b["rows"] for b in done),
@@ -121,6 +125,9 @@ class BuildTests(unittest.TestCase):
         self.assertIn("4.612 bloqueadas", page)
         self.assertIn("mai/26".replace("mai", "mar"), page)          # último lote: mar/26
         self.assertIn("alterada na simulação", page)
+        self.assertIn("<td>t1 e c1</td>", page)                      # níveis simulados na saúde do pipeline
+        self.assertIn("jan/26 t1 e c1", page)                        # e a agenda no rodapé
+        self.assertIn("drift detectado", page)                       # veredito do Evidently no tooltip do mapa
 
     def test_signal_board_summarises_each_rule_group_per_batch(self):
         page = build(make_summary(FULL), None, [])
@@ -236,10 +243,12 @@ class BuildTests(unittest.TestCase):
              "report": "reports/drift/t3.html", "evidently_drifted": ["MonthlyIncome", "DebtRatio"],
              "drift": drift(0.6, 0.034), "performance": metrics}]}
         page = build(make_summary(FULL), None, [], scenarios)
-        for expected in ['id="cenarios"', "Cenários pareados da Etapa 2", "×0,60", "×1,60", "▲ 0,600",
-                         "o PSI da renda chega a 0,600", "Rótulos &lt;preservados&gt;.", "35.297 clientes",
-                         "<td>nenhuma</td>", "<td>2 de 2</td>"]:
+        for expected in ['id="cenarios"', "Cenários pareados da Etapa 2", "renda mensal ×0,60",
+                         "comprometimento de renda ×1,60", "▲ 0,600", "a maior mudança é em renda mensal (PSI 0,600)",
+                         "o score do modelo tem PSI de 0,034", "Rótulos &lt;preservados&gt;.", "35.297 clientes",
+                         "<td>nenhuma</td>", "<td>2 de 2</td>", "PSI: renda mensal", "PSI do score"]:
             self.assertIn(expected, page)
+        self.assertNotIn("PSI: utilização do rotativo", page)        # só as colunas presentes no resumo
         only_rejected = build(make_summary([rejected_batch()]), None, [], scenarios)
         self.assertIn("Cenários pareados da Etapa 2", only_rejected)
 

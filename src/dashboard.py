@@ -506,7 +506,9 @@ def section_pipeline(summary, events):
     rows = []
     for batch in summary["batches"]:
         logged = by_batch.get(batch["batch"], {})
+        levels = [batch.get("data_level"), batch.get("concept_level")]
         cells = [f'<span class="strong">{esc(batch_label(batch["batch"]))}</span>',
+                 esc(" e ".join(level for level in levels if level)) or "—",
                  chip(batch["status"]), num(batch["rows"], 0) if batch["rows"] is not None else "—"]
         for stage in STAGES:
             info = logged.get(stage) or batch["stages"].get(stage)
@@ -518,7 +520,8 @@ def section_pipeline(summary, events):
                   for s in SEVERITIES if any(a["severity"] == s for a in batch["alerts"])]
         cells.append(esc(", ".join(counts)) or "—")
         rows.append(cells)
-    health = table(["Lote", "Status", "Linhas", *STAGES.values(), "Duração total", "Alertas"], rows, "data health", right=(2,),
+    health = table(["Lote", "Níveis simulados", "Status", "Linhas", *STAGES.values(), "Duração total", "Alertas"], rows,
+                   "data health", right=(3,),
                    label="Status, volume e duração por lote e por etapa")
 
     latest = {}
@@ -547,7 +550,8 @@ def section_pipeline(summary, events):
              + table(["Etapa", "Status", "Quando", "Duração", "Linhas"], other, right=(3, 4),
                      label="Última execução das demais etapas")) if other else ""
     return card("Saúde do pipeline", health + log_note + log_table + extra,
-                "Uma linha por lote, na ordem de chegada. O primeiro lote inclui a carga inicial do Evidently.", "pipeline")
+                "Uma linha por lote, na ordem de chegada. Os níveis simulados são os dos experimentos pareados: "
+                "data drift (t) e concept drift (c). O primeiro lote inclui a carga inicial do Evidently.", "pipeline")
 
 
 def psi_level(value, limits):
@@ -576,7 +580,9 @@ def section_drift(summary, done):
         for batch in done:
             item = batch["drift"][column]
             mark = {"warning": '<span aria-hidden="true">●</span>', "alert": '<span aria-hidden="true">▲</span>'}.get(item["status"], "")
+            verdict = {True: "drift detectado", False: "sem drift"}.get(item.get("evidently_drift"), "fora do relatório")
             rows = [("PSI (decis da referência)", num(item["psi"])), ("situação", STATUS[item["status"]][2]),
+                    ("Evidently", verdict),
                     ("KS, estatística D", num(item["ks_stat"])), ("KS, p-valor", f'{item["ks_pvalue"]:.2g}'),
                     ("média, referência → lote", f'{num(item["ref_mean"], 2)} → {num(item["cur_mean"], 2)}'),
                     ("mediana, referência → lote", f'{num(item["ref_median"], 2)} → {num(item["cur_median"], 2)}')]
@@ -589,12 +595,12 @@ def section_drift(summary, done):
              (5, f"▲ alerta: {num(alert * 1.5, 2)} ou mais")]
     legend_html = '<div class="legend scale">' + "".join(
         f'<span class="key"><span class="swatch seq-{level}"></span>{esc(text)}</span>' for level, text in scale) + "</div>"
-    note = ('<p class="note">PSI calculado com faixas fixas nos decis da referência (treino) e registrado no Evidently como '
-            "<code>psi_decis</code>; o relatório HTML de cada lote traz o mesmo número, com o nome "
-            "“PSI (decis da referência)”, e o teste KS. O KS aparece como "
-            "evidência complementar e não gera alerta: é mais sensível que o PSI e acusa também mudanças pequenas. "
-            "Passe o cursor em uma célula, ou use Tab e as setas, para ver KS, médias e medianas. Os links “relatório” abrem os "
-            "relatórios do Evidently gerados por <code>make report</code>; o repositório versiona apenas alguns deles (ver README).</p>")
+    note = ('<p class="note">As cores mostram o tamanho da mudança: PSI com faixas fixas nos decis da referência (treino), '
+            "a mesma medida gravada no resumo dos cenários pareados. As regras de alerta usam esse tamanho. Os links “relatório” "
+            "abrem o relatório do Evidently de cada lote, que diz se há drift por feature (KS nas medidas contínuas, PSI de "
+            "categorias nas demais); o KS é mais sensível e acusa também mudanças pequenas. Passe o cursor em uma célula, ou use "
+            "Tab e as setas, para ver o veredito do Evidently, o KS, as médias e as medianas. Os relatórios são gerados por "
+            "<code>make report</code>; o repositório versiona apenas alguns deles (ver README).</p>")
     return card("Drift por variável e por lote",
                 '<div class="scroll"><table class="heat" data-grid><caption class="sr">PSI por variável (linhas) e por lote (colunas)'
                 f'</caption><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
@@ -606,6 +612,8 @@ def section_scenarios(scenarios, limits):
     """Cenários pareados da Etapa 2 (src.simulate_drift): mesmos clientes e rótulos, só X muda."""
     if not scenarios:
         return ""
+    shifted = [c for c in scenarios.get("shifted_columns", config.DRIFT_SHIFTED_COLUMNS)
+               if all(c in item["drift"] for item in scenarios["scenarios"])]
 
     def psi_cell(item):
         mark = {"warning": "● ", "alert": "▲ "}.get(item["status"], "")
@@ -619,28 +627,29 @@ def section_scenarios(scenarios, limits):
             href = os.path.relpath(item["report"], config.DASHBOARD.parent).replace(os.sep, "/")
             name = f"Relatório do Evidently do cenário {item['scenario']}"
             link = f'<a href="{esc(href)}" aria-label="{esc(name)}" title="{esc(name)}">relatório</a>'
+        applied = "; ".join(f"{feature_label(column).lower()} ×{num(value, 2)}" for column, value in factors.items())
         flagged = item.get("evidently_drifted")
         verdict = "—" if flagged is None else (f'{len(flagged)} de {len(drift) - 1}' if flagged else "nenhuma")
-        rows.append([f'<span class="strong">{esc(item["scenario"])}</span>',
-                     "—" if not factors else f'×{num(factors["MonthlyIncome"], 2)}',
-                     "—" if not factors else f'×{num(factors["DebtRatio"], 2)}',
-                     verdict, psi_cell(drift["MonthlyIncome"]), psi_cell(drift["DebtRatio"]), psi_cell(drift[config.SCORE]),
+        rows.append([f'<span class="strong">{esc(item["scenario"])}</span>'
+                     + (f'<span class="factors">{esc(applied)}</span>' if applied else ""),
+                     verdict, *[psi_cell(drift[column]) for column in shifted], psi_cell(drift[config.SCORE]),
                      num(metrics["auc"]), pct(metrics["flagged_rate"]), link or "—"])
     first, last = scenarios["scenarios"][0], scenarios["scenarios"][-1]
+    feature, largest = max(((c, last["drift"][c]) for c in shifted), key=lambda pair: pair[1]["psi"])
     reading = (
-        f'No cenário mais forte ({esc(last["scenario"])}), o PSI da renda chega a {num(last["drift"]["MonthlyIncome"]["psi"])} '
-        f'e o do endividamento a {num(last["drift"]["DebtRatio"]["psi"])}, mas o PSI do score fica em '
-        f'{num(last["drift"][config.SCORE]["psi"])} e a AUC fica em {num(last["performance"]["auc"])}, contra '
-        f'{num(first["performance"]["auc"])} no controle. Drift grande em uma variável não implica impacto grande na predição: '
-        "o modelo dá pouco peso a essas duas colunas.")
+        f'No cenário mais forte ({esc(last["scenario"])}), a maior mudança é em {esc(feature_label(feature).lower())} '
+        f'(PSI {num(largest["psi"])}) e o score do modelo tem PSI de {num(last["drift"][config.SCORE]["psi"])}. '
+        f'A parcela sinalizada vai de {pct(first["performance"]["flagged_rate"])} para {pct(last["performance"]["flagged_rate"])}, '
+        f'enquanto a AUC vai de {num(first["performance"]["auc"])} para {num(last["performance"]["auc"])}: '
+        "com os rótulos preservados, o data drift muda as decisões do modelo mais do que a sua capacidade de ordenar.")
+    headers = ["Cenário", "Colunas em drift no Evidently", *[f"PSI: {feature_label(c).lower()}" for c in shifted],
+               "PSI do score", "AUC", "Sinalizados", "Relatório"]
     body = (f'<p class="reading">{reading}</p>'
-            + table(["Cenário", "Renda", "Dívida", "Colunas em drift no Evidently", "PSI da renda", "PSI do endividamento",
-                     "PSI do score", "AUC", "Sinalizados", "Relatório"], rows, right=(1, 2, 7, 8),
-                    label="Drift e desempenho por cenário pareado")
+            + table(headers, rows, right=(len(shifted) + 3, len(shifted) + 4), label="Drift e impacto por cenário pareado")
             + f'<p class="note">{esc(scenarios.get("note", ""))} Os {num(first["rows"], 0)} clientes são os mesmos em todos os '
-            "cenários; os fatores multiplicam <code>MonthlyIncome</code> e <code>DebtRatio</code> do holdout original. "
-            "A coluna do Evidently vem dos relatórios de <code>src.detect_drift</code> (KS e PSI por feature), que dizem "
-            "se há drift; o PSI por decis mede o tamanho da mudança.</p>")
+            "cenários; os fatores multiplicam as colunas do holdout original, e quem passa a usar todo o limite rotativo ganha "
+            "um atraso de 30–59 dias. A coluna do Evidently vem de <code>src.detect_drift</code> (KS nas medidas contínuas e "
+            "PSI de categorias nas demais), que diz se há drift; o PSI por decis mede o tamanho da mudança.</p>")
     return card("Cenários pareados da Etapa 2", body,
                 "Controle e três intervenções sobre o holdout inteiro: quanto os dados mudaram e quanto o modelo sentiu.",
                 "cenarios")
@@ -731,7 +740,8 @@ def section_causal(causal):
         for column, item in sorted(interventions.items(), key=lambda pair: pair[1]["effect"]["auc"])]
     body = (
         f'<p class="reading">Mesmo modelo, mesmos {num(causal["rows"], 0)} clientes de {esc(batch_label(causal["month"]))} e mesmo sorteio: '
-        "cada cenário liga uma parte do choque por vez. O que muda entre cenários é efeito da intervenção, dentro da simulação.</p>"
+        f'cada cenário liga uma parte do choque daquele lote por vez (níveis {esc(causal.get("data_level", "—"))} e '
+        f'{esc(causal.get("concept_level", "—"))}). O que muda entre cenários é efeito da intervenção, dentro da simulação.</p>'
         '<div class="grid2"><div><h3>Efeito na AUC por mecanismo (IC de 95%, bootstrap pareado)</h3>'
         f'{bars}<p class="note">Barras a partir do zero; o traço fino é o intervalo de confiança. '
         "A interação é o que sobra: os dois mecanismos juntos derrubam menos do que a soma dos efeitos isolados.</p></div>"
@@ -776,10 +786,12 @@ def section_definitions(summary):
 
 def footer(summary):
     simulation = summary.get("simulation", {})
-    parameters = ", ".join(f"{esc(k)}={esc(v)}" for k, v in simulation.get("parameters", {}).items())
-    return (f'<footer><p>Fontes: <code>{esc(config.SUMMARY)}</code>, <code>{esc(config.CAUSAL)}</code> e <code>{esc(config.EVENT_LOG)}</code>. '
-            f'Simulação com seed {esc(simulation.get("seed", "—"))} sobre <code>{esc(simulation.get("source", "—"))}</code>; '
-            f'parâmetros: {parameters or "—"}.</p>'
+    schedule = "; ".join(f'{month_label(item["month"])} {item["data_level"]} e {item["concept_level"]}'
+                         for item in simulation.get("schedule", []))
+    return (f'<footer><p>Fontes: <code>{esc(config.SUMMARY)}</code>, <code>{esc(config.SCENARIO_IMPACT)}</code>, '
+            f'<code>{esc(config.CAUSAL)}</code> e <code>{esc(config.EVENT_LOG)}</code>. '
+            f'Lotes simulados com seed {esc(simulation.get("seed", "—"))} sobre <code>{esc(simulation.get("source", "—"))}</code>; '
+            f'níveis de data drift e de concept drift por mês: {esc(schedule) or "—"}.</p>'
             "<p>O dashboard contém somente agregados por lote; nenhuma linha de cliente é gravada aqui ou no log central.</p></footer>")
 
 
