@@ -1,545 +1,76 @@
 # TC04 | Governança e confiabilidade de um modelo de crédito
 
-Projeto acadêmico da Fase 4 do MLET/FIAP. O cenário é uma fintech cujo modelo de Credit Scoring pode sofrer degradação silenciosa diante de mudanças econômicas e do perfil dos clientes. O objetivo é validar dados, investigar mudanças de distribuição e definir como proteger dados e responder à degradação.
+Projeto acadêmico MLET/FIAP: validação de dados, detecção de drift e análise da confiabilidade de um modelo de crédito com o dataset **Give Me Some Credit** e XGBoost.
 
-Este README documenta a **Etapa 1 executada**, os **experimentos de data drift e concept drift da Etapa 2**, com predições e relatórios, e a **proposta de governança da Etapa 4**. A observabilidade contínua da Etapa 3 ainda está pendente. A degradação de desempenho demonstrada é sintética; não representa uma série temporal real ou evidência de causa econômica. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
+Os cenários são sintéticos, sem série temporal real ou comprovação de causa econômica. O projeto não realiza concessões reais de crédito.
 
-## 1. Escopo e evidências disponíveis
+## Situação da entrega
 
-| Componente | Evidência no repositório | Situação |
-| --- | --- | --- |
-| Exploração e avaliação inicial de seleção | [Notebook](notebooks/01_exploracao.ipynb) | Exploração auxiliar; saídas antigas removidas; leitura sem modificar dados |
-| Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória, sem simulação temporal |
-| Contrato de dados | [contract.py](src/contract.py) | Implementado em Pandera |
-| Bloqueio e quarentena | [ingest.py](src/ingest.py) | Implementados para falhas de validação do contrato |
-| Lotes de demonstração | [Log de aprovação](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt), [log de bloqueio](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) e [falhas](data/quarantine/bad_batch_errors.csv) | Executados: 500 linhas aprovadas e lote de 505 linhas em quarentena |
-| Treinamento e avaliação | [Modelo](models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib), [métricas](models/runs/32542e11c8c8477ea23d42db115efd0e/metrics.json) e [manifesto da execução](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) | Baseline treinado, métricas conferidas após recarregar o modelo e publicação por versão |
-| Simulação de data drift | [simulate_drift.py](src/simulate_drift.py): controle e três períodos sintéticos pareados a partir do holdout | Implementada; não representa série temporal real |
-| Predições da Etapa 2 | [predict.py](src/predict.py): inferência com o modelo salvo na referência e nos quatro cenários | Implementadas; probabilidades e classes em arquivos separados |
-| Detecção de data drift | [detect_drift.py](src/detect_drift.py), [resumo estatístico](reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: utilização de crédito detectada em t1–t3; atrasos de 90 dias detectados em t2–t3 |
-| Comparativo de intervenções | [compare_data_drift.py](src/compare_data_drift.py) e [análise comparativa](reports/drift_comparison/analysis.html) | Mesmo modelo/holdout; perfil anterior de renda/dívida preservado e comparado ao perfil atual de utilização/atrasos |
-| Concept drift e comportamento do modelo | [concept_drift.py](src/concept_drift.py), [análise](artifacts/concept_drift/analysis.html) e [métricas](artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
-| Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
-| Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
-| Vídeo STAR | Seção 10 | Gravação e link pendentes |
-
-## 2. Dados, modelo e arquitetura
-
-### Dados e finalidade
-
-Os arquivos locais correspondem ao conjunto **Give Me Some Credit**, com 150.000 registros no `cs-training.csv`. A finalidade acadêmica é estimar o risco de inadimplência e estudar qualidade e confiabilidade. A origem de obtenção, a versão e os termos de uso devem ser registrados antes da entrega; a presença dos arquivos no Git não comprova autorização de redistribuição.
-
-O alvo `SeriousDlqin2yrs` representa inadimplência grave no horizonte de dois anos. As dez variáveis preditoras são:
-
-| Grupo | Colunas | Risco de privacidade e uso |
-| --- | --- | --- |
-| Perfil | `age`, `NumberOfDependents` | Combinações podem favorecer identificação e segmentação discriminatória |
-| Situação financeira | `MonthlyIncome`, `DebtRatio`, `RevolvingUtilizationOfUnsecuredLines` | Informações financeiras confidenciais; possíveis proxies socioeconômicos |
-| Histórico de crédito | `NumberOfTime30-59DaysPastDueNotWorse`, `NumberOfTimes90DaysLate`, `NumberOfTime60-89DaysPastDueNotWorse`, `NumberOfOpenCreditLinesAndLoans`, `NumberRealEstateLoansOrLines` | Perfil financeiro e risco de exposição de comportamento |
-| Desfecho | `SeriousDlqin2yrs` | Informação de inadimplência; usada no treino e na avaliação |
-
-Não há colunas de nome, CPF, telefone ou e-mail no arquivo de treino inspecionado. A coluna `Unnamed: 0`, um índice do arquivo, é removida na preparação. **Essa remoção não comprova anonimização**: não há avaliação de reidentificação ou técnica de anonimização implementada.
-
-Dados financeiros e idade podem ser dados pessoais quando vinculados a pessoa identificada ou identificável; não são automaticamente dados pessoais sensíveis na definição legal. Não foram identificadas colunas explícitas de saúde, biometria, religião ou origem racial. A distinção segue o [Glossário da ANPD](https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/glossario-anpd).
-
-### Fluxo implementado
-
-```text
-data/raw/cs-training.csv
-    -> src.prepare: limpeza fixa + divisões estratificadas (seed 42)
-        -> treino (56%): ajusta os dois limites p99
-        -> aplica os mesmos limites ao treino, validação (14%) e holdout (30%)
-        -> data/reference/reference.parquet (somente treino)
-        -> data/validation/validation.parquet
-            -> src.train: valida contratos das duas partições
-                -> treino XGBoost na referência e avaliação na validação
-                -> models/.tmp-<execução>/{model.joblib,metrics.json}
-                -> models/runs/<execução> (versão completa)
-                -> models/current (apontador para a versão publicada)
-        -> data/reference/outlier_limits.json + cleaning_report.json
-        -> data/production/holdout.parquet
-            -> src.make_bad_batch: lotes de demonstração
-                -> data/incoming/{good,bad}_batch.parquet
-                    -> src.ingest + contrato Pandera
-                        -> válido: log e retorno 0
-                        -> inválido: movimentação para data/quarantine,
-                           CSV de falhas e retorno 1
-                        -> falha operacional: log e retorno 2
-            -> src.simulate_drift: controle e intervenções em utilização/atrasos de 90 dias
-                -> data/production/scenarios/{t0_control,t1,t2,t3}.parquet
-                -> data/production/scenarios/manifest.json
-
-models/current/model.joblib + referência + quatro cenários
-    -> src.predict: contrato + seleção ordenada de FEATURE_COLUMNS
-        -> data/predictions/{reference,t0_control,t1,t2,t3}.parquet
-        -> data/predictions/manifest.json
-
-referência + quatro cenários (somente FEATURE_COLUMNS)
-    -> src.detect_drift: Evidently DataDriftPreset + KS/PSI
-        -> reports/drift/{t0_control,t1,t2,t3}.{html,json}
-        -> reports/drift/summary.csv + manifest.json
-
-perfil anterior arquivado + cenários/predições atuais + modelo fixo
-    -> src.compare_data_drift
-        -> reports/drift_comparison/{analysis.html,metrics.csv,feature_importance.csv}
-        -> comparações nativas de classificação + importância conjunta + manifest.json
-
-referência (ajusta apenas corte de renda) + holdout + modelo salvo
-    -> src.concept_drift: altera Y condicionalmente a X; preserva X e modelo
-        -> artifacts/concept_drift/{datasets,predictions}/
-        -> métricas globais e por segmento + sensibilidade a cinco seeds
-        -> relatórios de classificação do Evidently + prova de features estáveis
-        -> analysis.html + interventions.parquet + manifest.json
-```
-
-[config.py](src/config.py) centraliza alvo, seed, limiar de classificação, fatores dos períodos, critérios de drift e probabilidades do choque sintético no alvo. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados nos experimentos e relatórios. A ordem das features continua definida apenas em [contract.py](src/contract.py).
-
-Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
-
-Modelo e métricas são gravados em um diretório temporário exclusivo dentro de `models/`. Somente após concluir ambas as gravações, a versão é movida para `models/runs/<execução>` e o link simbólico `models/current` é substituído atomicamente. Os caminhos publicados são `models/current/model.joblib` e `models/current/metrics.json`. Falhas de gravação ou publicação retornam 2 e preservam a versão anterior; temporários e versões não publicadas são removidos nas falhas tratadas. Versões publicadas anteriores permanecem disponíveis em `models/runs/`.
-
-Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Todos os consumidores do projeto usam a estrutura publicada em `models/current` ou uma versão explícita de `models/runs`. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
-
-O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
-
-## 3. Qualidade de dados e limites do contrato
-
-O contrato exige pelo menos um registro; valores finitos em todas as colunas numéricas (rejeita `+inf` e `-inf`); alvo binário; idade inteira entre 18 e 100, inclusive; renda não nula e não negativa; demais medidas e contagens não negativas; colunas e tipos definidos; ausência de colunas extras e de linhas integralmente duplicadas. Os campos não marcados como anuláveis também rejeitam nulos por padrão. Não há coerção de tipos configurada. Lotes vazios e números infinitos são violações do contrato, com retorno 1 na ingestão e no treinamento.
-
-A lista `FEATURE_COLUMNS`, definida no contrato, determina a ordem das entradas do modelo. O treinamento seleciona as mesmas features nessa ordem na referência e na validação, permitindo arquivos com colunas em outra ordem. A lista fica registrada também nos nomes das features do XGBoost serializado.
-
-A preparação remove duplicatas, idades fora do intervalo, registros sem renda ou dependentes, rendas negativas e códigos 96/98 nas colunas de atraso. Separa 30% para holdout e divide os 70% restantes em treino/validação na proporção 80/20. Calcula os percentis 99 de `DebtRatio` e de utilização de crédito exclusivamente no treino, antes de qualquer filtro estatístico. Aplica os mesmos limites às três partições, sem recalculá-los na validação ou no holdout. Os limites são salvos em `data/reference/outlier_limits.json`, e o relatório registra exclusões e tamanhos por partição.
-
-O [relatório da preparação executada](data/reference/cleaning_report.json) registra 609 duplicatas, 14 exclusões por idade, 29.214 por renda/dependentes ausentes, nenhuma por renda negativa e 145 pelos códigos 96/98. Restaram 120.018 registros antes dos filtros estatísticos. Os limites calculados somente no treino foram `DebtRatio ≤ 672,76` e `RevolvingUtilizationOfUnsecuredLines ≤ 1,09213079212`; os valores completos estão em [outlier_limits.json](data/reference/outlier_limits.json).
-
-| Partição | Antes dos outliers | Removidos por DebtRatio | Removidos por utilização | Registros finais |
-| --- | ---: | ---: | ---: | ---: |
-| Treino / referência | 67.209 | 673 | 669 | 65.867 |
-| Validação | 16.803 | 156 | 167 | 16.480 |
-| Holdout | 36.006 | 366 | 343 | 35.297 |
-
-As exclusões são contagens sequenciais, não estimativas independentes de prevalência. Ao final, restaram 117.644 registros nas três partições. A execução verificou contratos, limites aplicados e ausência de registros compartilhados entre partições.
-
-Limitações que precisam orientar a operação:
-
-- O contrato exige `SeriousDlqin2yrs`; atende lotes históricos rotulados. Inferência real exige contrato próprio sem o alvo, pois o desfecho futuro ainda não é conhecido.
-- O contrato não reproduz todos os filtros da limpeza: não bloqueia especificamente 96/98 nem aplica limites superiores de renda, dívida ou utilização.
-- A remoção de outliers também filtra validação e holdout; as métricas descrevem a população retida. O relatório permite acompanhar as exclusões por partição. A simulação atual não reaplica esse filtro após as intervenções, preservando as mudanças introduzidas.
-- O lote ruim contém idade 15, renda nula, dívida negativa, duplicatas e coluna ausente. Isso testa qualidade, não simula drift temporal.
-- A ingestão retorna 2 para falhas de leitura, validação inesperada, escrita ou movimentação. Se já houver lote ou relatório com o mesmo nome na quarentena, preserva a evidência anterior e o arquivo de entrada e retorna 2; é necessário resolver a colisão antes de repetir. O armazenamento de múltiplas ocorrências com identificadores únicos continua pendente.
-
-## 4. Plano de proteção de dados e base legal
-
-### Finalidades e enquadramento
-
-Na hipótese de operação real da fintech, a base legal proposta para avaliação de risco é **proteção do crédito, art. 7º, X, da LGPD**. O controlador deverá validar sua adequação à finalidade e aos dados tratados. Essa hipótese não autoriza automaticamente o reuso acadêmico ou a publicação da base. Finalidade acadêmica também exige observar os arts. 7º e 11, conforme art. 4º, II, b. Fonte: [texto atualizado da LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html).
-
-Para este estudo, permanece pendente documentar a procedência, os termos de uso e o enquadramento do tratamento. O caráter público de uma fonte não afasta, por si só, os cuidados com dados pessoais. Fonte: [perguntas frequentes da ANPD](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes).
-
-### Privacy by Design e by Default
-
-| Medida | Situação atual | Política proposta |
-| --- | --- | --- |
-| Minimização | Remoção do índice; contrato recusa colunas extras | Admitir somente atributos justificados pela finalidade; não incluir identificadores diretos nas features |
-| Segregação | Diretórios de dados brutos, referência e holdout | Separar ambientes, identidades e permissões; manter chaves de associação fora da área analítica |
-| Acesso | Sem controle de acesso implementado no projeto | Menor privilégio; dados detalhados restritos à equipe autorizada; revisão ao trocar integrantes |
-| Armazenamento e transporte | Arquivos locais; sem configuração de criptografia no código | Armazenamento e backups criptografados; TLS nas transferências; segredos fora do Git |
-| Publicação | CSV e Parquet estão versionados | Avaliar termos e risco; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
-| Logs e relatórios | Log de lote e CSV de falhas | Não registrar linhas de clientes; restringir quarentena e sanitizar valores antes de compartilhar relatórios ou vídeo |
-| Descarte | Sem rotina implementada | Aplicar a tabela de retenção, incluindo cópias, backups e histórico sob controle da equipe |
-
-O CSV de falhas pode conter valores rejeitados. Quarentena é uma área restrita de diagnóstico, não um mecanismo de anonimização. A ausência de identificadores diretos também não autoriza divulgar registros financeiros individuais.
-
-### Direitos e decisões automatizadas
-
-Em uma operação real, disponibilizar canal de privacidade para acesso, correção e demais solicitações aplicáveis; manter registro de atendimento. Solicitações de revisão de decisões automatizadas devem receber procedimento documentado, com informação sobre critérios e parâmetros, respeitados os segredos comercial e industrial. Fonte: [direitos dos titulares, ANPD](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares).
-
-Como política do projeto para uma implantação futura, decisões contestadas ou com alerta crítico serão encaminhadas a análise humana, com justificativa registrada. O protótipo atual não possui cadastro de titulares, canal de atendimento ou sistema de decisão de crédito.
-
-### Retenção e descarte
-
-Os prazos abaixo são **propostas internas para o ambiente acadêmico**, contados conforme cada linha, e não prazos legais universais. Na operação real, o controlador deverá definir uma matriz própria de obrigações e necessidades antes da coleta.
-
-| Categoria | Retenção proposta | Destino e responsável |
-| --- | --- | --- |
-| Dados brutos e derivados locais | Até 90 dias após a avaliação final | Engenharia de Dados elimina cópias de trabalho e confirma tratamento das cópias compartilhadas |
-| Lotes em quarentena e CSVs com valores | Até 30 dias após a triagem | Engenharia de Dados corrige/reprocessa ou elimina; guarda somente resumo agregado |
-| Logs sem valores individuais | 180 dias após a execução | MLOps elimina após consolidar indicadores de auditoria |
-| Relatórios agregados e documentação | 12 meses após a avaliação final | Responsável pelo projeto revisa necessidade de conservação |
-| Modelos e metadados | Até 12 meses após a substituição | Ciência de Dados elimina versões sem necessidade de auditoria; acesso continua restrito |
-
-Revisar mensalmente os vencimentos; registrar categoria, data, executor e resultado do descarte. Incluir backups no ciclo de expiração. Exceções exigem motivo, aprovador e nova data de revisão. Um arquivo excluído da pasta de trabalho pode continuar no Git ou em clones: a limpeza do histórico e o alcance das cópias precisam ser avaliados separadamente. Nada disso está automatizado hoje.
-
-## 5. Vieses e uso responsável
-
-O dataset de treino tem 10.026 positivos em 150.000 registros, uma taxa de 6,684%. O treinamento usa `scale_pos_weight` para lidar com o desequilíbrio; isso não demonstra equidade entre grupos.
-
-A exclusão de registros sem renda ou dependentes pode mudar a população atendida. A análise do CSV bruto, reproduzível pelo notebook auxiliar, encontra taxas de inadimplência de aproximadamente 5,61% para renda ausente e 6,95% para renda preenchida, indicando seleção potencialmente relevante. Os filtros de percentil também podem remover clientes de maior risco. Esses resultados justificam investigação, sem comprovar discriminação ou causalidade.
-
-Antes de recomendar uso operacional, a política proposta é:
-
-1. Comparar proporções de exclusão, distribuição e inadimplência antes/depois da limpeza por faixas de idade e renda.
-2. Avaliar AUC, recall, FPR, FNR e calibração por segmento, com tamanho amostral e incerteza; explicitar que o positivo representa inadimplência.
-3. Comparar exclusão de renda ausente com imputação ajustada no treino e indicador de ausência, avaliando desempenho e seleção.
-4. Revisar o uso de idade, dependentes e proxies socioeconômicos; justificar necessidade e alternativas.
-5. Aprovar o limiar com base nos custos de inadimplência e de recusa indevida. Não converter automaticamente a probabilidade em aprovação/reprovação sem política validada.
-
-Não há atributos explícitos suficientes para auditar todos os grupos protegidos. Sua ausência limita conclusões sobre equidade. Eventual coleta para auditoria exige finalidade, base legal e controles próprios; não deve ser feita indiscriminadamente.
-
-## 6. Causalidade: diagnóstico e hipóteses
-
-**Não há evidência de degradação temporal real ou de causa econômica no código atual.** O holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O script `src.simulate_drift` cria cenários sintéticos de data drift e `src.detect_drift` identifica as alterações por testes estatísticos. Separadamente, `src.concept_drift` muda o mecanismo do alvo com as features fixas e mede a degradação sintética do modelo. Isso permite atribuir diferenças de métricas à intervenção programada dentro do experimento, sem identificar causas econômicas no mundo real.
-
-O mecanismo econômico a investigar é: mudança econômica pode afetar renda e endividamento, que podem alterar o risco de inadimplência; mudanças no público atendido e na política de aprovação também podem alterar a população observada. Essas relações são hipóteses de domínio, não conclusões obtidas neste projeto.
-
-| Hipótese | Evidência necessária | Ação se corroborada |
-| --- | --- | --- |
-| Erro na coleta ou transformação | Falhas no contrato, mudança de unidade, versão da fonte e logs | Bloquear lote, corrigir origem e reprocessar |
-| Data drift: mudança em P(X) | Comparação referência/análise, por exemplo em utilização de crédito e atrasos de 90 dias, com testes e magnitude | Investigar origem, população e impacto sobre predições |
-| Concept drift: mudança em P(Y\|X) | Rótulos maturados, queda de desempenho/calibração em condições comparáveis e análise de alternativas | Avaliar recalibração ou retreinamento |
-| Seleção causada pela limpeza | Comparação entre incluídos/excluídos e alternativas de tratamento | Rever filtros e repetir avaliação por segmento |
-| Efeito econômico sobre inadimplência | Dados temporais, fatores de confusão e desenho causal defensável | Submeter a hipótese a análise específica antes de atribuir causa |
-
-PSI ou um teste KS de duas amostras pode apontar mudança de distribuição; não identifica sua causa nem comprova concept drift. Queda de performance também exige investigar qualidade, seleção, mudança de política e maturação do alvo.
-
-O experimento de data drift registra intervenções em duas features, compara cenários pareados e executa o mesmo modelo. Usa todo o holdout; sorteios com seed 42 determinam quais registros recebem um atraso adicional, sem alterar a composição da amostra. O experimento separado de concept drift usa sorteios reproduzíveis para alterar o mecanismo do alvo. A seed 42 também se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica; a alteração de `P(Y|X)` está explicitada na subseção de concept drift.
-
-Como o alvo tem horizonte de dois anos, produção real requer política de maturação e acompanhamento de rótulos. Sem desfechos disponíveis, monitorar dados e scores e declarar a limitação de avaliação do modelo. O dataset local não permite reconstruir uma série temporal real de concessões.
-
-### Cenário de controle e períodos sintéticos da Etapa 2
-
-**O dataset não fornece uma série temporal real.** `t0`, `t1`, `t2` e `t3` são rótulos de cenários ordenados de um experimento, sem datas observadas, duração em meses ou alegação de evolução econômica real. Todos reutilizam os mesmos registros do holdout, na mesma ordem, para uma comparação pareada que mantém fixa a composição da amostra. Não representam safras independentes de clientes.
-
-O script [simulate_drift.py](src/simulate_drift.py) lê `data/production/holdout.parquet` e gera:
-
-| Arquivo em `data/production/scenarios/` | Cenário | Fator de utilização de crédito | Chance de acrescentar um atraso de 90 dias |
-| --- | --- | ---: | ---: |
-| `t0_control.parquet` | Controle: cópia integral do holdout, sem alterações de valores | 1,00 | 0% |
-| `t1.parquet` | Primeira intervenção sintética | 1,10 | 10% |
-| `t2.parquet` | Segunda intervenção sintética | 1,30 | 25% |
-| `t3.parquet` | Terceira intervenção sintética | 1,60 | 40% |
-
-As features alteradas são `RevolvingUtilizationOfUnsecuredLines` e `NumberOfTimes90DaysLate`. O fator de utilização é aplicado diretamente ao holdout original, sem acumulação; valores zero permanecem zero. Para atrasos, sortear um `U ~ Uniforme(0,1)` por linha com seed 42 e acrescentar **um** atraso quando `U` estiver abaixo da probabilidade do período, inclusive para quem tinha zero atrasos. Os mesmos sorteios são reutilizados, formando grupos aninhados; a contagem permanece inteira e não usa o alvo ou os scores. Em t1/t2/t3, respectivamente 3.472/8.889/14.055 linhas recebem o acréscimo; 32.977 linhas têm utilização alterada em cada período. Renda, `DebtRatio`, demais features e o alvo histórico permanecem intactos. Esses parâmetros são testes de estresse, não estimativas econômicas ou evidências de desempenho futuro.
-
-O controle não recebe intervenção; isso não garante ausência de diferenças estatísticas em relação ao treino. O holdout já passou pela limpeza da Etapa 1. Não há nova filtragem por p99 após as intervenções, para não remover a mudança introduzida. O script valida a entrada e todos os cenários com o contrato Pandera antes de publicar os arquivos. A referência de treino, a validação, o holdout e o modelo permanecem intactos; não há treinamento nessa operação.
-
-O `manifest.json` registra entrada e hashes, identificação `credit_utilization_late90_v1`, seed, intervenções, quantidade de linhas alteradas, volumes e limitações. O processo usa todo o holdout sem reamostragem; a seed controla somente o choque de atrasos. Metadados ficam no manifesto, fora dos Parquet, para preservar o contrato estrito. O argumento `--seed` permite outra realização, usando um novo destino.
-
-Na execução local, cada cenário contém 35.297 registros e passa pelo contrato. O [manifesto gerado](data/production/scenarios/manifest.json) registra os artefatos. Referência, validação, holdout e modelo permanecem preservados. O controle coincide integralmente com o holdout após a leitura dos Parquet. Os cenários anteriores de renda/endividamento foram arquivados para comparação, conforme a subseção abaixo.
-
-Para gerar os cenários usando o holdout existente:
-
-```bash
-make simulate-drift PYTHON=.venv/bin/python
-```
-
-O alvo não depende de `prepare`, evitando regenerar a referência. Para outra entrada ou destino:
-
-```bash
-.venv/bin/python -m src.simulate_drift --holdout data/production/holdout.parquet --output-dir /tmp/tc04-scenarios
-```
-
-O destino deve ser inexistente; reexecuções não sobrescrevem cenários anteriores. Os quatro Parquet e o manifesto são publicados juntos após a gravação em diretório temporário. A inferência e a detecção estatística com Evidently estão descritas a seguir.
-
-### Predições na referência e nos cenários
-
-O script [predict.py](src/predict.py) carrega `models/current/model.joblib` uma única vez, resolvendo o apontador para a versão publicada, e executa o mesmo modelo na referência e em `t0_control`, `t1`, `t2` e `t3`. Não executa preparação ou treinamento e não altera os arquivos de entrada. Cada dataset é validado com Pandera. As entradas do modelo são selecionadas exclusivamente com `df.loc[:, FEATURE_COLUMNS]`, na ordem do contrato e sem o alvo; essa ordem também é conferida contra os nomes de features do modelo salvo.
-
-```bash
-make predict PYTHON=.venv/bin/python
-```
-
-Os resultados ficam em `data/predictions/{reference,t0_control,t1,t2,t3}.parquet`. Cada arquivo contém:
-
-| Coluna | Significado |
+| Etapa | Situação |
 | --- | --- |
-| `row_position` | Posição da linha no Parquet de origem, começando em zero; nenhuma linha é removida ou reordenada |
-| `SeriousDlqin2yrs` | Alvo histórico, copiado para permitir análises posteriores; não é entrada do modelo |
-| `probability_0` | Probabilidade estimada para a classe 0 |
-| `probability_1` | Probabilidade estimada para a classe 1 (inadimplência grave) |
-| `predicted_class` | 1 quando `probability_1 >= 0.5`, e 0 caso contrário, seguindo o limiar da avaliação do baseline |
+| 1 — Qualidade e contratos | Executada: Pandera, bloqueio/quarentena e baseline treinado |
+| 2 — Drift | Executada: data drift, concept drift, predições e relatórios Evidently |
+| 3 — Observabilidade | Pendente: centralização de logs, métricas e rastreamento/dashboard |
+| 4 — Governança e vídeo | Plano documentado; procedência dos dados, responsáveis e vídeo pendentes |
 
-O `manifest.json` de predições registra a versão resolvida e o hash SHA-256 do modelo, horário UTC, ordem de features, regra de classificação, caminhos/hashes das entradas e hashes/quantidades das saídas. Para associar resultados às features, usar a posição das linhas no arquivo de origem indicado no manifesto e conferir seu hash. As predições ficam separadas dos dados para preservar o contrato estrito. O conjunto completo é publicado após concluir todos os arquivos; destino existente causa erro, preservando resultados anteriores.
+**Vídeo STAR:** pendente de gravação e publicação, com duração máxima de cinco minutos. [Roteiro e checklist](docs/entrega.md).
 
-Para outro destino ou uma versão explícita de modelo:
+## Executar
 
-```bash
-.venv/bin/python -m src.predict --model models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib --output-dir /tmp/tc04-predictions
-```
-
-Os argumentos `--reference` e `--scenarios-dir` também permitem indicar outras entradas. As predições na referência são sobre dados usados no treinamento, sem representar avaliação independente. Nos períodos sintéticos, os rótulos históricos permanecem inalterados; resultados não comprovam concept drift nem desempenho futuro real.
-
-Na execução local com o modelo `32542e11c8c8477ea23d42db115efd0e`, foram salvas 65.867 predições na referência e 35.297 em cada cenário, totalizando 207.055. O [manifesto de inferência](data/predictions/manifest.json) registra a procedência. Após recarregar os cinco Parquet, probabilidades e classes coincidiram exatamente com uma nova inferência do modelo salvo; posições e rótulos também coincidiram com as entradas. Os hashes dos 12 arquivos de dados e modelo envolvidos permaneceram inalterados.
-
-### Detecção de data drift com Evidently AI
-
-O script [detect_drift.py](src/detect_drift.py) integra o Evidently **0.7.23** usando a API `Dataset`, `DataDefinition`, `Report` e `DataDriftPreset`, conforme a [documentação oficial de relatórios](https://docs.evidentlyai.com/docs/library/report) e de [métodos de drift](https://docs.evidentlyai.com/metrics/customize_data_drift). A execução é local, com telemetria de uso desabilitada por `DO_NOT_TRACK=1`. Não requer conta, servidor ou envio dos dados à plataforma Evidently.
-
-```bash
-make detect-drift PYTHON=.venv/bin/python
-```
-
-Cada cenário é comparado com `data/reference/reference.parquet`. Entrada e referência passam pelo contrato Pandera; somente `FEATURE_COLUMNS` são entregues ao Evidently. O alvo, `row_position`, probabilidades e classes previstas não participam dessa comparação. Os arquivos de inferência continuam disponíveis para análises posteriores de scores e desempenho, separadas da detecção de data drift.
-
-Os métodos e limiares são explícitos em `src/config.py`, sem depender da seleção automática por cardinalidade do Evidently:
-
-| Grupo | Features | Método | Critério por feature |
-| --- | --- | --- | --- |
-| Medidas financeiras contínuas | `MonthlyIncome`, `DebtRatio`, `RevolvingUtilizationOfUnsecuredLines` | KS de duas amostras | p-valor < 0,01 |
-| Idade e contagens, tratadas como categorias | As outras sete features do contrato | PSI sobre frequências das categorias | PSI ≥ 0,20 |
-
-O PSI categórico usa a união dos valores presentes nas duas amostras e o tratamento de frequências zero do Evidently 0.7.23; não discretiza as medidas financeiras contínuas. O KS evita a escolha de bins para essas medidas. O p-valor não mede a magnitude nem o impacto de negócio, e os testes podem ser sensíveis ao volume e a valores repetidos. Os limiares são escolhas iniciais do experimento, sem correção de múltiplas comparações; não são exigências do enunciado nem critérios universais. O critério global sinaliza drift quando **pelo menos 20% das dez features** apresentam drift; os resultados individuais continuam disponíveis mesmo abaixo desse percentual.
-
-O diretório `reports/drift/` contém quatro relatórios HTML, quatro JSONs nativos do Evidently, `summary.csv` com as 40 comparações por feature e cenário e `manifest.json` com versões das bibliotecas, parâmetros, hashes das entradas/saídas e limitações. Nos relatórios, testes em falha indicam drift detectado, não falha operacional do script. Uma execução concluída retorna 0 mesmo com drift; erros de leitura, contrato ou geração propagam erro e não publicam um conjunto parcial. O destino deve ser inexistente. Para outro conjunto ou destino:
-
-```bash
-.venv/bin/python -m src.detect_drift --reference data/reference/reference.parquet --scenarios-dir data/production/scenarios --output-dir /tmp/tc04-drift
-```
-
-Resultados da execução sobre os artefatos preservados:
-
-| Cenário | Features com drift | Proporção | Relatório |
-| --- | --- | ---: | --- |
-| Controle | Nenhuma | 0/10 | [t0_control.html](reports/drift/t0_control.html) |
-| t1 | `RevolvingUtilizationOfUnsecuredLines` | 1/10 | [t1.html](reports/drift/t1.html) |
-| t2 | Utilização de crédito e atrasos de 90 dias | 2/10 | [t2.html](reports/drift/t2.html) |
-| t3 | Utilização de crédito e atrasos de 90 dias | 2/10 | [t3.html](reports/drift/t3.html) |
-
-O KS da utilização tem p-valor aproximadamente 0,603 no controle e 3,23 × 10⁻²²⁷ em t1; em t2/t3 retorna 0 por precisão numérica. O PSI de atrasos de 90 dias é 0,002781 no controle, 0,129921 em t1, 0,550084 em t2 e 1,097602 em t3. O choque de t1 altera a distribuição dos atrasos, mas não supera o limiar PSI de 0,20. Assim, t1 não aciona o sinal global de 20% das features; t2 e t3 acionam. Os métodos e limiares foram mantidos para permitir comparação. Os números completos estão no [resumo estatístico](reports/drift/summary.csv) e a procedência no [manifesto](reports/drift/manifest.json).
-
-A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção nas duas features confirma mudanças de distribuição introduzidas no experimento; não comprova causa econômica ou concept drift. A avaliação a seguir mede sensibilidade do mesmo modelo aos choques com rótulos históricos preservados.
-
-### Comparação dos efeitos: perfil anterior e perfil atual de data drift
-
-O perfil anterior, com renda ×0,90/0,75/0,60 e dívida ×1,10/1,30/1,60, foi preservado em [artifacts/data_drift_income_debt](artifacts/data_drift_income_debt/archive.json), com seus 21 arquivos de cenários, predições e relatórios e o commit de origem. Os manifestos históricos mantêm os caminhos da execução antiga; `archive.json` mapeia cada caminho original para o snapshot e seu hash. Esse material é evidência histórica; o gerador ativo produz somente utilização de crédito/atrasos de 90 dias.
-
-[compare_data_drift.py](src/compare_data_drift.py) exige o mesmo modelo e holdout, confere hashes, ordem, rótulos e predições, recalcula os resultados salvos e avalia ambos os perfis no limiar 0,5. As features fora da dupla de intervenção devem permanecer idênticas. A avaliação inclui AUC, recall, precisão, F1, average precision, KS de classificação, Brier, log loss, matriz de confusão, scores e classes alteradas, além de importância por ganho e permutação com dez repetições.
-
-```bash
-make compare-data-drift PYTHON=.venv/bin/python
-```
-
-Os resultados ficam em [reports/drift_comparison/analysis.html](reports/drift_comparison/analysis.html), com métricas, importância individual e conjunta, 80 resultados estatísticos de drift dos dois perfis e comparações de classificação do Evidently em t3. A referência de treino não é usada para medir desempenho: as métricas são do holdout pareado. Para outro destino, usar `python -m src.compare_data_drift --output-dir /tmp/tc04-comparison`.
-
-| Perfil | Cenário | AUC | Recall | Precisão | Previsões positivas | Classes alteradas contra controle |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Controle comum | t0 | 0,843257 | 74,09% | 19,74% | 24,83% | 0 |
-| Renda/dívida anterior | t1 | 0,843497 | 75,20% | 19,34% | 25,73% | 608 |
-| Renda/dívida anterior | t2 | 0,844089 | 76,62% | 18,58% | 27,28% | 1.210 |
-| Renda/dívida anterior | t3 | 0,842989 | 77,94% | 17,75% | 29,05% | 1.950 |
-| Utilização/atrasos atual | t1 | 0,826368 | 78,67% | 15,53% | 33,52% | 3.200 |
-| Utilização/atrasos atual | t2 | 0,810124 | 84,03% | 12,19% | 45,61% | 7.462 |
-| Utilização/atrasos atual | t3 | 0,800850 | 88,27% | 10,29% | 56,74% | 11.377 |
-
-Em t3, os falsos positivos são 8.435 no perfil anterior e 17.965 no atual; a taxa de falsos positivos passa de 25,59% para 54,50%. O aumento de recall ocorre junto com mais previsões positivas e menor precisão. O Brier piora de 0,168535 para 0,316147 e o log loss de 0,514014 para 0,885914 entre os dois perfis de t3. A variação média absoluta do score contra o controle é 0,044117 no anterior e 0,193918 no atual. O modelo é mais sensível aos choques atuais escolhidos, com pior discriminação e mais falsos positivos contra os rótulos históricos.
-
-No holdout original, utilização e atrasos de 90 dias ocupam a 1ª e a 2ª posição por importância de permutação: quedas médias de AUC de 0,065950 e 0,032620. Dívida e renda ocupam a 5ª e a 8ª posição, com 0,008679 e 0,003704. A permutação conjunta, preservando a relação interna de cada dupla e usando as mesmas dez ordens, reduz a AUC em média 0,123676 na dupla atual e 0,012697 na anterior. Ganhos normalizados de 28,29% e 21,71% são indicadores internos das árvores, não proporções do risco explicado. Ver [feature_importance.csv](reports/drift_comparison/feature_importance.csv) e [joint_importance.csv](reports/drift_comparison/joint_importance.csv).
-
-**Limites da comparação:** o modelo e a amostra são fixos, mas as doses e unidades das intervenções são diferentes. Nomes t1/t2/t3 não significam choques economicamente equivalentes. Portanto, a diferença dos efeitos não pode ser atribuída somente ao ranking de importância. Com os rótulos antigos, trata-se de sensibilidade sintética, não uma estimativa de desfechos após uma mudança real. Os desvios padrão das permutações não são intervalos de confiança. O experimento separado de concept drift, abaixo, mantém seu mecanismo de renda, seus dados e seus resultados anteriores.
-
-### Experimento de concept drift e comportamento do modelo
-
-[concept_drift.py](src/concept_drift.py) mantém **as mesmas features, os mesmos clientes, a mesma ordem, o mesmo modelo e o limiar 0,5** em quatro cenários. Altera somente o mecanismo do alvo histórico. A distinção entre mudanças em `P(X)` e em `P(Y|X)` segue a formulação de [Tan, Lee e Salehi (2019)](https://arxiv.org/abs/1909.11251); aqui a mudança condicional é conhecida por construção, não inferida somente pela mudança da prevalência.
-
-O segmento afetado é `MonthlyIncome ≤ 3500`, corte ajustado no primeiro quartil **somente da referência de treino**. Inclui 9.147 registros do holdout (aproximadamente 25,9%; os empates no corte explicam a diferença para 25%). A hipótese ilustrativa é um choque adicional de inadimplência nesse segmento. Não há estimativa de inflação, desemprego ou efeito causal econômico.
-
-Para cada linha, sortear `U ~ Uniforme(0,1)`, independente do modelo, com seed 42 e reutilizar o mesmo `U` nos quatro cenários. Com `S(X)` indicando o segmento e `Y0` o rótulo histórico:
-
-```text
-Yq = Y0 OU (S(X) E U < q)
-Pq(Y=1|X) = p0(X) + (1 - p0(X)) * q * S(X)
-```
-
-`p0(X)` é a probabilidade histórica desconhecida, não o score do modelo. Apenas rótulos 0 no segmento podem virar 1; positivos históricos e rótulos fora do segmento permanecem intactos. Os valores de `q` são 0, 0,10, 0,25 e 0,50, definidos em `src/config.py`. São chances adicionais para os negativos elegíveis, não taxas finais de inadimplência. O uso dos mesmos sorteios torna as alterações cumulativas entre cenários. O mecanismo não usa scores nem ajusta parâmetros para obter determinada queda de métrica.
-
-```bash
-make concept-drift PYTHON=.venv/bin/python
-```
-
-O comando usa o holdout original, não os cenários de data drift, e publica um conjunto completo em `artifacts/concept_drift/`: datasets, predições, auditoria por linha em `interventions.parquet`, métricas globais e por segmento, sensibilidade a cinco seeds, quatro relatórios de classificação HTML/JSON do Evidently, comparação de features e manifesto com parâmetros, versões e hashes. Os [relatórios de classificação](https://docs.evidentlyai.com/metrics/preset_classification) usam o controle do mesmo holdout como referência, com gráficos ROC/PR e matrizes de confusão; a validação do treino não é usada como baseline desse experimento. Não há treinamento, recalibração ou mudança de limiar.
-
-Resultados com seed 42, todos com 35.297 registros:
-
-| Cenário | q | Rótulos alterados | Prevalência | AUC ROC | Recall | Precisão | Falsos negativos |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| c0_control | 0 | 0 | 6,62% | 0,843257 | 74,09% | 19,74% | 605 |
-| c1 | 0,10 | 815 | 8,92% | 0,768076 | 62,22% | 22,37% | 1.190 |
-| c2 | 0,25 | 2.062 | 12,46% | 0,710069 | 52,49% | 26,34% | 2.089 |
-| c3 | 0,50 | 4.123 | 18,30% | 0,669626 | 45,35% | 33,42% | 3.529 |
-
-**Comportamento observado:** a probabilidade média prevista permanece 0,326790 e a proporção de classes positivas previstas permanece 24,83% em todos os cenários. As probabilidades e classes são idênticas linha a linha; o modelo não tem sinal de entrada que revele o choque. Mesmo assim, em c3 a AUC cai 0,173631 e o recall cai 28,74 pontos percentuais. O Brier piora de 0,147595 para 0,182354 e o log loss de 0,459707 para 0,553312. O KS de classificação cai de 0,533130 para 0,258752. As três intensidades ativam os critérios experimentais de queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 em relação ao controle.
-
-A precisão aumenta porque, dentro da mesma lista de previsões positivas, passam a existir mais positivos nos novos rótulos. O F1 também aumenta e a average precision de c3 fica próxima à do controle; essas métricas respondem à prevalência e não demonstram recuperação da discriminação. A ponderação de classes do baseline não garante probabilidades calibradas. Os resultados completos estão em [metrics.csv](artifacts/concept_drift/metrics.csv).
-
-No segmento afetado, a AUC cai de 0,841789 para 0,548125 e o recall de 81,58% para 37,49%; a prevalência sobe de 8,60% para 53,68%. Fora dele, rótulos e todas as métricas permanecem iguais. Isso localiza o efeito na intervenção programada, sem transformá-la em evidência de vulnerabilidade real de um grupo. Ver [métricas por segmento](artifacts/concept_drift/segment_metrics.csv).
-
-A sensibilidade usa as seeds 42–46 com os mesmos parâmetros e modelo. Em c3, a AUC varia de 0,669626 a 0,673019 e o recall de 44,75% a 45,84%, mantendo a degradação nas cinco realizações. Esses mínimos/máximos **não são intervalos de confiança** e não validam a hipótese econômica. Ver [sensitivity.csv](artifacts/concept_drift/sensitivity.csv).
-
-A igualdade exata das features é verificada em todos os períodos. A [comparação Evidently entre c3 e o controle](artifacts/concept_drift/feature_drift.html) confirma zero features com drift. Monitorar apenas distribuições de entrada e scores não detectaria esse experimento: é necessário acompanhar rótulos maturados, desempenho e erros por segmento. A [análise consolidada](artifacts/concept_drift/analysis.html) reúne interpretação e links; o [manifesto](artifacts/concept_drift/manifest.json) registra a procedência. Os dados, modelo e relatórios anteriores permanecem intactos.
-
-Para outra execução, escolher destino inexistente:
-
-```bash
-.venv/bin/python -m src.concept_drift --seed 43 --output-dir /tmp/tc04-concept-drift
-```
-
-Os argumentos `--reference`, `--holdout` e `--model` permitem indicar versões explícitas das entradas. Uma falha não publica resultados parciais; um destino existente é preservado. O experimento é um teste de estresse sintético, sem uma série temporal real e sem comprovar degradação do modelo em concessões reais. Em produção, o alvo de dois anos exige política de maturação. Antes de qualquer atualização operacional, investigar origem dos rótulos e comparar candidatos em dados independentes; nenhum modelo novo é promovido aqui.
-
-## 7. Monitoramento e resposta à degradação
-
-Esta seção propõe a operação contínua e a resposta aos sinais; agendamento, centralização e acionamento operacional ainda não estão implementados. A detecção offline de data drift já está executada na seção 6. Os limiares são pontos iniciais e devem ser calibrados; não são exigências do enunciado.
-
-| Sinal | Frequência proposta | Critério inicial | Resposta |
-| --- | --- | --- | --- |
-| Qualidade do contrato | Cada lote | Qualquer violação | Bloquear e colocar em quarentena; corrigir e revalidar |
-| Status, volume, duração e erros | Cada execução | Falha ou lote vazio inesperado; duração acima de 2 vezes a mediana das últimas 20 execuções válidas | Abrir incidente e investigar dependências e origem |
-| Drift de features | Cada janela de análise com pelo menos 500 registros | KS com p < 0,01 nas três medidas financeiras ou PSI ≥ 0,20 nas demais categorias; sinal global em ≥ 20% das features | Alertar; examinar magnitude, segmentos e qualidade antes de decidir |
-| Performance com rótulos maturados | Cada janela elegível | Queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra baseline, usando o mesmo limiar | Revisar incerteza, população e política; avaliar candidato |
-| Equidade | Cada avaliação e troca de modelo | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade |
-
-O baseline da Etapa 1 está preservado em `models/runs/32542e11c8c8477ea23d42db115efd0e`, com AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. O experimento de concept drift já calcula sinais offline de queda de AUC/recall contra o controle do holdout; alertas operacionais e acompanhamento contínuo por janelas ainda não foram implementados. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
-
-Fluxo de resposta proposto:
-
-1. Registrar incidente com horário, lote, versão do código, dados e modelo; manter amostra restrita somente se necessária.
-2. Engenharia verifica integridade e pipeline; Ciência de Dados verifica distribuição, rótulos e desempenho; Risco avalia impacto nas decisões.
-3. Em falha de qualidade, interromper o lote. Em degradação crítica, suspender a decisão automática ou encaminhar casos à análise humana, mediante responsável operacional.
-4. Avaliar correção, recalibração ou retreinamento. Drift isolado não deve promover automaticamente um novo modelo.
-5. Comparar candidato com versão vigente em dados independentes, incluindo segmentos e calibração; registrar aprovação de Risco e responsável técnico.
-6. Publicar versão com monitoramento reforçado; manter versão anterior para rollback e registrar encerramento e prevenção da recorrência.
-
-Em suspeita de exposição de dados, conter acessos, preservar evidências restritas e acionar Segurança e o encarregado. A avaliação de impacto e eventuais comunicações deve seguir a regulamentação aplicável. Não há resposta a incidentes implementada no protótipo.
-
-## 8. Responsabilidades e rastreabilidade
-
-Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entrega; não há pessoas ou contatos presumidos.
-
-| Papel | Responsabilidade proposta |
-| --- | --- |
-| Responsável pelo projeto / Risco | Aprovar finalidade, política de decisão, critérios de promoção e suspensão |
-| Engenharia de Dados | Contratos, qualidade, linhagem, quarentena e descarte |
-| Ciência de Dados | Modelo, análise de drift, hipóteses causais e vieses |
-| MLOps / Segurança | Execução, acessos, logs, versionamento, incidentes e rollback |
-| Privacidade / encarregado, na operação real | Validar plano de privacidade, apoiar direitos e avaliar incidentes |
-
-Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed quando houver aleatoriedade, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Simulação e inferência já geram manifestos próprios de entradas, saídas e parâmetros; a inferência também registra modelo e horário. A coleta de todos os campos dessa política em cada etapa ainda não está automatizada. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas.
-
-## 9. Reprodução e ressalvas técnicas
-
-Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém oito dependências diretas do pipeline e dos testes:
-
-| Dependência | Uso |
-| --- | --- |
-| NumPy | Validação de finitude, probabilidades e operações numéricas |
-| pandas | Leitura, transformação e escrita de datasets |
-| Pandera com extra `pandas` | Contrato de qualidade |
-| PyArrow | Engine de leitura e escrita de Parquet pelo pandas |
-| scikit-learn | Separação estratificada e métricas de classificação |
-| XGBoost | Treinamento e execução do classificador salvo |
-| joblib | Persistência e leitura do modelo |
-| Evidently AI | Testes estatísticos de data drift e relatórios HTML/JSON de drift e desempenho de classificação |
-
-O Evidently 0.7.23 falha ao importar com pandas 3.1.0 por usar uma função interna removida. A integração fixa **pandas 2.3.3**, adiciona o Evidently e mantém as versões das outras seis dependências diretas do pipeline. A preparação, as predições e o baseline foram reproduzidos com os mesmos valores após esse ajuste. Parquet regenerado pode ter hash binário diferente devido à versão do pandas nos metadados; comparar o conteúdo e guardar o novo hash no manifesto. Os artefatos preservados da execução com pandas 3.1.0 continuam inalterados.
-
-Dependências transitivas, como SciPy, Pydantic e Plotly, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução; bibliotecas trazidas transitivamente pelo Evidently permanecem necessárias à sua instalação. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
-
-O arquivo fixa as versões diretas; não é um lockfile completo de dependências transitivas. O ambiente integral da execução histórica permanece registrado em `artifacts/stage1/` para auditoria.
-
-O notebook é auxiliar e não faz parte da execução do pipeline. Para executá-lo em um editor compatível com Jupyter, instalar opcionalmente `python -m pip install -r requirements-notebooks.txt`, que adiciona o IPython kernel às dependências do projeto. A raiz é localizada a partir da pasta do kernel; execute o notebook dentro do projeto. Suas saídas antigas foram removidas para evitar resultados e caminhos de outras máquinas.
-
-No macOS, instalar também o runtime OpenMP exigido pelo XGBoost:
-
-```bash
-brew install libomp
-```
-
-A execução definitiva da Etapa 1 foi realizada no projeto em **14/11/2026, às 20:13, no fuso America/Sao_Paulo**, usando macOS ARM64 e Python 3.12.14. O `pip check` não encontrou conflitos, os 32 testes passaram e os artefatos estão preservados. As versões completas do ambiente constam em [environment.txt](artifacts/stage1/20261114T201315-0300-5fbfe64d/environment.txt).
+Usar **Python 3.12**, a partir da raiz do repositório. No macOS, instalar o runtime OpenMP (`brew install libomp`).
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip check
-python -m src.prepare
-python -m src.train
-python -m src.make_bad_batch
-python -m src.ingest data/incoming/good_batch.parquet
-python -m src.ingest data/incoming/bad_batch.parquet
+make test PYTHON=.venv/bin/python
 ```
 
-O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
+A suíte possui **54 testes**, aprovados na última validação. O notebook é opcional; suas dependências estão em [requirements-notebooks.txt](requirements-notebooks.txt).
 
-Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift`, `make predict` e `make detect-drift`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação, inferência e detecção exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. A detecção usa diretamente a referência e os cenários, sem depender das predições. Se regenerar partições ou trocar o modelo, gerar novos cenários, predições e relatórios antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
+| Comando `make` | Finalidade |
+| --- | --- |
+| `prepare` / `train` | Preparar partições e treinar/publicar uma nova versão do baseline |
+| `demo-bad` / `demo-good` | Demonstrar rejeição e aprovação do contrato, nessa ordem |
+| `simulate-drift` / `predict` / `detect-drift` | Gerar cenários, predições e relatórios de data drift |
+| `compare-data-drift` | Comparar o perfil anterior com o atual, usando o mesmo modelo/holdout |
+| `concept-drift` | Alterar o mecanismo do alvo com features e modelo fixos |
 
-`make compare-data-drift` compara os artefatos ativos com o perfil de renda/dívida arquivado, sem regerar os cenários nem treinar o modelo. Exige os mesmos hashes de modelo/holdout e destino inexistente. O perfil antigo não é uma opção do gerador ativo: sua versão de código está identificada pelo commit no arquivo histórico. O comparativo é um relatório adicional, separado dos relatórios de detecção por cenário.
+Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe ajuda.
 
-`make concept-drift` executa o experimento separado com a referência, o holdout e o modelo existentes. Não depende dos cenários t1–t3 de data drift. O destino também deve ser inexistente e pode ser alterado com `python -m src.concept_drift --output-dir ...`; esse experimento não sobrescreve os dados ou relatórios das etapas anteriores.
+Os artefatos já estão versionados. Simulação, inferência e relatórios exigem **destinos inexistentes**; para novas execuções, usar os argumentos `--output-dir` dos scripts. Preparação e geração dos lotes sobrescrevem suas saídas; o treino publica uma nova versão. [Reprodução e ressalvas](docs/reproducao.md).
 
-Os alvos `make demo-bad` e `make demo-good` demonstram o contrato da Etapa 1. `demo-bad` gera os dois lotes e somente passa se a ingestão retornar 1, o lote sair da entrada e os arquivos de quarentena e relatório existirem e não estiverem vazios. Deve preceder `demo-good`. O gerador valida o holdout e exige pelo menos 500 registros; sua importação não lê nem grava arquivos. Para gerar lotes em outro local, usar `python -m src.make_bad_batch --output-dir /tmp/tc04-batches`. Cada script cria os diretórios necessários às suas saídas. Reexecutar preparação ou geração dos lotes sobrescreve suas saídas; o treinamento cria uma nova versão e troca o apontador publicado. A ingestão rejeita colisões na quarentena. Preservar as evidências e resolver colisões antes de repetir a demonstração.
+## Resultados principais
 
-Os testes são executados com `make test` ou `python -m unittest discover -s tests -v`. Verificam limites calculados somente no treino, invariância a alterações na validação/holdout, aplicação de limites fixos, separação das partições e criação das saídas. Cobrem bloqueio do treinamento, códigos de saída da ingestão, erros operacionais, colisões na quarentena e falso sucesso no Makefile. Incluem rejeição de lotes vazios e valores infinitos e invariância à ordem das colunas. Os testes de publicação simulam falhas e conferem preservação da versão anterior e limpeza de temporários. Simulação e inferência têm testes de pareamento, preservação de entradas, hashes, ordem das features, exclusão do alvo, limiar 0,5, probabilidades inválidas e publicação sem resultados parciais. Também há cobertura para importação do gerador sem efeitos no filesystem, lotes de demonstração e execução explícita do Makefile. Os testes de drift usam o Evidently real para conferir ausência de detecção em features idênticas, exclusão do alvo, detecção de alterações conhecidas, hashes dos relatórios e ausência de publicação parcial quando um cenário é inválido.
-
-O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) e as cópias de código e requisitos em `artifacts/stage1/` são evidências imutáveis daquela execução, não a implementação atual. Não devem ser usados para instalar ou executar o pipeline atual.
-
-Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift passaram 51. Após substituir as features de data drift e adicionar o comparativo, a suíte contém **54 testes**, todos aprovados. A cobertura adicional verifica sorteios reproduzíveis, grupos aninhados, incremento inteiro de atrasos a partir de zero, invariância das demais colunas, comparação dos dois perfis e rejeição de predições/snapshots adulterados. Os testes de concept drift continuam verificando intervenção condicional, métricas conhecidas, hashes, concordância com Evidently e ausência de publicação parcial.
-
-A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
-
-A [auditoria consolidada das Etapas 1 e 2](artifacts/audit_stage1_stage2/audit.json) é uma evidência histórica anterior à troca das features de data drift: registra 51 testes no ambiente então vigente e em um ambiente isolado, reprodução dos experimentos, integridade e links daquele estado. Seus hashes e conclusões se referem ao commit e às fontes indicados, não certificam automaticamente os novos artefatos. Os resultados de renda/dívida foram preservados em `artifacts/data_drift_income_debt/`; os resultados atuais e o comparativo têm manifestos próprios. Foram atualizados dois endereços da ANPD e removidos metadados antigos do notebook. As fontes em `artifacts/stage1/` também são evidências históricas, sem uso no pipeline ativo. Os commits antigos com mensagens não semânticas foram preservados. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente. A execução validada cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
-
-### Resultados e evidências da Etapa 1
-
-Execução: `20261114T201315-0300-5fbfe64d`. O [manifesto](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json) relaciona comandos, códigos de saída, hashes SHA-256, dependências e cópias das fontes e dos resultados em `artifacts/stage1/20261114T201315-0300-5fbfe64d/`. As cópias em `outputs/` preservam este resultado caso os arquivos de trabalho sejam regenerados.
-
-| Partição | Registros | Inadimplentes | Taxa de inadimplência |
-| --- | ---: | ---: | ---: |
-| Treino / referência | 65.867 | 4.322 | 6,5617% |
-| Validação | 16.480 | 1.089 | 6,6080% |
-| Holdout | 35.297 | 2.335 | 6,6153% |
-
-| Métrica na validação | Valor |
-| --- | ---: |
-| AUC ROC | 0,857208 |
-| Recall no limiar 0,5 | 0,772268 |
-| KS de classificação | 0,567594 |
-
-As métricas foram recalculadas após recarregar o modelo salvo e coincidiram com o JSON publicado. O holdout ficou reservado para os lotes e etapas seguintes; estas métricas foram calculadas somente na validação. Elas descrevem a população retida pela limpeza e não demonstram desempenho temporal ou sob drift.
-
-| Evidência | Resultado observado | Arquivo |
+| Evidência | Resultado | Relatório |
 | --- | --- | --- |
-| Dependências | Sem conflitos, retorno 0 | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/01_dependencies.txt) |
-| Treinamento | Retorno 0, versão completa publicada | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/04_train.txt) |
-| Lote válido | 500 linhas, retorno 0 | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt) |
-| Lote inválido | 505 linhas, retorno 1, movido para quarentena | [Log](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) |
-| Diagnóstico do contrato | 104 entradas de falhas: coluna ausente, idade, nulo, valor negativo e unicidade | [CSV](data/quarantine/bad_batch_errors.csv) |
+| Baseline na validação | AUC 0,857208; recall 77,23% no limiar 0,5 | [Etapa 1](docs/etapa-1.md) |
+| Data drift atual | Utilização de crédito detectada em t1–t3; atrasos de 90 dias em t2–t3 | [Evidently t3](reports/drift/t3.html) |
+| Comparativo de intervenções | Em t3, AUC 0,842989 no perfil anterior e 0,800850 no atual | [Análise comparativa](reports/drift_comparison/analysis.html) |
+| Concept drift | AUC 0,843257 → 0,669626 e recall 74,09% → 45,35%, com features fixas | [Análise do experimento](artifacts/concept_drift/analysis.html) |
 
-As 104 entradas do relatório não representam 104 clientes distintos: um registro pode produzir múltiplas entradas. Antes de repetir o lote inválido com o mesmo nome, arquivar a ocorrência ativa de quarentena ou usar outro nome; a ingestão retorna 2 em colisões e preserva a evidência anterior. As cópias desta execução em `artifacts/stage1/` devem ser mantidas inalteradas para conferência dos hashes.
+As métricas dos experimentos comparam o mesmo holdout ao seu controle; a validação do baseline é outra partição. As doses dos perfis de data drift não são economicamente equivalentes.
 
-## 10. Vídeo STAR e checklist de entrega
+## Governança e privacidade
 
-**Link do vídeo: pendente de gravação e publicação pelo grupo.** Substituir esta indicação por um link acessível antes da entrega. Duração máxima: 5 minutos.
+Não foram identificados nome, CPF, telefone ou e-mail. O índice original é removido; isso **não comprova anonimização**. Dados financeiros, combinações de atributos e valores em quarentena exigem revisão antes da divulgação.
 
-| Tempo | STAR | Conteúdo sugerido |
-| --- | --- | --- |
-| 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
-| 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação, predições, relatórios de data drift e degradação sob concept drift; após implementação, demonstrar observabilidade; explicar privacidade e retenção |
-| 3:40–5:00 | Result | Mostrar métricas e alertas efetivamente gerados, interpretação, limitações causais, mitigação de vieses e resposta proposta |
+A base legal proposta para a fintech hipotética é proteção do crédito; o enquadramento do uso acadêmico e os termos do dataset continuam pendentes. As políticas são propostas documentais, sem comprovação de conformidade operacional integral.
 
-### Antes da entrega
+A retenção proposta é: dados brutos/derivados até 90 dias após a avaliação final; quarentena até 30 dias após a triagem; logs sem valores individuais por 180 dias após a execução; relatórios por 12 meses após a avaliação; modelos/metadados até 12 meses após a substituição. O descarte não está automatizado.
 
-- [x] Documentar arquitetura e distinguir controles implementados de políticas propostas.
-- [x] Explicar tratamento de dados, base legal proposta, minimização e retenção.
-- [x] Documentar riscos de viés, hipóteses causais e plano de resposta.
-- [ ] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos.
-- [ ] Atribuir responsáveis e validar as políticas propostas.
-- [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
-- [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
-- [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
-- [x] Executar experimento próprio de concept drift em `P(Y|X)` e analisar o modelo com features fixas.
-- [ ] Implementar a observabilidade da Etapa 3.
-- [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
-- [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
-- [ ] Publicar o vídeo STAR e inserir o link nesta seção.
+O [plano completo de governança](docs/governanca.md) detalha fontes legais, tratamento dos dados, retenção, vieses, causalidade, responsabilidades e resposta à degradação.
 
-A Etapa 1 e os experimentos de data drift e concept drift da Etapa 2 possuem execução e evidências preservadas; a documentação de governança cobre a proposta teórica da Etapa 4. A Etapa 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.
+## Documentação detalhada
+
+| Documento | Conteúdo |
+| --- | --- |
+| [Arquitetura](docs/arquitetura.md) | Dados, features, modelo, fluxo e mapa das evidências |
+| [Etapa 1](docs/etapa-1.md) | Contrato, limpeza, limitações, baseline e execução preservada |
+| [Data drift](docs/data-drift.md) | Cenários atuais, predições, métodos e relatórios estatísticos |
+| [Comparativo](docs/comparativo-drift.md) | Perfil anterior, efeitos no modelo e importância das features |
+| [Concept drift](docs/concept-drift.md) | Mecanismo sintético do alvo, segmentos e sensibilidade às seeds |
+| [Governança](docs/governanca.md) | Privacidade, base legal, retenção, vieses e causalidade |
+| [Reprodução](docs/reproducao.md) | Dependências, comandos, testes, auditorias e ressalvas |
+| [Entrega](docs/entrega.md) | Vídeo STAR e checklist das pendências |
