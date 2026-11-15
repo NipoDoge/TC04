@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from src.config import SEED, TARGET
+from src.observability import new_run_id, setup_logging, track
 
 OUTLIER_COLUMNS = ["DebtRatio", "RevolvingUtilizationOfUnsecuredLines"]
 
@@ -53,21 +54,26 @@ def prepare_datasets(raw):
 
 
 def main():
-    datasets, limits, report = prepare_datasets(pd.read_csv("data/raw/cs-training.csv"))
-    paths = {
-        "train": Path("data/reference/reference.parquet"),
-        "validation": Path("data/validation/validation.parquet"),
-        "holdout": Path("data/production/holdout.parquet"),
-    }
-    for name, path in paths.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        datasets[name].to_parquet(path)
-    for filename, payload in [("outlier_limits.json", limits), ("cleaning_report.json", report)]:
-        Path("data/reference", filename).write_text(
-            json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+    with track("prepare") as info:
+        datasets, limits, report = prepare_datasets(pd.read_csv("data/raw/cs-training.csv"))
+        paths = {
+            "train": Path("data/reference/reference.parquet"),
+            "validation": Path("data/validation/validation.parquet"),
+            "holdout": Path("data/production/holdout.parquet"),
+        }
+        for name, path in paths.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            datasets[name].to_parquet(path)
+        for filename, payload in [("outlier_limits.json", limits), ("cleaning_report.json", report)]:
+            Path("data/reference", filename).write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+        info.update(rows=sum(len(partition) for partition in datasets.values()),
+                    partitions={name: len(partition) for name, partition in datasets.items()})
     print(report)
 
 
 if __name__ == "__main__":
+    setup_logging()
+    new_run_id("prepare")
     main()
