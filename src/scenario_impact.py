@@ -62,7 +62,7 @@ def run(report_dir=config.SCENARIO_REPORTS, predictions_dir=PREDICTIONS,
     summary = {
         "run_id": run_id,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "model": manifest["model"],
+        "model": {"version": Path(manifest["model"]["path"]).parent.name, "sha256": manifest["model"]["sha256"]},
         "reference_rows": len(reference),
         "thresholds": {"psi_warning": config.PSI_WARNING, "psi_alert": config.PSI_ALERT,
                        "decision_threshold": config.THRESHOLD},

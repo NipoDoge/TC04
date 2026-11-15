@@ -60,7 +60,9 @@ class ScenarioImpactTests(unittest.TestCase):
     def test_summary_and_events_are_written_without_touching_the_inputs(self):
         saved = json.loads(config.SCENARIO_IMPACT.read_text(encoding="utf-8"))
         self.assertEqual(saved["scenarios"], self.summary["scenarios"])
-        self.assertEqual(saved["model"], json.loads((PREDICTIONS / "manifest.json").read_text(encoding="utf-8"))["model"])
+        published = json.loads((PREDICTIONS / "manifest.json").read_text(encoding="utf-8"))["model"]
+        self.assertEqual(saved["model"], {"version": Path(published["path"]).parent.name, "sha256": published["sha256"]})
+        self.assertNotIn(str(Path.cwd()), config.SCENARIO_IMPACT.read_text(encoding="utf-8"))   # sem caminho da máquina
         self.assertEqual(saved["shifted_columns"], list(config.DRIFT_SHIFTED_COLUMNS))
         self.assertIn("rótulos históricos preservados", saved["note"])
         self.assertEqual({path: path.read_bytes() for path in self.before}, self.before)   # só leitura

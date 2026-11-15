@@ -1,8 +1,8 @@
 {
-  "run_id": "scn-20261115T024528Z-4e082b",
-  "generated_at": "2026-11-15T02:45:28+00:00",
+  "run_id": "scn-20261115T025728Z-405db7",
+  "generated_at": "2026-11-15T02:57:28+00:00",
   "model": {
-    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04-drift-observabilidade/models/runs/32542e11c8c8477ea23d42db115efd0e/model.joblib",
+    "version": "32542e11c8c8477ea23d42db115efd0e",
     "sha256": "46669177a30bc46c76f842d1201a9fa50b429dc5dc3d0369dc8cb305ace923d6"
   },
   "reference_rows": 65867,
