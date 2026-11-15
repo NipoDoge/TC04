@@ -58,7 +58,7 @@ O calendário separa os dois mecanismos no tempo: abril só tem data drift fraco
 | 3 | Observabilidade | [observability.py](src/observability.py), [tracking.py](src/tracking.py), [dashboard.py](src/dashboard.py) | [Dashboard](reports/dashboard.html); log central e MLflow são recriados por `make report` | [docs/03](docs/03-monitoramento-e-observabilidade.md) |
 | 4 | Análise causal | [causal_analysis.py](src/causal_analysis.py) | [Resultado](reports/causal_analysis.json) | Seção 7 |
 | 4 | Governança | — | Seções 5 a 9 deste README | — |
-| 4 | Vídeo STAR | [gera_video.py](docs/video/gera_video.py) | [Vídeo](docs/video/tc04-star.mp4), [legendas](docs/video/tc04-star.srt) e [roteiro](docs/video/roteiro.md); link público pendente | Seção 10 |
+| 4 | Vídeo STAR | — | [Vídeo](docs/video/tc04-star.mp4), [legendas](docs/video/tc04-star.srt) e [roteiro](docs/video/roteiro.md); link público pendente | Seção 10 |
 
 Documentação técnica:
 
@@ -306,17 +306,17 @@ Para cada execução, a política é guardar identificador, horário, commit, am
 
 ## 10. Vídeo STAR e checklist de entrega
 
-**Vídeo: [docs/video/tc04-star.mp4](docs/video/tc04-star.mp4)**, com 4min50s (o limite é de 5 minutos), em 1920×1080. A narração é sintetizada, as frases aparecem como legenda na própria imagem e os integrantes do grupo não aparecem. O [roteiro](docs/video/roteiro.md) traz o texto e os tempos de cada frase; as [legendas](docs/video/tc04-star.srt) também estão em arquivo separado.
+**Vídeo: [docs/video/tc04-star.mp4](docs/video/tc04-star.mp4)**, com 4min09s (o limite é de 5 minutos), em 1920×1080, com as frases da narração como legenda na própria imagem. O [roteiro](docs/video/roteiro.md) traz o texto e os tempos de cada frase; as [legendas](docs/video/tc04-star.srt) também estão em arquivo separado.
 
 **Link público (YouTube ou Drive): a inserir aqui depois que o grupo publicar o arquivo.** O enunciado pede um link acessível; o arquivo no repositório fica como cópia.
 
 | Tempo | STAR | Conteúdo do vídeo |
 | --- | --- | --- |
-| 0:00–0:08 | Abertura | Título do trabalho |
-| 0:08–0:43 | Situation | Cenário da fintech, risco de degradação silenciosa, base de dados e modelo de referência |
-| 0:43–1:14 | Task | As quatro etapas: validar dados, simular e detectar drift, observar o processamento e documentar a governança |
-| 1:14–3:24 | Action | O contrato e o bloqueio da entrega corrompida; os níveis de data drift e de concept drift e os lotes mensais; a detecção com o Evidently e o tamanho do efeito; o log central, o MLflow e o dashboard; a governança |
-| 3:24–4:50 | Result | AUC de 0,85 para 0,62 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; o data drift muda as decisões (25% para 38% de sinalizados) mais do que a ordenação; a decomposição causal; os 21 alertas; limites (tudo é simulação) e conclusão |
+| 0:00–0:07 | Abertura | Título do trabalho |
+| 0:07–0:38 | Situation | Cenário da fintech, risco de degradação silenciosa, base de dados e modelo de referência |
+| 0:38–1:05 | Task | As quatro etapas: validar dados, simular e detectar drift, observar o processamento e documentar a governança |
+| 1:05–2:54 | Action | O contrato e o bloqueio da entrega corrompida; os níveis de data drift e de concept drift e os lotes mensais; a detecção com o Evidently e o tamanho do efeito; o log central, o MLflow e o dashboard; a governança |
+| 2:54–4:09 | Result | AUC de 0,85 para 0,62 em oito meses simulados; a queda de maio, sem nenhum sinal nas entradas; o data drift muda as decisões (25% para 38% de sinalizados) mais do que a ordenação; a decomposição causal; os 21 alertas; limites (tudo é simulação) e conclusão |
 
 ### Antes da entrega
 

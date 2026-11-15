@@ -1,139 +1,139 @@
 1
-00:00:00,500 --> 00:00:07,904
+00:00:00,500 --> 00:00:06,659
 Este é o nosso trabalho da fase 4: drift, observabilidade e governança de um modelo de crédito.
 
 2
-00:00:08,704 --> 00:00:15,890
+00:00:07,559 --> 00:00:13,729
 Uma fintech usa um modelo de pontuação de crédito para estimar o risco de inadimplência de cada cliente.
 
 3
-00:00:16,090 --> 00:00:24,424
+00:00:14,029 --> 00:00:21,374
 O risco é a degradação silenciosa: a economia e o perfil dos clientes mudam, e o modelo piora sem que ninguém perceba.
 
 4
-00:00:24,624 --> 00:00:33,149
+00:00:21,674 --> 00:00:29,002
 Trabalhamos com uma base pública de crédito, com 150 mil registros, e um modelo XGBoost como referência.
 
 5
-00:00:33,349 --> 00:00:43,052
+00:00:29,302 --> 00:00:37,537
 Na validação, ele tem AUC de 0,857 e identifica 77% dos inadimplentes.
 
 6
-00:00:43,852 --> 00:00:46,647
+00:00:38,437 --> 00:00:40,854
 Nossa tarefa tinha quatro partes.
 
 7
-00:00:46,847 --> 00:00:51,516
+00:00:41,154 --> 00:00:44,970
 Primeiro: validar os dados que chegam, com um contrato de dados.
 
 8
-00:00:51,716 --> 00:00:59,413
+00:00:45,270 --> 00:00:51,914
 Segundo: simular e detectar drift, separando a mudança nos dados da mudança na relação com a inadimplência.
 
 9
-00:00:59,613 --> 00:01:06,129
+00:00:52,214 --> 00:00:57,563
 Terceiro: observar o processamento, com registros, métricas e alertas centralizados.
 
 10
-00:01:06,329 --> 00:01:14,174
+00:00:57,863 --> 00:01:04,168
 E quarto: documentar a governança, com proteção de dados, vieses, causalidade e resposta à degradação.
 
 11
-00:01:14,974 --> 00:01:25,543
+00:01:05,068 --> 00:01:13,700
 Começamos pelo contrato de dados, escrito em Pandera: colunas e tipos definidos, faixas válidas, sem valores nulos e sem linhas duplicadas.
 
 12
-00:01:26,043 --> 00:01:36,036
+00:01:14,300 --> 00:01:22,720
 Na simulação, uma entrega corrompida chega em maio. O contrato bloqueia as 4.612 linhas e manda o lote para a quarentena.
 
 13
-00:01:36,236 --> 00:01:43,246
+00:01:23,020 --> 00:01:28,923
 Os lotes com drift passam pelo contrato: são dados válidos, que apenas mudaram de distribuição.
 
 14
-00:01:43,746 --> 00:01:51,486
+00:01:29,523 --> 00:01:36,319
 Para o drift, definimos os níveis de intensidade uma única vez e usamos os mesmos em todos os experimentos.
 
 15
-00:01:51,686 --> 00:02:00,506
+00:01:36,619 --> 00:01:43,824
 No data drift, a renda cai, o endividamento e o uso do rotativo sobem, e quem passa a usar todo o limite ganha um atraso.
 
 16
-00:02:00,706 --> 00:02:08,575
+00:01:44,124 --> 00:01:50,690
 No concept drift, bons pagadores de baixa renda passam a inadimplir, sem nenhuma mudança nas variáveis.
 
 17
-00:02:08,775 --> 00:02:16,948
+00:01:50,990 --> 00:01:57,826
 Aplicamos cada nível à base inteira, um mecanismo por vez, e depois a oito lotes mensais, que combinam os dois.
 
 18
-00:02:17,448 --> 00:02:25,864
+00:01:58,426 --> 00:02:04,668
 A detecção usa o Evidently: o teste KS, para as medidas contínuas, e o PSI, para as contagens.
 
 19
-00:02:26,364 --> 00:02:33,739
+00:02:05,268 --> 00:02:11,343
 Com muitos dados, o teste acusa até mudanças mínimas. Por isso gravamos também o tamanho do efeito.
 
 20
-00:02:33,939 --> 00:02:45,325
+00:02:11,643 --> 00:02:21,022
 No cenário mais fraco, o teste já aponta drift, mas o PSI da renda é de apenas 0,03. No mais forte, chega a 0,60.
 
 21
-00:02:45,825 --> 00:02:53,380
+00:02:21,622 --> 00:02:27,502
 No monitoramento, cada lote passa por contrato, escoragem, drift, avaliação e regras de alerta.
 
 22
-00:02:53,880 --> 00:03:01,078
+00:02:28,102 --> 00:02:33,832
 Cada etapa grava um evento em um log central, e as métricas de cada lote vão para o MLflow.
 
 23
-00:03:01,578 --> 00:03:07,152
+00:02:34,432 --> 00:02:39,000
 Tudo aparece em um painel único, em um só arquivo, que abre direto no navegador.
 
 24
-00:03:07,652 --> 00:03:15,370
+00:02:39,600 --> 00:02:46,331
 Na governança, propomos a base legal de proteção do crédito, a minimização dos dados e prazos de retenção.
 
 25
-00:03:15,570 --> 00:03:23,221
+00:02:46,631 --> 00:02:53,408
 Relatórios e logs guardam apenas valores agregados, e documentamos riscos de viés e um plano de resposta.
 
 26
-00:03:24,021 --> 00:03:31,635
+00:02:54,308 --> 00:03:00,925
 Em oito meses simulados, a AUC caiu de 0,85 para 0,62.
 
 27
-00:03:31,835 --> 00:03:41,213
+00:03:01,225 --> 00:03:09,409
 O ponto mais importante é maio: a AUC cai para 0,77 e nenhum PSI das entradas passa do limite de aviso.
 
 28
-00:03:41,413 --> 00:03:50,062
+00:03:09,709 --> 00:03:16,514
 É o efeito do concept drift. Só o rótulo, que no caso real leva até dois anos para maturar, revela essa queda.
 
 29
-00:03:50,562 --> 00:03:58,257
+00:03:17,114 --> 00:03:23,463
 O data drift se comporta de outro jeito: quase não muda a ordenação dos clientes, mas muda as decisões.
 
 30
-00:03:58,457 --> 00:04:08,879
+00:03:23,763 --> 00:03:32,808
 No nível mais forte, o modelo passa a sinalizar cerca de 38% dos clientes, contra 25%, com a mesma inadimplência.
 
 31
-00:04:09,379 --> 00:04:19,477
+00:03:33,408 --> 00:03:41,687
 O experimento contrafactual confirma: o concept drift tira 0,18 da AUC; o data drift, só 0,01.
 
 32
-00:04:19,977 --> 00:04:26,072
+00:03:42,287 --> 00:03:47,679
 O monitoramento gerou 21 alertas, do bloqueio pelo contrato às quedas de desempenho.
 
 33
-00:04:26,572 --> 00:04:33,620
+00:03:48,279 --> 00:03:54,195
 Tudo isso é simulação: mostra que o monitoramento funciona, não o desempenho de uma operação real.
 
 34
-00:04:34,120 --> 00:04:42,735
+00:03:54,795 --> 00:04:02,276
 A conclusão é que vigiar as entradas não basta. É preciso acompanhar os rótulos, as decisões e o desempenho por segmento.
 
 35
-00:04:42,935 --> 00:04:48,435
+00:04:02,576 --> 00:04:07,181
 O código, os relatórios e a documentação estão no repositório. Obrigado.
