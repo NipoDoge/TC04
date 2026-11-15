@@ -459,7 +459,8 @@ def section_timeline(summary, done):
     auc_notes = [(position[auc_alert["batch"]], auc_alert["performance"]["auc"], "1º alerta de AUC")] if auc_alert else []
     psi_notes = []
     if psi_warning:
-        psi_notes.append((position[psi_warning["batch"]], max_feature_psi(psi_warning), "1º aviso de PSI"))
+        first = "1º alerta de PSI" if psi_warning is psi_alert else "1º aviso de PSI"
+        psi_notes.append((position[psi_warning["batch"]], max_feature_psi(psi_warning), first))
     if psi_alert and psi_alert is not psi_warning:
         psi_notes.append((position[psi_alert["batch"]], max_feature_psi(psi_alert), "1º alerta de PSI"))
 
@@ -469,11 +470,18 @@ def section_timeline(summary, done):
             f'A AUC cruzou o limite de queda ({num(limits["auc_drop"], 2)}) em <strong>{esc(batch_label(auc_alert["batch"]))}</strong>, '
             f'com {num(auc_alert["performance"]["auc"])}; nesse lote o maior PSI entre as variáveis era '
             f'{num(max_feature_psi(auc_alert))}.')
-    if psi_warning:
+    if psi_warning and psi_warning is psi_alert:
+        reading.append(f'O primeiro sinal de PSI veio em <strong>{esc(batch_label(psi_alert["batch"]))}</strong>, '
+                       f'já como alerta (≥ {num(limits["psi_alert"], 2)}).')
+    elif psi_warning:
         reading.append(f'O primeiro aviso de PSI (≥ {num(limits["psi_warning"], 2)}) veio em '
                        f'<strong>{esc(batch_label(psi_warning["batch"]))}</strong>'
                        + (f' e o primeiro alerta (≥ {num(limits["psi_alert"], 2)}) em '
                           f'<strong>{esc(batch_label(psi_alert["batch"]))}</strong>.' if psi_alert else "."))
+    detected = first_batch(done, lambda b: any(i.get("evidently_drift") for i in b["drift"].values()))
+    if detected and (psi_warning is None or position[detected["batch"]] < position[psi_warning["batch"]]):
+        reading.append(f'O teste do Evidently, mais sensível, já apontava drift em '
+                       f'<strong>{esc(batch_label(detected["batch"]))}</strong>, com mudanças ainda pequenas.')
     reading.append("A AUC depende do rótulo maturado (dois anos no caso real): sem ele, o primeiro sinal disponível "
                    "seria o do PSI. É a degradação silenciosa que o monitoramento precisa cobrir.")
 
@@ -551,7 +559,7 @@ def section_pipeline(summary, events):
                      label="Última execução das demais etapas")) if other else ""
     return card("Saúde do pipeline", health + log_note + log_table + extra,
                 "Uma linha por lote, na ordem de chegada. Os níveis simulados são os dos experimentos pareados: "
-                "data drift (t) e concept drift (c). O primeiro lote inclui a carga inicial do Evidently.", "pipeline")
+                "data drift (t) e concept drift (c).", "pipeline")
 
 
 def psi_level(value, limits):
@@ -608,6 +616,10 @@ def section_drift(summary, done):
                 "PSI de cada variável de entrada e do score, lote contra referência. Variáveis ordenadas pelo maior PSI.", "drift")
 
 
+SHORT = {"MonthlyIncome": "renda", "DebtRatio": "endividamento", "RevolvingUtilizationOfUnsecuredLines": "rotativo",
+         "NumberOfTime30-59DaysPastDueNotWorse": "atrasos 30–59"}
+
+
 def section_scenarios(scenarios, limits):
     """Cenários pareados da Etapa 2 (src.simulate_drift): mesmos clientes e rótulos, só X muda."""
     if not scenarios:
@@ -627,7 +639,7 @@ def section_scenarios(scenarios, limits):
             href = os.path.relpath(item["report"], config.DASHBOARD.parent).replace(os.sep, "/")
             name = f"Relatório do Evidently do cenário {item['scenario']}"
             link = f'<a href="{esc(href)}" aria-label="{esc(name)}" title="{esc(name)}">relatório</a>'
-        applied = "; ".join(f"{feature_label(column).lower()} ×{num(value, 2)}" for column, value in factors.items())
+        applied = "; ".join(f"{SHORT.get(column, column)} ×{num(value, 2)}" for column, value in factors.items())
         flagged = item.get("evidently_drifted")
         verdict = "—" if flagged is None else (f'{len(flagged)} de {len(drift) - 1}' if flagged else "nenhuma")
         rows.append([f'<span class="strong">{esc(item["scenario"])}</span>'
@@ -642,14 +654,14 @@ def section_scenarios(scenarios, limits):
         f'A parcela sinalizada vai de {pct(first["performance"]["flagged_rate"])} para {pct(last["performance"]["flagged_rate"])}, '
         f'enquanto a AUC vai de {num(first["performance"]["auc"])} para {num(last["performance"]["auc"])}: '
         "com os rótulos preservados, o data drift muda as decisões do modelo mais do que a sua capacidade de ordenar.")
-    headers = ["Cenário", "Colunas em drift no Evidently", *[f"PSI: {feature_label(c).lower()}" for c in shifted],
-               "PSI do score", "AUC", "Sinalizados", "Relatório"]
+    headers = ["Cenário", "Drift no Evidently", *[f"PSI: {SHORT.get(c, c)}" for c in shifted],
+               "PSI: score", "AUC", "Sinalizados", "Relatório"]
     body = (f'<p class="reading">{reading}</p>'
             + table(headers, rows, right=(len(shifted) + 3, len(shifted) + 4), label="Drift e impacto por cenário pareado")
             + f'<p class="note">{esc(scenarios.get("note", ""))} Os {num(first["rows"], 0)} clientes são os mesmos em todos os '
             "cenários; os fatores multiplicam as colunas do holdout original, e quem passa a usar todo o limite rotativo ganha "
-            "um atraso de 30–59 dias. A coluna do Evidently vem de <code>src.detect_drift</code> (KS nas medidas contínuas e "
-            "PSI de categorias nas demais), que diz se há drift; o PSI por decis mede o tamanho da mudança.</p>")
+            "um atraso de 30–59 dias. A coluna do Evidently conta as features com drift segundo <code>src.detect_drift</code> "
+            "(KS nas medidas contínuas e PSI de categorias nas demais); o PSI por decis mede o tamanho da mudança.</p>")
     return card("Cenários pareados da Etapa 2", body,
                 "Controle e três intervenções sobre o holdout inteiro: quanto os dados mudaram e quanto o modelo sentiu.",
                 "cenarios")
@@ -729,8 +741,14 @@ def section_causal(causal):
          ("Interação entre os dois", parts["interaction"], None),
          ("Choque completo (total)", parts["total"], scenarios["ambos"]["auc_effect_ci95"])],
         title="Decomposição do efeito na AUC por mecanismo")
+    if abs(parts["interaction"]) < 0.005:
+        interaction = "A interação é o que sobra, e aqui é quase nula: os efeitos dos dois mecanismos praticamente se somam."
+    elif parts["interaction"] > 0:
+        interaction = ("A interação é o que sobra: os dois mecanismos juntos derrubam menos do que a soma dos efeitos isolados.")
+    else:
+        interaction = ("A interação é o que sobra: os dois mecanismos juntos derrubam mais do que a soma dos efeitos isolados.")
     interventions = causal["feature_interventions"]
-    scale_auc = max((abs(i["effect"]["auc"]) for i in interventions.values()), default=0)
+    scale_auc = max([abs(parts["total"]), *(abs(i["effect"]["auc"]) for i in interventions.values())])
     scale_score = max((abs(i["effect"]["mean_score"]) for i in interventions.values()), default=0)
     feature_rows = [
         [esc(feature_label(column)),
@@ -743,9 +761,9 @@ def section_causal(causal):
         f'cada cenário liga uma parte do choque daquele lote por vez (níveis {esc(causal.get("data_level", "—"))} e '
         f'{esc(causal.get("concept_level", "—"))}). O que muda entre cenários é efeito da intervenção, dentro da simulação.</p>'
         '<div class="grid2"><div><h3>Efeito na AUC por mecanismo (IC de 95%, bootstrap pareado)</h3>'
-        f'{bars}<p class="note">Barras a partir do zero; o traço fino é o intervalo de confiança. '
-        "A interação é o que sobra: os dois mecanismos juntos derrubam menos do que a soma dos efeitos isolados.</p></div>"
+        f'{bars}<p class="note">Barras a partir do zero; o traço fino é o intervalo de confiança. {interaction}</p></div>'
         "<div><h3>Intervenção em uma variável por vez (rótulos originais)</h3>"
+        '<p class="note">As barras da AUC estão na escala do choque completo, para comparação.</p>'
         + table(["Variável", "Efeito na AUC", "Efeito no score médio", "Sinalizados"], feature_rows, "data causal", right=(3,),
                 label="Efeito de alterar uma variável por vez")
         + "</div></div><h3>Cenários contrafactuais</h3>"

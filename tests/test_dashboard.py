@@ -169,8 +169,9 @@ class BuildTests(unittest.TestCase):
         page = build(make_summary(FULL), None, [])
         self.assertIn("A AUC cruzou o limite de queda (0,05) em <strong>fev/26</strong>", page)
         self.assertIn("1º alerta de AUC", page)
-        self.assertIn("1º aviso de PSI", page)                       # mar/26 já entra direto em alerta
-        self.assertNotIn("1º alerta de PSI", page)
+        self.assertIn("1º alerta de PSI", page)                      # mar/26 já entra direto em alerta
+        self.assertNotIn("1º aviso de PSI", page)
+        self.assertIn("já como alerta", page)
 
     def test_one_table_row_per_alert_with_severity_filters(self):
         page = build(make_summary(FULL), None, [])
@@ -225,8 +226,13 @@ class BuildTests(unittest.TestCase):
                   "feature_interventions": {"MonthlyIncome": scenario([-0.01, 0.0])},
                   "auc_decomposition": {"data_drift": -0.064, "concept_drift": -0.189, "interaction": 0.114, "total": -0.138}}
         page = build(make_summary(FULL), causal, [])
-        for expected in ["Só P(X): data drift", "−0,189", "+0,114", "[−0,078; −0,047]", "Renda mensal"]:
+        for expected in ["Só P(X): data drift", "−0,189", "+0,114", "[−0,078; −0,047]", "Renda mensal",
+                         "juntos derrubam menos do que a soma"]:
             self.assertIn(expected, page)
+        causal["auc_decomposition"]["interaction"] = -0.020
+        self.assertIn("juntos derrubam mais do que a soma", build(make_summary(FULL), causal, []))
+        causal["auc_decomposition"]["interaction"] = 0.001
+        self.assertIn("praticamente se somam", build(make_summary(FULL), causal, []))
 
 
     def test_paired_scenarios_section_is_optional(self):
@@ -243,12 +249,12 @@ class BuildTests(unittest.TestCase):
              "report": "reports/drift/t3.html", "evidently_drifted": ["MonthlyIncome", "DebtRatio"],
              "drift": drift(0.6, 0.034), "performance": metrics}]}
         page = build(make_summary(FULL), None, [], scenarios)
-        for expected in ['id="cenarios"', "Cenários pareados da Etapa 2", "renda mensal ×0,60",
-                         "comprometimento de renda ×1,60", "▲ 0,600", "a maior mudança é em renda mensal (PSI 0,600)",
+        for expected in ['id="cenarios"', "Cenários pareados da Etapa 2", "renda ×0,60; endividamento ×1,60",
+                         "▲ 0,600", "a maior mudança é em renda mensal (PSI 0,600)",
                          "o score do modelo tem PSI de 0,034", "Rótulos &lt;preservados&gt;.", "35.297 clientes",
-                         "<td>nenhuma</td>", "<td>2 de 2</td>", "PSI: renda mensal", "PSI do score"]:
+                         "<td>nenhuma</td>", "<td>2 de 2</td>", "PSI: renda", "PSI: score"]:
             self.assertIn(expected, page)
-        self.assertNotIn("PSI: utilização do rotativo", page)        # só as colunas presentes no resumo
+        self.assertNotIn("PSI: rotativo", page)                      # só as colunas presentes no resumo
         only_rejected = build(make_summary([rejected_batch()]), None, [], scenarios)
         self.assertIn("Cenários pareados da Etapa 2", only_rejected)
 
