@@ -1,15 +1,30 @@
-# TC04 | Governança e confiabilidade de um modelo de crédito
+# TC04 | Drift, observabilidade e governança de um modelo de crédito
 
 Projeto acadêmico da Fase 4 do MLET/FIAP. O cenário é uma fintech cujo modelo de Credit Scoring pode sofrer degradação silenciosa diante de mudanças econômicas e do perfil dos clientes. O objetivo é validar dados, investigar mudanças de distribuição e definir como proteger dados e responder à degradação.
 
-Este README documenta a **Etapa 1 executada**, os **experimentos de data drift e concept drift da Etapa 2**, com predições e relatórios, e a **proposta de governança da Etapa 4**. A observabilidade contínua da Etapa 3 ainda está pendente. A degradação de desempenho demonstrada é sintética; não representa uma série temporal real ou evidência de causa econômica. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. O projeto não realiza concessões reais de crédito.
+Este README documenta as **Etapas 1 a 3 executadas, com artefatos e evidências versionados** (contrato de dados; experimentos de data drift e de concept drift, com predições e relatórios; monitoramento por lote com observabilidade), e a **proposta de governança da Etapa 4**. A degradação de desempenho demonstrada é sintética; não representa uma série temporal real ou evidência de causa econômica. As políticas de operação futura são distinguidas dos controles executados; não constituem evidência de conformidade integral. Os lotes de produção são **simulados**: os resultados demonstram o funcionamento do monitoramento, não o desempenho de uma operação real. O projeto não realiza concessões reais de crédito.
+
+### Resultado em resumo
+
+- **Baseline** (XGBoost, validação fora do treino): AUC 0,857, recall 0,772 no limiar 0,5 e KS 0,568.
+- **Três experimentos complementares sobre o holdout**. Os **cenários pareados** `t0` a `t3` mantêm os mesmos 35.297 clientes e rótulos e alteram renda e endividamento por fatores fixos. O **experimento de concept drift** `c0` a `c3` mantém features e scores e altera o rótulo no segmento de menor renda. Os **lotes mensais** repartem o holdout em 8 meses com um choque econômico progressivo, que combina as duas mudanças, e trazem uma entrega corrompida. O contrato **bloqueou a entrega corrompida** (4.612 linhas) e deixou passar os dados com drift, que são válidos e apenas mudaram de distribuição.
+- **Drift nos cenários pareados**: o Evidently aponta renda e endividamento em `t1`, `t2` e `t3`, e nada no controle. Em magnitude, o PSI da renda vai de 0,030 em `t1` a 0,600 em `t3`, mas o score quase não se move (PSI 0,034) e a AUC fica em 0,843. Drift grande em uma variável de pouco peso tem impacto pequeno.
+- **Drift detectado nos lotes mensais**: as 4 variáveis alteradas chegaram a PSI entre 0,246 e 0,429 no último mês; as 6 não alteradas ficaram em no máximo 0,005 em todos os meses.
+- **Degradação silenciosa**: a AUC já tinha caído 0,078 em maio, quando nenhum PSI passava de 0,10. O primeiro aviso de PSI veio em junho e o primeiro alerta em julho. O teste KS, mais sensível, já acusava as variáveis alteradas em abril.
+- **Concept drift pareado**: com features e scores idênticos linha a linha, alterar o rótulo no segmento de menor renda derruba a AUC de 0,843 para 0,670 e o recall de 74,1% para 45,4% em `c3`. Nenhum monitor de entradas ou de scores vê essa mudança.
+- **Decomposição nos lotes mensais** (experimento contrafactual): a mudança na relação entre variáveis e inadimplência derruba a AUC em 0,189; a mudança só nos dados, em 0,064, mas dobra a parcela de clientes sinalizados (24% para 50%).
+- **Observabilidade**: 58 eventos no log central da execução, 23 alertas (1 crítico, 17 alertas, 5 avisos), métricas por lote no MLflow e um [dashboard HTML](reports/dashboard.html) autocontido.
+
+![Visão geral do dashboard: indicadores, AUC por lote e PSI máximo por lote](docs/img/dashboard-visao-geral.png)
+
+O GitHub não renderiza HTML: para navegar no dashboard, baixe o repositório e abra `reports/dashboard.html` no navegador.
 
 ## 1. Escopo e evidências disponíveis
 
 | Componente | Evidência no repositório | Situação |
 | --- | --- | --- |
 | Exploração e avaliação inicial de seleção | [Notebook](notebooks/01_exploracao.ipynb) | Exploração auxiliar; saídas antigas removidas; leitura sem modificar dados |
-| Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória, sem simulação temporal |
+| Limpeza e separação treino/validação/produção | [prepare.py](src/prepare.py), relatório de limpeza e arquivos Parquet | Implementados; percentis ajustados somente no treino; divisão aleatória (a passagem do tempo é simulada à parte, sobre o holdout) |
 | Contrato de dados | [contract.py](src/contract.py) | Implementado em Pandera |
 | Bloqueio e quarentena | [ingest.py](src/ingest.py) | Implementados para falhas de validação do contrato |
 | Lotes de demonstração | [Log de aprovação](artifacts/stage1/20261114T201315-0300-5fbfe64d/06_ingest_good.txt), [log de bloqueio](artifacts/stage1/20261114T201315-0300-5fbfe64d/07_ingest_bad.txt) e [falhas](data/quarantine/bad_batch_errors.csv) | Executados: 500 linhas aprovadas e lote de 505 linhas em quarentena |
@@ -18,8 +33,13 @@ Este README documenta a **Etapa 1 executada**, os **experimentos de data drift e
 | Predições da Etapa 2 | [predict.py](src/predict.py): inferência com o modelo salvo na referência e nos quatro cenários | Implementadas; probabilidades e classes em arquivos separados |
 | Detecção de data drift | [detect_drift.py](src/detect_drift.py), [resumo estatístico](reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: controle sem detecção; renda e dívida com drift em t1, t2 e t3 |
 | Concept drift e comportamento do modelo | [concept_drift.py](src/concept_drift.py), [análise](artifacts/concept_drift/analysis.html) e [métricas](artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
-| Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
-| Governança e causalidade | Este README | Política proposta e hipóteses documentadas |
+| Simulação em lotes mensais | [simulate_batches.py](src/simulate_batches.py); parâmetros e seed no [resumo do monitoramento](reports/monitoring_summary.json) | Executada: 8 lotes com choque progressivo (data drift e concept drift) e 1 entrega corrompida |
+| Magnitude e impacto do drift nos cenários | [scenario_impact.py](src/scenario_impact.py) e [resumo](reports/scenario_impact.json) | Executada: PSI por decis, PSI do score e métricas do modelo em cada cenário |
+| Drift por lote | [batch_drift.py](src/batch_drift.py), [drift_stats.py](src/drift_stats.py) e relatórios do Evidently de [jan/26](reports/batches/2026-01.html) e [ago/26](reports/batches/2026-08.html) | Executado: PSI por decis e KS por variável e para o score, lote contra referência |
+| Monitoramento e alertas | [monitor.py](src/monitor.py), [alerts.py](src/alerts.py) e [resumo](reports/monitoring_summary.json) | Executados sobre os lotes simulados: 23 alertas em 9 lotes |
+| Observabilidade centralizada | [observability.py](src/observability.py), [tracking.py](src/tracking.py), [dashboard.py](src/dashboard.py) e [dashboard](reports/dashboard.html) | Log central de eventos, MLflow local e dashboard HTML; sem agendador nem envio externo de alertas |
+| Análise causal | [causal_analysis.py](src/causal_analysis.py) e [resultado](reports/causal_analysis.json) | Experimento contrafactual sobre a simulação; não identifica a causa de uma degradação real |
+| Governança | Este README | Política proposta e hipóteses documentadas |
 | Vídeo STAR | Seção 10 | Gravação e link pendentes |
 
 ## 2. Dados, modelo e arquitetura
@@ -84,15 +104,38 @@ referência (ajusta apenas corte de renda) + holdout + modelo salvo
         -> métricas globais e por segmento + sensibilidade a cinco seeds
         -> relatórios de classificação do Evidently + prova de features estáveis
         -> analysis.html + interventions.parquet + manifest.json
+
+referência + quatro cenários + models/current
+    -> src.scenario_impact: PSI por decis, PSI do score e métricas do modelo
+        -> reports/scenario_impact.json
+
+data/production/holdout.parquet
+            -> src.simulate_batches: 8 lotes mensais + 1 entrega corrompida (seed 42)
+                -> data/production/batches/*.parquet + manifest.json
+                    -> src.monitor, para cada lote na ordem de chegada:
+                        -> contrato (src.ingest): inválido vai para
+                           data/quarantine/<execução>/ e o lote é interrompido
+                        -> escoragem com models/current
+                        -> src.batch_drift: Evidently, PSI por decis + KS
+                           -> reports/batches/<lote>.html
+                        -> desempenho com o rótulo observado
+                        -> src.alerts: regras de alerta
+                        -> um evento por etapa em logs/pipeline_events.jsonl
+                           e métricas por lote no MLflow (mlflow.db)
+                    -> reports/monitoring_summary.json
+            -> src.causal_analysis -> reports/causal_analysis.json
+
+resumos + log central
+    -> src.dashboard -> reports/dashboard.html
 ```
 
-[config.py](src/config.py) centraliza alvo, seed, limiar de classificação, fatores dos períodos, critérios de drift e probabilidades do choque sintético no alvo. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados nos experimentos e relatórios. A ordem das features continua definida apenas em [contract.py](src/contract.py).
+[config.py](src/config.py) centraliza alvo, seed, limiar de classificação, fatores dos períodos, critérios de drift e probabilidades do choque sintético no alvo, além dos caminhos e dos limiares de alerta do monitoramento. [artifacts.py](src/artifacts.py) centraliza snapshots de leitura e hashes SHA-256 usados nos experimentos e relatórios. A ordem das features continua definida apenas em [contract.py](src/contract.py).
 
-Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. A ingestão aprovada somente valida o lote: não o encaminha automaticamente ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
+Os percentuais são anteriores à filtragem de outliers; as proporções finais podem variar. Os scripts criam os diretórios de saída automaticamente. A preparação atual já foi executada; ao reproduzir, executar `python -m src.prepare` antes de treinar para manter as partições e os limites da mesma preparação. Na demonstração da Etapa 1 (`src.ingest` pela linha de comando), a ingestão aprovada somente valida o lote. No monitoramento (`src.monitor`), o lote aprovado segue para escoragem, drift e avaliação, e o rejeitado é interrompido antes de chegar ao modelo. O treinamento valida referência e validação com o contrato e exige registros das duas classes em ambas antes de criar o modelo. Reprovação retorna 1; falha operacional retorna 2. Uma execução bloqueada preserva eventuais artefatos anteriores.
 
 Modelo e métricas são gravados em um diretório temporário exclusivo dentro de `models/`. Somente após concluir ambas as gravações, a versão é movida para `models/runs/<execução>` e o link simbólico `models/current` é substituído atomicamente. Os caminhos publicados são `models/current/model.joblib` e `models/current/metrics.json`. Falhas de gravação ou publicação retornam 2 e preservam a versão anterior; temporários e versões não publicadas são removidos nas falhas tratadas. Versões publicadas anteriores permanecem disponíveis em `models/runs/`.
 
-Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Todos os consumidores do projeto usam a estrutura publicada em `models/current` ou uma versão explícita de `models/runs`. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
+Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Todos os consumidores do projeto usam a estrutura publicada em `models/current` ou uma versão explícita de `models/runs`. O monitoramento, o impacto dos cenários e a análise causal resolvem `models/current` uma vez, leem modelo e métricas do mesmo diretório e gravam a versão usada no resumo. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
 
 O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
 
@@ -116,11 +159,11 @@ As exclusões são contagens sequenciais, não estimativas independentes de prev
 
 Limitações que precisam orientar a operação:
 
-- O contrato exige `SeriousDlqin2yrs`; atende lotes históricos rotulados. Inferência real exige contrato próprio sem o alvo, pois o desfecho futuro ainda não é conhecido.
+- O contrato exige `SeriousDlqin2yrs`; atende lotes históricos rotulados. Inferência real exige contrato próprio sem o alvo, pois o desfecho futuro ainda não é conhecido. Os lotes simulados da seção 7 já chegam rotulados, como se o desfecho tivesse maturado.
 - O contrato não reproduz todos os filtros da limpeza: não bloqueia especificamente 96/98 nem aplica limites superiores de renda, dívida ou utilização.
 - A remoção de outliers também filtra validação e holdout; as métricas descrevem a população retida. O relatório permite acompanhar as exclusões por partição. A simulação atual não reaplica esse filtro após as intervenções, preservando as mudanças introduzidas.
-- O lote ruim contém idade 15, renda nula, dívida negativa, duplicatas e coluna ausente. Isso testa qualidade, não simula drift temporal.
-- A ingestão retorna 2 para falhas de leitura, validação inesperada, escrita ou movimentação. Se já houver lote ou relatório com o mesmo nome na quarentena, preserva a evidência anterior e o arquivo de entrada e retorna 2; é necessário resolver a colisão antes de repetir. O armazenamento de múltiplas ocorrências com identificadores únicos continua pendente.
+- O lote ruim contém idade 15, renda nula, dívida negativa, duplicatas e coluna ausente. Isso testa qualidade, não simula drift temporal. Os cenários pareados e os lotes mensais com drift passam no contrato, porque são dados válidos com outra distribuição; quem pega esse caso é a detecção de drift.
+- A ingestão retorna 2 para falhas de leitura, validação inesperada, escrita ou movimentação. Se já houver lote ou relatório com o mesmo nome na quarentena, preserva a evidência anterior e o arquivo de entrada e retorna 2; é necessário resolver a colisão antes de repetir. No monitoramento, cada execução grava a quarentena em `data/quarantine/<execução>/`, o que evita a colisão; a demonstração da Etapa 1 mantém o comportamento descrito.
 
 ## 4. Plano de proteção de dados e base legal
 
@@ -139,7 +182,7 @@ Para este estudo, permanece pendente documentar a procedência, os termos de uso
 | Acesso | Sem controle de acesso implementado no projeto | Menor privilégio; dados detalhados restritos à equipe autorizada; revisão ao trocar integrantes |
 | Armazenamento e transporte | Arquivos locais; sem configuração de criptografia no código | Armazenamento e backups criptografados; TLS nas transferências; segredos fora do Git |
 | Publicação | CSV e Parquet estão versionados | Avaliar termos e risco; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
-| Logs e relatórios | Log de lote e CSV de falhas | Não registrar linhas de clientes; restringir quarentena e sanitizar valores antes de compartilhar relatórios ou vídeo |
+| Logs e relatórios | Log central, resumo do monitoramento, MLflow e dashboard gravam somente agregados por lote (um teste verifica que valores rejeitados não chegam ao log); o CSV de falhas da quarentena contém valores e, no monitoramento, fica fora do Git | Não registrar linhas de clientes; restringir quarentena e sanitizar valores antes de compartilhar relatórios ou vídeo |
 | Descarte | Sem rotina implementada | Aplicar a tabela de retenção, incluindo cópias, backups e histórico sob controle da equipe |
 
 O CSV de falhas pode conter valores rejeitados. Quarentena é uma área restrita de diagnóstico, não um mecanismo de anonimização. A ausência de identificadores diretos também não autoriza divulgar registros financeiros individuais.
@@ -170,6 +213,8 @@ O dataset de treino tem 10.026 positivos em 150.000 registros, uma taxa de 6,684
 
 A exclusão de registros sem renda ou dependentes pode mudar a população atendida. A análise do CSV bruto, reproduzível pelo notebook auxiliar, encontra taxas de inadimplência de aproximadamente 5,61% para renda ausente e 6,95% para renda preenchida, indicando seleção potencialmente relevante. Os filtros de percentil também podem remover clientes de maior risco. Esses resultados justificam investigação, sem comprovar discriminação ou causalidade.
 
+A simulação acrescenta um risco de uso responsável: quando só as variáveis mudam (renda menor, mais uso do rotativo), o modelo passa a sinalizar o dobro dos clientes sem que a inadimplência deles tenha mudado (seção 6). Em uma operação real isso significaria recusas indevidas concentradas em quem perdeu renda. O monitoramento implementado é agregado por lote; a avaliação por segmento descrita abaixo continua pendente.
+
 Antes de recomendar uso operacional, a política proposta é:
 
 1. Comparar proporções de exclusão, distribuição e inadimplência antes/depois da limpeza por faixas de idade e renda.
@@ -182,21 +227,45 @@ Não há atributos explícitos suficientes para auditar todos os grupos protegid
 
 ## 6. Causalidade: diagnóstico e hipóteses
 
-**Não há evidência de degradação temporal real ou de causa econômica no código atual.** O holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O script `src.simulate_drift` cria cenários sintéticos de data drift e `src.detect_drift` identifica as alterações por testes estatísticos. Separadamente, `src.concept_drift` muda o mecanismo do alvo com as features fixas e mede a degradação sintética do modelo. Isso permite atribuir diferenças de métricas à intervenção programada dentro do experimento, sem identificar causas econômicas no mundo real.
+**Não há evidência de degradação temporal real nem de causa econômica observada.** O dataset não tem datas, e o holdout é uma amostra aleatória; o gerador de lote ruim introduz violações de contrato. O que existe são **experimentos controlados** sobre o holdout: os cenários pareados de `src.simulate_drift`, que alteram só duas variáveis; o experimento de `src.concept_drift`, que altera só o rótulo de um segmento, com as features fixas; e os lotes mensais de `src.simulate_batches` (seção 7), que combinam as duas mudanças ao longo do tempo. Os dois primeiros estão descritos mais abaixo. Em todos, as diferenças de métricas podem ser atribuídas à intervenção programada, dentro do experimento. A análise a seguir mede o efeito de cada intervenção dos lotes mensais. Isso mostra como o diagnóstico seria conduzido e quanto cada mecanismo pesa no cenário construído; não prova o que aconteceria com clientes reais.
+
+### Experimento contrafactual nos lotes mensais
+
+[causal_analysis.py](src/causal_analysis.py) pega os 4.412 clientes do último lote mensal e aplica cada parte do choque isoladamente, com o mesmo sorteio (seed) e o mesmo modelo. Como nada mais muda entre os cenários, a diferença é o efeito da intervenção. O intervalo de confiança vem de bootstrap pareado sobre os clientes (300 reamostragens).
+
+| Cenário | O que muda | AUC | Efeito na AUC (IC 95%) | Recall | Sinalizados | Inadimplência |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| Controle | Nada | 0,829 | — | 0,715 | 24,4% | 6,4% |
+| Só P(X), data drift | Variáveis alteradas, rótulos originais | 0,765 | −0,064 [−0,078; −0,047] | 0,826 | 50,2% | 6,4% |
+| Só P(Y\|X), concept drift | Rótulos alterados, variáveis originais | 0,640 | −0,189 [−0,219; −0,164] | 0,436 | 24,4% | 13,9% |
+| Choque completo | Os dois | 0,691 | −0,138 [−0,160; −0,115] | 0,730 | 50,2% | 13,9% |
+
+![Efeito de cada mecanismo na AUC e intervenção em uma variável por vez](docs/img/dashboard-causal.png)
+
+Leitura, válida dentro da simulação:
+
+- **O concept drift é o que mais destrói a ordenação** (−0,189 de AUC). Ele não aparece em nenhum PSI: as variáveis e o score continuam com a distribuição do controle (PSI do score 0,002). Só o rótulo maturado o revela. O experimento pareado de concept drift, descrito mais abaixo, chega à mesma conclusão por outro desenho: com features e scores idênticos, a AUC vai de 0,843 para 0,670.
+- **O data drift sozinho custa menos AUC (−0,064), mas dobra a parcela sinalizada** (24,4% para 50,2%) com a inadimplência inalterada. O recall sobe porque o modelo sinaliza muito mais gente, não porque acerta melhor. É o mesmo tipo de intervenção dos cenários pareados, que também preservam os rótulos, com a diferença de que aqui mudam variáveis de maior peso no modelo.
+- **Os efeitos não se somam**: −0,064 −0,189 daria −0,253, e o choque completo derruba −0,138. A interação de +0,114 vem da construção do cenário: a mesma variável latente de estresse piora as variáveis e gera as novas inadimplências, então parte de quem passou a inadimplir também teve o score elevado.
+- **Por variável** (só X, uma intervenção por vez): utilização do rotativo −0,026 de AUC e +0,081 no score médio; atrasos de 30–59 dias −0,019 e +0,053; `DebtRatio` −0,005 e +0,029; renda −0,002 e +0,009. O modelo é mais sensível às variáveis de maior importância (utilização 0,28; atrasos de 30–59 dias 0,20). A renda, apesar de um PSI de 0,379, quase não move o score: a importância dela no modelo é menor que 0,05. Drift grande em uma variável não implica impacto grande na predição.
+
+Limites: as intervenções são sintéticas e definidas por nós ([parâmetros](src/simulate_batches.py)); o mecanismo real pode ser outro. Efeito medido em um cenário construído não é estimativa causal sobre dados observacionais, que exigiria dados temporais, controle de fatores de confusão e um desenho defensável.
+
+### Hipóteses para uma degradação real
 
 O mecanismo econômico a investigar é: mudança econômica pode afetar renda e endividamento, que podem alterar o risco de inadimplência; mudanças no público atendido e na política de aprovação também podem alterar a população observada. Essas relações são hipóteses de domínio, não conclusões obtidas neste projeto.
 
 | Hipótese | Evidência necessária | Ação se corroborada |
 | --- | --- | --- |
 | Erro na coleta ou transformação | Falhas no contrato, mudança de unidade, versão da fonte e logs | Bloquear lote, corrigir origem e reprocessar |
-| Data drift: mudança em P(X) | Comparação referência/análise, por exemplo em renda e endividamento, com testes e magnitude | Investigar origem, população e impacto sobre predições |
+| Data drift: mudança em P(X) | Comparação referência/análise, por exemplo em renda e endividamento, com testes e magnitude (implementada: PSI e KS por lote, seção 7) | Investigar origem, população e impacto sobre predições |
 | Concept drift: mudança em P(Y\|X) | Rótulos maturados, queda de desempenho/calibração em condições comparáveis e análise de alternativas | Avaliar recalibração ou retreinamento |
 | Seleção causada pela limpeza | Comparação entre incluídos/excluídos e alternativas de tratamento | Rever filtros e repetir avaliação por segmento |
 | Efeito econômico sobre inadimplência | Dados temporais, fatores de confusão e desenho causal defensável | Submeter a hipótese a análise específica antes de atribuir causa |
 
 PSI ou um teste KS de duas amostras pode apontar mudança de distribuição; não identifica sua causa nem comprova concept drift. Queda de performance também exige investigar qualidade, seleção, mudança de política e maturação do alvo.
 
-O experimento de data drift registra intervenções em duas features e sua intensidade, compara cenários pareados e executa o mesmo modelo. Essa simulação usa todo o holdout sem aleatoriedade. O experimento separado de concept drift usa sorteios reproduzíveis para alterar o mecanismo do alvo. A seed 42 também se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica; a alteração de `P(Y|X)` está explicitada na subseção de concept drift.
+O experimento de data drift registra intervenções em duas features e sua intensidade, compara cenários pareados e executa o mesmo modelo. Essa simulação usa todo o holdout sem aleatoriedade. O experimento separado de concept drift usa sorteios reproduzíveis para alterar o mecanismo do alvo. A seed 42 também se aplica à preparação e ao treinamento. Alterar apenas X mantendo rótulos antigos permite estudar sensibilidade das previsões, mas não demonstra desempenho real após uma mudança econômica; a alteração de `P(Y|X)` está explicitada na subseção de concept drift e, combinada com data drift em lotes mensais, na seção 7.
 
 Como o alvo tem horizonte de dois anos, produção real requer política de maturação e acompanhamento de rótulos. Sem desfechos disponíveis, monitorar dados e scores e declarar a limitação de avaliação do modelo. O dataset local não permite reconstruir uma série temporal real de concessões.
 
@@ -301,7 +370,7 @@ Resultados da execução sobre os artefatos preservados:
 
 No controle, os p-valores de renda e dívida foram aproximadamente 0,925 e 0,588; em t1, aproximadamente 1,01 × 10⁻¹²³ e 1,91 × 10⁻⁶⁰. Em t2 e t3, a biblioteca retornou 0 por precisão numérica para esses p-valores extremamente pequenos. Os números completos estão no [resumo estatístico](reports/drift/summary.csv) e a procedência no [manifesto](reports/drift/manifest.json). Os 54 arquivos existentes de dados, modelos e evidências permaneceram inalterados durante a geração, verificados por SHA-256.
 
-A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção em renda e dívida confirma mudanças de distribuição introduzidas no experimento; não comprova queda de desempenho, causa econômica ou concept drift. O experimento separado a seguir altera explicitamente `P(Y|X)`.
+A ausência de drift no controle é um resultado observado, sem garantia para outras amostras. A detecção em renda e dívida confirma mudanças de distribuição introduzidas no experimento; não comprova queda de desempenho, causa econômica ou concept drift. O experimento separado a seguir altera explicitamente `P(Y|X)`. A magnitude das mudanças de distribuição dos cenários `t1` a `t3` e o efeito delas no modelo estão na seção 7, em "Magnitude e impacto do drift nos cenários pareados".
 
 ### Experimento de concept drift e comportamento do modelo
 
@@ -353,17 +422,159 @@ Os argumentos `--reference`, `--holdout` e `--model` permitem indicar versões e
 
 ## 7. Monitoramento e resposta à degradação
 
-Esta seção propõe a operação contínua e a resposta aos sinais; agendamento, centralização e acionamento operacional ainda não estão implementados. A detecção offline de data drift já está executada na seção 6. Os limiares são pontos iniciais e devem ser calibrados; não são exigências do enunciado.
+Esta seção separa o que está **implementado e executado sobre lotes simulados** do que continua como **política proposta**. Os limiares são pontos de partida, definidos em [config.py](src/config.py), e devem ser calibrados com dados reais; não são exigências do enunciado.
 
-| Sinal | Frequência proposta | Critério inicial | Resposta |
+### Simulação da produção em lotes mensais (Etapa 2)
+
+A seção 6 descreve os experimentos pareados, sempre com o holdout inteiro e os mesmos clientes: os cenários `t0` a `t3` isolam o data drift, e os cenários `c0` a `c3` isolam o concept drift. Esta seção acrescenta uma simulação complementar, que alimenta o monitoramento contínuo: o holdout chega em **lotes**, como chegaria em produção, o choque combina as duas mudanças e cresce no tempo, e uma entrega vem com defeito.
+
+O dataset não tem datas. Para representar a passagem do tempo, [simulate_batches.py](src/simulate_batches.py) embaralha o holdout (35.297 clientes que o modelo nunca viu) e o reparte em 8 lotes mensais de cerca de 4.412 linhas, de 2026-01 a 2026-08. Os três primeiros ficam intactos, como período de controle. A partir do quarto, um choque econômico cresce em intensidade `t` = 0,2; 0,4; 0,6; 0,8; 1,0. A referência é sempre a partição de treino (`data/reference/`), separada da produção (`data/production/`).
+
+O choque é dirigido por uma variável latente de estresse financeiro, que o modelo não observa. Com `t` = 1, metade das famílias entra em estresse, e:
+
+| Tipo | Coluna | O que acontece |
+| --- | --- | --- |
+| Data drift, P(X) | `MonthlyIncome` | Perda real de 15% para todos; famílias em estresse ficam com 40% a 80% da renda |
+| Data drift, P(X) | `DebtRatio` | A mesma parcela pesa sobre uma renda menor, com 15% de encarecimento |
+| Data drift, P(X) | `RevolvingUtilizationOfUnsecuredLines` | Famílias em estresse consomem de 20% a 90% do limite que restava |
+| Data drift, P(X) | `NumberOfTime30-59DaysPastDueNotWorse` | Metade das famílias em estresse ganha um ou mais atrasos |
+| Concept drift, P(Y\|X) | `SeriousDlqin2yrs` | 15% dos bons pagadores em estresse passam a inadimplir, e 2% dos demais, sem sinal nas variáveis |
+
+Duas das quatro variáveis alteradas estão entre as mais importantes do modelo (utilização do rotativo, 0,28; atrasos de 30–59 dias, 0,20). Tudo é determinístico (seed 42), e os parâmetros ficam gravados no manifesto dos lotes e no [resumo do monitoramento](reports/monitoring_summary.json). Em 2026-05 chega antes uma **entrega corrompida** do mesmo mês: 120 rendas nulas, 40 idades iguais a zero, 20 razões de dívida negativas e 200 linhas reenviadas em duplicidade.
+
+### Drift por lote
+
+Para cada lote aprovado, [batch_drift.py](src/batch_drift.py) gera um relatório do **Evidently** comparando a referência com o lote nas 10 variáveis de entrada e no score do modelo, com duas estatísticas:
+
+- **PSI** (Population Stability Index), que é a regra de alerta: aviso a partir de 0,10 e alerta a partir de 0,20.
+- **Teste KS** de duas amostras, como evidência complementar, com o mesmo p-valor de corte dos relatórios da seção 6 (0,01).
+
+Os relatórios offline dos cenários (seção 6) respondem **se** há drift: KS nas três medidas contínuas e PSI de categorias nas demais. No monitoramento por lote a pergunta é de **tamanho**, e a regra usa um só índice para todas as colunas. O PSI usa **faixas fixas nos decis da referência** ([drift_stats.py](src/drift_stats.py)), prática usual em risco de crédito, e é registrado no Evidently como um teste próprio. O PSI numérico nativo do Evidently usa faixas de largura igual; em variáveis de cauda longa, como renda e endividamento, quase toda a massa cai na primeira faixa e o índice fica insensível. Em contagens com poucos valores distintos, cada valor é uma faixa. O número que aparece no HTML do Evidently, com o nome "PSI (decis da referência)", é o mesmo do resumo e do dashboard; um teste automatizado confere isso. Limitação de qualquer PSI por faixas: mudanças dentro de uma mesma faixa, ou valores acima do máximo da referência que caem na última faixa, não alteram o índice.
+
+O KS não gera alerta no monitoramento, mas o resultado dele merece registro. Com p < 0,01, acusou as quatro variáveis alteradas e o score já em **abril**, quando o maior PSI era 0,028, e não apontou nenhuma das seis variáveis não alteradas em 48 testes, nem nada nos meses de controle. Foi mais sensível que o PSI e, neste cenário, teria avisado antes de a queda de AUC passar do limite. O custo aparece nos cenários pareados: com 35 mil linhas, o KS dá p ≈ 10⁻¹²³ para a renda em `t1`, onde o PSI é 0,030 e o modelo não sente nada. Significância não é magnitude. Por isso a regra de alerta usa o PSI, e o KS fica como candidato a aviso precoce, a calibrar pelo volume do lote. O alvo ficou fora do relatório de propósito: PSI em variável binária é pouco sensível (dobrar a inadimplência dá cerca de 0,05), então a regra para o alvo compara a taxa observada com a da referência.
+
+### Magnitude e impacto do drift nos cenários pareados
+
+Os relatórios da seção 6 mostram que renda e endividamento têm drift em `t1`, `t2` e `t3`. [scenario_impact.py](src/scenario_impact.py) acrescenta o que eles não medem: o tamanho da mudança, pelo PSI por decis, e o efeito no modelo, pelo PSI do score e pelas métricas com os rótulos preservados. O resultado fica no [resumo](reports/scenario_impact.json); nenhum relatório novo do Evidently é gerado para os cenários, e `reports/drift/` não é alterado. Os scores são recalculados com o modelo publicado e coincidem exatamente com os de `data/predictions/`.
+
+| Cenário | Renda | Dívida | Colunas em drift no Evidently | PSI da renda | PSI do endividamento | PSI do score | AUC | Recall | Sinalizados |
+| --- | ---: | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
+| `t0_control` | ×1,00 | ×1,00 | nenhuma | 0,000 | 0,000 | 0,001 | 0,843 | 0,741 | 24,8% |
+| `t1` | ×0,90 | ×1,10 | 2 de 10 | 0,030 | 0,016 | 0,001 | 0,843 | 0,752 | 25,7% |
+| `t2` | ×0,75 | ×1,30 | 2 de 10 | 0,195 (aviso) | 0,109 (aviso) | 0,010 | 0,844 | 0,766 | 27,3% |
+| `t3` | ×0,60 | ×1,60 | 2 de 10 | 0,600 (alerta) | 0,329 (alerta) | 0,034 | 0,843 | 0,779 | 29,1% |
+
+O Evidently aponta as mesmas duas colunas nos três cenários; o PSI mostra que eles não são equivalentes: as duas variáveis ficam abaixo de 0,10 em `t1`, geram aviso em `t2` e alerta em `t3`. As demais variáveis ficam em no máximo 0,001. O ponto mais útil é o que **não** acontece: o score quase não se move (PSI de 0,034 em `t3`) e a AUC fica entre 0,843 e 0,844 em todos os cenários. O modelo dá pouco peso a renda e endividamento (importância abaixo de 0,05 cada), então um drift grande nessas colunas tem impacto pequeno na predição. Como os rótulos são os históricos, esses cenários não dizem nada sobre concept drift; para isso existe a simulação em lotes.
+
+![Cenários pareados no dashboard: colunas em drift no Evidently, PSI da renda, do endividamento e do score, AUC e parcela sinalizada](docs/img/dashboard-cenarios.png)
+
+### Resultados do monitoramento dos lotes mensais
+
+Execução `mon-20261115T020052Z-71f373`, com o modelo `32542e11…`. Baseline da validação: AUC 0,857, recall 0,772 e KS 0,568. Na referência, a inadimplência é de 6,6% e o modelo sinaliza 24,6% dos clientes.
+
+| Lote | Status | AUC | Recall | KS | Inadimplência | Sinalizados | PSI máx. das variáveis | PSI do score | Alertas |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 2026-01 | ok | 0,854 | 0,750 | 0,548 | 6,4% | 24,9% | 0,003 | 0,001 | — |
+| 2026-02 | ok | 0,847 | 0,772 | 0,571 | 7,5% | 26,0% | 0,003 | 0,002 | — |
+| 2026-03 | ok | 0,844 | 0,745 | 0,552 | 7,2% | 24,8% | 0,003 | 0,002 | — |
+| 2026-04 | ok | 0,821 | 0,730 | 0,493 | 8,0% | 29,7% | 0,028 | 0,019 | — |
+| 2026-05, entrega corrompida | **rejeitado** | — | — | — | — | — | — | — | 1 crítico |
+| 2026-05 | ok | 0,780 | 0,725 | 0,421 | 10,4% | 35,5% | 0,085 | 0,071 | 2 alertas |
+| 2026-06 | ok | 0,751 | 0,718 | 0,375 | 11,3% | 39,8% | 0,154 | 0,127 | 2 alertas, 4 avisos |
+| 2026-07 | ok | 0,743 | 0,756 | 0,368 | 13,0% | 43,7% | 0,299 | 0,225 | 6 alertas, 1 aviso |
+| 2026-08 | ok | 0,691 | 0,730 | 0,279 | 13,9% | 50,2% | 0,429 | 0,390 | 7 alertas |
+
+PSI das variáveis alteradas e do score, por lote:
+
+| Coluna | 01/26 | 02/26 | 03/26 | 04/26 | 05/26 | 06/26 | 07/26 | 08/26 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `RevolvingUtilizationOfUnsecuredLines` | 0,001 | 0,001 | 0,002 | 0,028 | 0,070 | 0,131 | 0,230 | 0,429 |
+| `DebtRatio` | 0,003 | 0,003 | 0,002 | 0,020 | 0,085 | 0,154 | 0,299 | 0,427 |
+| `MonthlyIncome` | 0,001 | 0,002 | 0,002 | 0,021 | 0,057 | 0,119 | 0,237 | 0,379 |
+| `NumberOfTime30-59DaysPastDueNotWorse` | 0,001 | 0,002 | 0,002 | 0,012 | 0,057 | 0,088 | 0,152 | 0,246 |
+| Score do modelo | 0,001 | 0,002 | 0,002 | 0,019 | 0,071 | 0,127 | 0,225 | 0,390 |
+
+As seis variáveis não alteradas ficaram em no máximo 0,005 em todos os meses. A entrega corrompida foi rejeitada com quatro violações: 400 linhas duplicadas (as 200 reenviadas e seus originais), 120 rendas nulas, 40 idades fora de 18–100 e 20 `DebtRatio` negativos. O lote foi para `data/quarantine/<execução>/` e não chegou ao modelo; a entrega correta do mesmo mês foi processada em seguida.
+
+![PSI por variável e por lote, com os limites de aviso e alerta](docs/img/dashboard-drift.png)
+
+**Degradação silenciosa.** Em maio a AUC já tinha caído 0,078 (de 0,857 para 0,780), e o maior PSI era 0,085, abaixo do limite de aviso. O alerta de AUC depende do rótulo: no caso real, a inadimplência grave leva até dois anos para maturar. Sem rótulo, o primeiro sinal pelas regras atuais seria o aviso de PSI de junho, e o primeiro alerta, o de julho. Três consequências práticas: os limites de 0,10 e 0,20 chegam tarde neste cenário; o PSI do score (0,071 em maio) e a parcela sinalizada (35,5% contra 24,6% na referência) merecem acompanhamento próprio, porque se movem sem precisar de rótulo; e o KS, que já acusava em abril, é um candidato a aviso precoce.
+
+![Recall, KS do modelo, inadimplência observada, score médio e parcela sinalizada por lote](docs/img/dashboard-modelo.png)
+
+O relatório do Evidently de agosto ([HTML](reports/batches/2026-08.html)) aponta drift em 5 das 11 colunas e, no cabeçalho, diz que não há "dataset drift", porque nele o critério global ficou no padrão da ferramenta, de metade das colunas. O monitoramento não usa critério global: alerta por coluna. O relatório de [janeiro](reports/batches/2026-01.html) serve de contraste, sem nenhuma coluna em drift. Esses dois estão versionados em `reports/batches/`; os outros seis são recriados por `make report` (cada HTML tem 4,8 MB). Os relatórios dos cenários, em `reports/drift/`, são os da seção 6.
+
+![Relatório do Evidently do lote de agosto: PSI por decis em cada coluna](docs/img/evidently-2026-08.png)
+
+### Regras de alerta
+
+Implementadas em [alerts.py](src/alerts.py) e cobertas por testes. Crítico interrompe o lote; alerta exige investigação; aviso pede acompanhamento. Um alerta de drift indica mudança de distribuição, não a sua causa.
+
+| Sinal | Critério | Severidade | Situação |
 | --- | --- | --- | --- |
-| Qualidade do contrato | Cada lote | Qualquer violação | Bloquear e colocar em quarentena; corrigir e revalidar |
-| Status, volume, duração e erros | Cada execução | Falha ou lote vazio inesperado; duração acima de 2 vezes a mediana das últimas 20 execuções válidas | Abrir incidente e investigar dependências e origem |
-| Drift de features | Cada janela de análise com pelo menos 500 registros | KS com p < 0,01 nas três medidas financeiras ou PSI ≥ 0,20 nas demais categorias; sinal global em ≥ 20% das features | Alertar; examinar magnitude, segmentos e qualidade antes de decidir |
-| Performance com rótulos maturados | Cada janela elegível | Queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra baseline, usando o mesmo limiar | Revisar incerteza, população e política; avaliar candidato |
-| Equidade | Cada avaliação e troca de modelo | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade |
+| Contrato de dados | Qualquer violação no lote | Crítico: bloqueia e põe em quarentena | Implementado |
+| Falha operacional | Erro de leitura, de quarentena ou exceção em qualquer etapa | Crítico: interrompe o lote | Implementado |
+| Volume | Lote com menos de 500 linhas | Aviso | Implementado |
+| Latência | Lote levou mais de 2 vezes a mediana dos lotes anteriores da execução, com pelo menos 3 lotes anteriores | Aviso | Implementado; a proposta original usava as últimas 20 execuções válidas |
+| Drift de variável | PSI por decis ≥ 0,10 ou ≥ 0,20, com faixas fixadas na referência | Aviso ou alerta | Implementado no monitoramento por lote; os relatórios offline dos cenários usam KS com p < 0,01 e PSI ≥ 0,20, com sinal global em 20% das features |
+| Drift do score | O mesmo critério, sobre a probabilidade prevista | Aviso ou alerta | Implementado |
+| Desempenho com rótulo | Queda absoluta de AUC ≥ 0,05 ou de recall ≥ 0,10 contra o baseline da validação, no mesmo limiar | Alerta | Implementado; são os mesmos critérios do experimento de concept drift da seção 6, que compara com o controle do holdout. Na simulação o rótulo já vem pronto |
+| Inadimplência observada | Taxa do lote ≥ 1,5 vez a da referência | Alerta | Implementado |
+| Equidade | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade | Proposto, não implementado |
 
-O baseline da Etapa 1 está preservado em `models/runs/32542e11c8c8477ea23d42db115efd0e`, com AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. O experimento de concept drift já calcula sinais offline de queda de AUC/recall contra o controle do holdout; alertas operacionais e acompanhamento contínuo por janelas ainda não foram implementados. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
+O baseline de comparação é o da versão publicada em `models/current` (hoje `models/runs/32542e11c8c8477ea23d42db115efd0e`): AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. O volume mínimo é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
+
+### Observabilidade (Etapa 3)
+
+Três camadas, alimentadas pelo mesmo pipeline:
+
+1. **Log central de eventos**, em `logs/pipeline_events.jsonl` ([observability.py](src/observability.py)). Cada etapa de cada script grava uma linha JSON com o mesmo esquema: `ts`, `run_id`, `stage`, `batch`, `status`, `level`, `duration_s`, `rows` e `details`. As etapas são `prepare`, `train`, `simulate`, `ingest`, `score`, `drift`, `evaluate`, `alert`, `monitor`, `scenario`, `causal` e `dashboard`. Uma falha de escrita no log não derruba o pipeline. Há também um log de texto em `logs/pipeline.log`. A geração dos cenários pareados, das predições, dos relatórios offline de drift e do experimento de concept drift (`src.simulate_drift`, `src.predict`, `src.detect_drift` e `src.concept_drift`) não grava no log central; a rastreabilidade delas está nos próprios manifestos, com hashes.
+2. **MLflow** local em SQLite ([tracking.py](src/tracking.py)). O experimento `tc04-baseline` guarda parâmetros, métricas e artefatos de cada treino. O experimento `tc04-monitoramento` guarda uma execução por rodada do monitor, com 25 métricas por lote em série (AUC, recall, KS, PSI de cada variável, linhas, duração, alertas por severidade), e uma execução aninhada por lote com o HTML do Evidently. Abrir com `make mlflow-ui`. O MLflow é auxiliar: se estiver indisponível, o pipeline segue e o log central continua sendo gravado.
+3. **Dashboard** em [reports/dashboard.html](reports/dashboard.html) ([dashboard.py](src/dashboard.py)): um arquivo único, sem servidor nem CDN, gerado a partir do resumo do monitoramento, do impacto dos cenários pareados, da análise causal e do log central. Tem tooltips nos gráficos e no mapa de PSI, leitura por teclado, tabela de dados para cada gráfico, filtro de alertas por severidade e temas claro e escuro.
+
+Exemplo de evento do log central, da etapa de drift do último lote:
+
+```json
+{
+  "ts": "2026-11-15T02:01:14.953+00:00",
+  "run_id": "mon-20261115T020052Z-71f373",
+  "stage": "drift",
+  "batch": "2026-08",
+  "status": "success",
+  "level": "INFO",
+  "duration_s": 1.2214,
+  "rows": 4412,
+  "details": {
+    "report": "reports/batches/2026-08.html",
+    "max_psi": 0.4286832814229222,
+    "alert": [
+      "MonthlyIncome",
+      "DebtRatio",
+      "RevolvingUtilizationOfUnsecuredLines",
+      "NumberOfTime30-59DaysPastDueNotWorse",
+      "score"
+    ],
+    "warning": []
+  }
+}
+```
+
+#### Métricas de saúde do pipeline
+
+| Métrica | Definição | Onde é medida | Valor na execução versionada |
+| --- | --- | --- | --- |
+| Status das etapas | Desfecho de cada etapa por lote: `success`, `rejected` (contrato) ou `failed` (falha operacional) | Campo `status` de cada evento | 8 lotes com as 4 etapas concluídas, 1 rejeitado na ingestão, nenhuma falha |
+| Latência | Tempo de parede de cada etapa e do lote (soma das etapas), em segundos | Campo `duration_s` | Mediana de cerca de 1,3 s por lote; o primeiro leva cerca de 6 s porque inclui a carga do Evidently; o drift responde por mais de 90% do tempo |
+| Volume | Linhas recebidas, processadas e bloqueadas por lote | Campo `rows` | 39.909 recebidas, 35.297 processadas e 4.612 bloqueadas |
+| Alertas | Regras disparadas por lote e por severidade | Um evento `alert` por regra disparada | 1 crítico, 17 alertas e 5 avisos |
+
+As durações variam a cada execução e conforme a máquina; os demais números são reproduzíveis. O dashboard traz essas definições e os valores por lote:
+
+![Saúde do pipeline: status, volume e duração por etapa e lote](docs/img/dashboard-pipeline.png)
+
+O que não existe: agendador, servidor de métricas, envio de alertas para e-mail, chat ou plantão, e retenção automática dos logs. Os alertas ficam no log central, no resumo, no MLflow e no dashboard, e alguém precisa abrir um deles para ver.
+
+### Resposta à degradação (política proposta)
 
 Fluxo de resposta proposto:
 
@@ -388,11 +599,11 @@ Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entr
 | MLOps / Segurança | Execução, acessos, logs, versionamento, incidentes e rollback |
 | Privacidade / encarregado, na operação real | Validar plano de privacidade, apoiar direitos e avaliar incidentes |
 
-Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed quando houver aleatoriedade, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Simulação e inferência já geram manifestos próprios de entradas, saídas e parâmetros; a inferência também registra modelo e horário. A coleta de todos os campos dessa política em cada etapa ainda não está automatizada. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas.
+Para cada execução, a política é guardar identificador, horário, commit, ambiente e dependências, hash e origem dos dados, seed quando houver aleatoriedade, versão do contrato, exclusões, métricas, parâmetros e artefato do modelo. A execução preservada da Etapa 1 já inclui manifesto com horários, commit-base, hashes do CSV de entrada, fontes e saídas, versões das dependências, seed, comandos e códigos de saída. Inclui cópias dos scripts e testes usados, pois havia alterações locais sobre o commit-base; o manifesto não atribui esses ajustes ao commit-base. Simulação e inferência já geram manifestos próprios de entradas, saídas e parâmetros; a inferência também registra modelo e horário. Em mudanças operacionais de modelo, comparação, aprovação e motivo continuam sendo políticas propostas. Cada execução do monitoramento já registra, no resumo e no MLflow, o identificador da execução, o horário, a versão do modelo, os limiares de alerta, a seed e os parâmetros da simulação, e todos os eventos do log central carregam o mesmo identificador. Commit, hashes dos dados e ambiente ainda não são capturados automaticamente nessas execuções; a coleta completa, como a feita manualmente na Etapa 1, ainda precisa ser automatizada.
 
 ## 9. Reprodução e ressalvas técnicas
 
-Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém oito dependências diretas do pipeline e dos testes:
+Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instalar as dependências de [requirements.txt](requirements.txt). As versões fixadas exigem Python 3.12 ou superior. O arquivo contém dez dependências diretas do pipeline e dos testes:
 
 | Dependência | Uso |
 | --- | --- |
@@ -404,12 +615,14 @@ Executar a partir da raiz, em ambiente virtual com **Python 3.12**, após instal
 | XGBoost | Treinamento e execução do classificador salvo |
 | joblib | Persistência e leitura do modelo |
 | Evidently AI | Testes estatísticos e relatórios HTML/JSON de data drift |
+| SciPy | Teste KS de duas amostras no drift por lote |
+| MLflow | Rastreamento do baseline e do monitoramento |
 
 O Evidently 0.7.23 falha ao importar com pandas 3.1.0 por usar uma função interna removida. A integração fixa **pandas 2.3.3**, adiciona o Evidently e mantém as versões das outras seis dependências diretas do pipeline. A preparação, as predições e o baseline foram reproduzidos com os mesmos valores após esse ajuste. Parquet regenerado pode ter hash binário diferente devido à versão do pandas nos metadados; comparar o conteúdo e guardar o novo hash no manifesto. Os artefatos preservados da execução com pandas 3.1.0 continuam inalterados.
 
-Dependências transitivas, como SciPy, Pydantic e Plotly, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução; bibliotecas trazidas transitivamente pelo Evidently permanecem necessárias à sua instalação. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
+Dependências transitivas, como Pydantic e Plotly, continuam necessárias às bibliotecas e são resolvidas pelo pip; não são listadas como dependências diretas. O pacote de compatibilidade `pathlib` foi removido porque o código usa a biblioteca padrão. Ferramentas de servidor Jupyter, Prometheus e demais pacotes sem uso direto foram retirados da lista de execução; bibliotecas trazidas transitivamente pelo Evidently permanecem necessárias à sua instalação. No Linux, o próprio XGBoost declara a dependência transitiva de NCCL; não há configuração de GPU no projeto. A limpeza do arquivo não desinstala pacotes de ambientes virtuais já existentes.
 
-O arquivo fixa as versões diretas; não é um lockfile completo de dependências transitivas. O ambiente integral da execução histórica permanece registrado em `artifacts/stage1/` para auditoria.
+O arquivo fixa as versões diretas; não é um lockfile completo de dependências transitivas. O ambiente integral da execução histórica permanece registrado em `artifacts/stage1/` para auditoria, e o ambiente completo em que o monitoramento foi executado, com as transitivas, está em [requirements-lock.txt](requirements-lock.txt).
 
 O notebook é auxiliar e não faz parte da execução do pipeline. Para executá-lo em um editor compatível com Jupyter, instalar opcionalmente `python -m pip install -r requirements-notebooks.txt`, que adiciona o IPython kernel às dependências do projeto. A raiz é localizada a partir da pasta do kernel; execute o notebook dentro do projeto. Suas saídas antigas foram removidas para evitar resultados e caminhos de outras máquinas.
 
@@ -421,6 +634,8 @@ brew install libomp
 
 A execução definitiva da Etapa 1 foi realizada no projeto em **14/11/2026, às 20:13, no fuso America/Sao_Paulo**, usando macOS ARM64 e Python 3.12.14. O `pip check` não encontrou conflitos, os 32 testes passaram e os artefatos estão preservados. As versões completas do ambiente constam em [environment.txt](artifacts/stage1/20261114T201315-0300-5fbfe64d/environment.txt).
 
+O monitoramento por lote e a observabilidade foram executados em **14/11/2026**, na mesma máquina, com o ambiente do `requirements-lock.txt`. A partir de um estado limpo, a sequência preparação, treino, lotes mensais, monitoramento, análise causal, dashboard e testes rodou sem erro em cerca de dois minutos. O modelo retreinado nessa conferência produziu **predições idênticas** às do modelo publicado na Etapa 1 em todo o holdout. Os relatórios versionados foram gerados com o modelo publicado (`models/runs/32542e11c8c8477ea23d42db115efd0e`), e não com o retreinado.
+
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -431,11 +646,31 @@ python -m src.train
 python -m src.make_bad_batch
 python -m src.ingest data/incoming/good_batch.parquet
 python -m src.ingest data/incoming/bad_batch.parquet
+python -m src.scenario_impact     # PSI por decis e impacto nos cenários pareados
+python -m src.simulate_batches    # lotes mensais em data/production/batches/
+python -m src.monitor             # contrato, escoragem, drift, alertas, MLflow
+python -m src.causal_analysis     # cenários contrafactuais
+python -m src.dashboard           # reports/dashboard.html
+python -m unittest discover -s tests
 ```
 
-O resultado esperado da última chamada é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
+O resultado esperado da chamada com `bad_batch.parquet` é código de saída 1, lote movido para quarentena e arquivo `bad_batch_errors.csv`. A chamada do lote válido deve retornar 0, se os tipos e valores satisfizerem o contrato. Erros operacionais retornam 2, incluindo arquivo ausente/ilegível ou falha ao registrar a quarentena. O código 1 somente é retornado após salvar o relatório e movimentar o lote rejeitado.
 
 Com o ambiente ativado, `make` exibe os alvos sem executar o pipeline. A sequência explícita é `make prepare`, `make train`, `make simulate-drift`, `make predict` e `make detect-drift`; `train` usa as partições existentes e não chama `prepare`. Para indicar o interpretador, usar `PYTHON=.venv/bin/python`. Simulação, inferência e detecção exigem destinos inexistentes; para novas execuções sem substituir as evidências atuais, usar os argumentos `--output-dir` descritos na seção 6. A detecção usa diretamente a referência e os cenários, sem depender das predições. Se regenerar partições ou trocar o modelo, gerar novos cenários, predições e relatórios antes de compará-los; manifestos antigos identificam as versões anteriores pelos hashes.
+
+Os alvos de monitoramento e observabilidade usam o modelo já publicado em `models/current`:
+
+| Alvo | O que faz |
+| --- | --- |
+| `make scenario-impact` | PSI por decis e impacto no modelo nos cenários pareados existentes |
+| `make simulate-batches` | Recria os lotes mensais e a entrega corrompida |
+| `make monitor` | Recria os lotes e roda contrato, escoragem, drift, desempenho e alertas. Recria antes porque a ingestão move a entrega corrompida para a quarentena |
+| `make causal`, `make dashboard` | Análise causal e dashboard |
+| `make report` | `scenario-impact`, `monitor`, `causal` e `dashboard`, nessa ordem |
+| `make all` | Fluxo completo a partir do CSV bruto: `prepare`, `train`, `report` e `test`. O treino publica uma nova versão em `models/runs/` |
+| `make mlflow-ui` | Interface do MLflow sobre `mlflow.db` |
+
+`make all` não executa `demo-bad`, `simulate-drift`, `predict`, `detect-drift` nem `concept-drift`: as evidências desses passos já estão versionadas, e os cinco recusam sobrescrever o destino existente. O bloqueio pelo contrato é exercitado de novo dentro do monitoramento, com a entrega corrompida de maio. Cada execução do monitor acrescenta eventos ao log central e uma execução ao MLflow; o dashboard mostra a execução do resumo mais recente. Reexecutar `make report` reescreve o dashboard, os resumos e os dois relatórios versionados de `reports/batches/` com novo identificador de execução, novos horários e durações; os números de drift, desempenho e alertas se repetem, e `reports/drift/` não é tocado. Ficam fora do Git, e são recriados por `make report`: `logs/`, `mlflow.db`, `mlruns/`, os lotes simulados e escorados, a quarentena do monitoramento e seis dos oito relatórios por lote. O `mlflow.db` guarda o caminho absoluto de `mlruns/`: se a pasta do projeto for movida, apagar os dois e rodar de novo.
 
 `make concept-drift` executa o experimento separado com a referência, o holdout e o modelo existentes. Não depende dos cenários t1–t3 de data drift. O destino também deve ser inexistente e pode ser alterado com `python -m src.concept_drift --output-dir ...`; esse experimento não sobrescreve os dados ou relatórios das etapas anteriores.
 
@@ -448,6 +683,8 @@ O [log histórico dos 32 testes da Etapa 1](artifacts/stage1/20261114T201315-030
 Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift a suíte contém **51 testes**, todos aprovados. Os cinco testes adicionais verificam a intervenção condicional e cumulativa, seeds, invariância de features/scores, métricas em exemplos conhecidos, segmentos de uma classe, concordância com métricas nativas do Evidently, hashes e publicação sem resultados parciais.
 
 A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
+
+Com o monitoramento e a observabilidade, a suíte tem **132 testes**: os 51 anteriores e 81 novos. Os novos cobrem o PSI por decis (amostras iguais, deslocamento, baixa cardinalidade, faixas vazias e a limitação das faixas das pontas), os lotes mensais (intensidade zero não altera nada, determinismo por seed, direção de cada mudança, rótulo só muda de bom para mau, lotes com drift passam no contrato e a entrega corrompida reprova), cada regra de alerta nos seus limites, o log central (esquema do evento, falha registrada e relançada, log indisponível não derruba o pipeline) e o dashboard (seções, escape de texto, execução sem lotes válidos). Dois testes de integração treinam um modelo em dados sintéticos pequenos e rodam, em diretório temporário, o monitoramento completo com o Evidently de verdade e o impacto nos cenários pareados; conferem que o PSI do resumo é o mesmo do HTML do Evidently, que os cenários de entrada não são alterados e que resumos e log não carregam valores de clientes.
 
 ### Resultados e evidências da Etapa 1
 
@@ -485,8 +722,8 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 | --- | --- | --- |
 | 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
 | 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação, predições, relatórios de data drift e degradação sob concept drift; após implementação, demonstrar observabilidade; explicar privacidade e retenção |
-| 3:40–5:00 | Result | Mostrar métricas e alertas efetivamente gerados, interpretação, limitações causais, mitigação de vieses e resposta proposta |
+| 1:10–3:40 | Action | Mostrar o contrato e o bloqueio da entrega corrompida; os cenários de data drift e de concept drift e os lotes mensais; o mapa de PSI e os relatórios do Evidently; o dashboard, o log central e o MLflow; explicar privacidade e retenção |
+| 3:40–5:00 | Result | AUC de 0,857 para 0,691 em oito meses simulados; a queda de maio, anterior a qualquer aviso de PSI; drift grande com impacto pequeno nos cenários pareados; os 23 alertas; a decomposição causal; limitações (tudo é simulação), mitigação de vieses e resposta proposta |
 
 ### Antes da entrega
 
@@ -499,9 +736,9 @@ As 104 entradas do relatório não representam 104 clientes distintos: um regist
 - [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
 - [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
 - [x] Executar experimento próprio de concept drift em `P(Y|X)` e analisar o modelo com features fixas.
-- [ ] Implementar a observabilidade da Etapa 3.
+- [x] Implementar a observabilidade da Etapa 3.
 - [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
 - [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
 - [ ] Publicar o vídeo STAR e inserir o link nesta seção.
 
-A Etapa 1 e os experimentos de data drift e concept drift da Etapa 2 possuem execução e evidências preservadas; a documentação de governança cobre a proposta teórica da Etapa 4. A Etapa 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.
+As Etapas 1 a 3 possuem execução e evidências versionadas; a documentação de governança cobre a proposta teórica da Etapa 4. As pendências de governança marcadas acima e o vídeo ainda precisam ser concluídos pelo grupo para a entrega completa do projeto.
