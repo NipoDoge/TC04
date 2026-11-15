@@ -1,5 +1,6 @@
 # Dependências diretas do pipeline e dos testes (Python >= 3.12).
-# As dependências transitivas são resolvidas pelo pip.
+# As dependências transitivas são resolvidas pelo pip; requirements-lock.txt
+# registra o ambiente completo em que o monitoramento foi executado.
 joblib==1.6.0
 numpy==2.5.4
 # Evidently 0.7.23 usa APIs internas removidas no pandas 3.x.
@@ -10,3 +11,7 @@ pyarrow==26.0.0
 scikit-learn==1.9.1
 xgboost==3.4.1
 evidently==0.7.23
+# Teste KS de duas amostras (src.drift_stats).
+scipy==1.18.1
+# Rastreamento do baseline e do monitoramento.
+mlflow==3.18.0

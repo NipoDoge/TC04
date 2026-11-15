@@ -219,3 +219,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# TC04: artefatos de execução, recriados por `make report`
+logs/
+mlruns/
+mlflow.db
+data/production/batches/
+data/production/scored/
+# quarentena do monitoramento: o CSV de falhas contém valores rejeitados
+data/quarantine/mon-*/
+# relatórios do Evidently por lote (4,8 MB cada): só dois ficam versionados como evidência
+reports/batches/*.html
+!reports/batches/2026-01.html
+!reports/batches/2026-08.html
