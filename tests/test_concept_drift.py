@@ -75,10 +75,20 @@ class ConceptDriftTests(unittest.TestCase):
         self.assertEqual(metrics["auc"], 0.75)
         self.assertEqual(metrics["recall"], 0.5)
         self.assertAlmostEqual(metrics["brier"], 0.255)
+        # Campos também verificados por PerformanceTests na entrega final (4f50a83).
+        self.assertEqual(metrics["precision"], 0.5)
+        self.assertEqual(metrics["prevalence"], 0.5)
+        self.assertEqual(metrics["predicted_positive_rate"], 0.5)
+        self.assertAlmostEqual(metrics["mean_score"], 0.55)
+        self.assertEqual(metrics["ks_classification"], 0.5)
         single = classification_metrics(np.zeros(4, dtype=int), np.full(4, 0.2), np.zeros(4, dtype=int))
         self.assertIsNone(single["auc"])
         self.assertIsNone(single["recall"])
         self.assertIsNone(single["average_precision"])
+        self.assertIsNone(single["ks_classification"])
+        self.assertEqual(single["prevalence"], 0.0)
+        self.assertEqual(single["predicted_positive_rate"], 0.0)
+        self.assertAlmostEqual(single["mean_score"], 0.2)
 
     def write_sources(self, root):
         reference, holdout, model = root / "reference.parquet", root / "holdout.parquet", root / "model.joblib"

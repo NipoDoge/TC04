@@ -57,8 +57,42 @@ Os testes são executados com `make test` ou `python -m unittest discover -s tes
 
 O [log histórico dos 32 testes da Etapa 1](../artifacts/stage1/20261114T201315-0300-5fbfe64d/02_tests.txt) e as cópias de código e requisitos em `artifacts/stage1/` são evidências imutáveis daquela execução, não a implementação atual. Não devem ser usados para instalar ou executar o pipeline atual.
 
-Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift passaram 51. Após substituir as features de data drift e adicionar o comparativo, a suíte contém **54 testes**, todos aprovados. A cobertura adicional verifica sorteios reproduzíveis, grupos aninhados, incremento inteiro de atrasos a partir de zero, invariância das demais colunas, comparação dos dois perfis e rejeição de predições/snapshots adulterados. Os testes de concept drift continuam verificando intervenção condicional, métricas conhecidas, hashes, concordância com Evidently e ausência de publicação parcial.
+Antes da integração do Evidently, os 42 testes passaram no ambiente do projeto e em um ambiente isolado contendo somente o fechamento transitivo das sete dependências então existentes, reutilizando as versões instaladas. Após a integração do Evidently 0.7.23 com pandas 2.3.3, passaram 46 testes; com o experimento de concept drift passaram 51. Após substituir as features de data drift e adicionar o comparativo, a suíte passou a conter **54 testes**, todos aprovados naquela validação. A cobertura adicional verifica sorteios reproduzíveis, grupos aninhados, incremento inteiro de atrasos a partir de zero, invariância das demais colunas, comparação dos dois perfis e rejeição de predições/snapshots adulterados. Os testes de concept drift continuam verificando intervenção condicional, métricas conhecidas, hashes, concordância com Evidently e ausência de publicação parcial.
 
 A reprodução anterior em diretórios temporários conferiu os mesmos valores nas três partições, relatórios de limpeza, lotes da Etapa 1, quatro cenários de data drift, 207.055 predições e métricas/probabilidades do baseline retreinado. Todas as células do notebook foram executadas a partir da raiz e de `notebooks/`, preservando os 54 arquivos então existentes de dados, modelos e evidências. O experimento de concept drift também preservou os arquivos anteriores, incluindo os relatórios de data drift, com conferência SHA-256. `pip check` não apontou conflitos; não foram necessárias novas dependências para o concept drift.
 
 A [auditoria consolidada das Etapas 1 e 2](../artifacts/audit_stage1_stage2/audit.json) é uma evidência histórica anterior à troca das features de data drift: registra 51 testes no ambiente então vigente e em um ambiente isolado, reprodução dos experimentos, integridade e links daquele estado. Seus hashes e conclusões se referem ao commit e às fontes indicados, não certificam automaticamente os novos artefatos. Os resultados de renda/dívida foram preservados em `artifacts/data_drift_income_debt/`; os resultados atuais e o comparativo têm manifestos próprios. Foram atualizados dois endereços da ANPD e removidos metadados antigos do notebook. As fontes em `artifacts/stage1/` também são evidências históricas, sem uso no pipeline ativo. Os commits antigos com mensagens não semânticas foram preservados. A verificação de HTML foi estrutural e de consistência com os JSONs, sem inspeção visual em navegador, indisponível no ambiente. A execução validada cobre macOS ARM64/Python 3.12; outros sistemas não foram executados.
+
+## Testes adaptados da entrega final
+
+Foram preservados os 54 testes existentes e acrescentados **11 casos**, totalizando **65 testes**, além de ampliar as verificações de métricas em um caso existente. A origem é a branch `nipodoge/feat/fase4-entrega-final`, commit [`4f50a83`](https://github.com/NipoDoge/TC04/tree/4f50a83bb68a3f705fd03eb470236a5475d4d902). A adaptação reaproveita os cenários de integração de `tests/test_monitor.py`, o caso de renda/endividamento de `tests/test_detect_drift.py` e o gerador sintético de `tests/support.py`; não é uma cópia dos 138 testes daquela branch.
+
+| Arquivo | Cobertura incorporada |
+| --- | --- |
+| [test_pipeline_integration.py](../tests/test_pipeline_integration.py) — 8 casos | Preparação, treino e recarga do XGBoost real; métricas da validação vinculadas à versão publicada; contrato e quarentena; rejeição antes de chamar o modelo; contagem e predições de todos os cenários; relatórios do Evidently real; isolamento entre data drift e concept drift; procedência entre etapas; preservação das entradas e recuperação de falha na geração de relatórios |
+| [test_detect_drift.py](../tests/test_detect_drift.py) — 1 caso novo | Detectar choques conhecidos de renda e endividamento sem substituir os testes das features do perfil ativo |
+| [test_simulate_drift.py](../tests/test_simulate_drift.py) — 2 casos novos | A seed altera somente o choque de atrasos; inverter o alvo não altera as intervenções nas features |
+| [test_concept_drift.py](../tests/test_concept_drift.py) — caso ampliado | Precisão, prevalência, taxa de positivos previstos, score médio e KS, inclusive a ausência de KS definido em amostra de uma classe |
+
+[support.py](../tests/support.py) gera dados financeiros fictícios com seed fixa. A integração usa 3.000 registros antes da preparação, partições separadas e diretórios temporários com limpeza automática. As saídas de simulação, inferência, drift e concept drift ficam nesses temporários. A rejeição pela ingestão é executada com o diretório corrente temporariamente ajustado para que a quarentena também fique isolada. Não são necessários novos pacotes, registros do dataset versionado ou downloads.
+
+O perfil desta branch continua sendo utilização de crédito e atrasos de 90 dias. O teste alternativo de renda/endividamento verifica a capacidade geral do detector, sem mudar a configuração dos experimentos. As validações foram aplicadas às funções existentes em `src/`; não foi necessário alterar sua implementação.
+
+Não foram incorporados os testes específicos de dashboard, MLflow, logs centrais, alertas, PSI por decis, lotes mensais ou decomposição causal, pois seus módulos não existem nesta branch. Os testes de isolamento e desempenho foram adaptados às APIs de simulação e concept drift disponíveis; isso não implementa um orquestrador que conecte automaticamente a ingestão à inferência.
+
+Para executar tudo, incluindo o comparativo histórico já existente:
+
+```bash
+make test PYTHON=.venv/bin/python
+.venv/bin/python -m pip check
+```
+
+Para executar somente a nova integração:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p 'test_pipeline_integration.py' -v
+```
+
+Resultado da validação: **65 testes aprovados em 22,859 segundos**, `pip check` sem conflitos e **142 arquivos versionados protegidos sem alteração de SHA-256**, incluindo código de produção, dados, modelos, relatórios e evidências anteriores. A recarga do modelo versionado reproduziu AUC **0,8572078813**, recall **0,7722681359** e KS **0,5675944208**, iguais às métricas salvas. Não houve alteração de `src/`, requisitos ou Makefile. A execução usou o ambiente virtual existente; não foi criada uma instalação isolada de dependências.
+
+As evidências desta validação ficam em [test_adaptation](../artifacts/test_adaptation/validation.json), com o resultado da suíte, dependências e hashes das fontes de teste. O [log completo](../artifacts/test_adaptation/tests.txt) registra os casos executados. A verificação abrange comportamento e consistência de relatórios HTML/JSON; não certifica sua aparência visual nem a execução em outros sistemas operacionais.

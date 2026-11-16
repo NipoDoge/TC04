@@ -27,7 +27,7 @@ python -m pip check
 make test PYTHON=.venv/bin/python
 ```
 
-A suíte possui **54 testes**, aprovados na última validação. O notebook é opcional; suas dependências estão em [requirements-notebooks.txt](requirements-notebooks.txt).
+A suíte possui **65 testes**, incluindo os casos da entrega final adaptados aos scripts desta branch. A cobertura e os resultados estão em [Reprodução e validação](docs/reproducao.md#testes-adaptados-da-entrega-final). O notebook é opcional; suas dependências estão em [requirements-notebooks.txt](requirements-notebooks.txt).
 
 | Comando `make` | Finalidade |
 | --- | --- |

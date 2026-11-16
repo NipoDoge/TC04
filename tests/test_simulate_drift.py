@@ -9,7 +9,7 @@ import pandera.pandas as pa
 
 from src.contract import FEATURE_COLUMNS, schema
 from src.artifacts import sha256
-from src.config import DATA_DRIFT_FEATURES, LATE90_COLUMN, UTILIZATION_COLUMN
+from src.config import DATA_DRIFT_FEATURES, LATE90_COLUMN, TARGET, UTILIZATION_COLUMN
 from src.simulate_drift import build_scenarios, simulate
 
 
@@ -51,6 +51,24 @@ class SimulateDriftTests(unittest.TestCase):
             pd.testing.assert_frame_equal(first[name], repeated[name])
         self.assertTrue(first["t3"][LATE90_COLUMN].eq(1).any())
         self.assertFalse(first["t3"][LATE90_COLUMN].equals(other["t3"][LATE90_COLUMN]))
+
+    def test_seed_only_changes_the_late_shock(self):
+        # Adapta o isolamento de mecanismos da entrega final ao choque aleatório atual.
+        first = build_scenarios(self.holdout, seed=42)
+        other = build_scenarios(self.holdout, seed=43)
+        unchanged = self.holdout.columns.difference([LATE90_COLUMN])
+        for name in first:
+            pd.testing.assert_frame_equal(first[name][unchanged], other[name][unchanged])
+        self.assertFalse(first["t3"][LATE90_COLUMN].equals(other["t3"][LATE90_COLUMN]))
+
+    def test_target_does_not_influence_feature_interventions(self):
+        original = build_scenarios(self.holdout)
+        inverted = self.holdout.assign(**{TARGET: 1 - self.holdout[TARGET]})
+        changed_target = build_scenarios(inverted)
+        for name in original:
+            pd.testing.assert_frame_equal(original[name][FEATURE_COLUMNS],
+                                          changed_target[name][FEATURE_COLUMNS])
+            pd.testing.assert_series_equal(changed_target[name][TARGET], inverted[TARGET])
 
     def test_zero_utilization_is_preserved_by_scaling(self):
         self.holdout.loc[0, UTILIZATION_COLUMN] = 0.0

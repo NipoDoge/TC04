@@ -50,6 +50,19 @@ class DetectDriftTests(unittest.TestCase):
         pd.testing.assert_frame_equal(self.reference, original_reference)
         pd.testing.assert_frame_equal(current, original_current)
 
+    def test_income_and_debt_shifts_are_detected_without_changing_other_features(self):
+        # Caso da entrega final (4f50a83), adicional ao perfil ativo desta branch.
+        current = self.reference.copy(deep=True)
+        current["MonthlyIncome"] *= 0.3
+        current["DebtRatio"] *= 4
+        before = current.copy(deep=True)
+        rows = summarize(compare_datasets(self.reference, current), "income_debt")
+        self.assertEqual({r["feature"] for r in rows if r["drift_detected"]},
+                         {"MonthlyIncome", "DebtRatio"})
+        pd.testing.assert_frame_equal(current, before)
+        unchanged = self.reference.columns.difference(["MonthlyIncome", "DebtRatio"])
+        pd.testing.assert_frame_equal(current[unchanged], self.reference[unchanged])
+
     def test_report_publication_hashes_and_no_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
