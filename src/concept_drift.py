@@ -6,6 +6,7 @@ from html import escape
 from importlib.metadata import version
 from io import BytesIO
 import json
+import math
 from pathlib import Path
 import tempfile
 
@@ -29,6 +30,7 @@ from src.config import (
 )
 from src.contract import FEATURE_COLUMNS, schema
 from src.predict import predict_dataset
+from src.execution_log import record, tracked
 
 LIMITATIONS = (
     "Experimento sintético, sem série temporal real ou inferência de causa econômica. "
@@ -38,6 +40,12 @@ LIMITATIONS = (
     "As cinco seeds avaliam sensibilidade aos sorteios; não são intervalos de confiança. "
     "Na operação real, métricas supervisionadas exigem rótulos maturados no horizonte do alvo."
 )
+
+
+def performance_degraded(auc_drop, recall_drop):
+    """Aplica os limiares inclusive no limite, tolerando arredondamento binário."""
+    return any(value is not None and (value >= threshold or math.isclose(value, threshold, abs_tol=1e-12, rel_tol=0))
+               for value, threshold in ((auc_drop, CONCEPT_AUC_DROP), (recall_drop, CONCEPT_RECALL_DROP)))
 
 
 def build_concept_scenarios(holdout, income_cutoff, seed=SEED):
@@ -155,6 +163,7 @@ O experimento não seleciona nem publica um modelo novo. Não autoriza conclusõ
 </html>''', encoding="utf-8")
 
 
+@tracked("concept_drift")
 def run_experiment(reference_path="data/reference/reference.parquet",
                    holdout_path="data/production/holdout.parquet",
                    model_path="models/current/model.joblib", seed=SEED,
@@ -189,7 +198,7 @@ def run_experiment(reference_path="data/reference/reference.parquet",
         baseline = results[0] if results else row
         row["auc_drop"] = baseline["auc"] - row["auc"]
         row["recall_drop"] = baseline["recall"] - row["recall"]
-        row["performance_alert"] = row["auc_drop"] >= CONCEPT_AUC_DROP or row["recall_drop"] >= CONCEPT_RECALL_DROP
+        row["performance_alert"] = performance_degraded(row["auc_drop"], row["recall_drop"])
         results.append(row)
         for label, mask in [("income_le_q25", segment), ("income_gt_q25", ~segment)]:
             segments.append({"scenario": name, "segment": label,
@@ -245,6 +254,9 @@ def run_experiment(reference_path="data/reference/reference.parquet",
             json.dumps(manifest, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8"
         )
         staging.rename(output_dir)
+    record(volume=sum(r["rows"] for r in results),
+           alert_count=sum(r["performance_alert"] for r in results),
+           manifest_path=str(output_dir / "manifest.json"))
     return manifest
 
 

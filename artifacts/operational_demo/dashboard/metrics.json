@@ -1,0 +1,305 @@
+{
+  "generated_at_utc": "2026-11-17T22:54:04.335516+00:00",
+  "pipeline": {
+    "status": "alert",
+    "run_id_filter": "demo-92503fed6be049d1b14be30f653ccff5",
+    "stages": [
+      {
+        "name": "prepare",
+        "status": "ok",
+        "volume": 117644,
+        "volume_unit": "rows",
+        "duration_ms": 318.713,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "feabfefc2d6f41d0917ef34b5042c2f0",
+        "ts": "2026-11-17T22:40:15.786222+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.209928,
+        "process_peak_rss_mb": 402.6875
+      },
+      {
+        "name": "ingest",
+        "status": "ok",
+        "volume": 500,
+        "volume_unit": "rows",
+        "duration_ms": 4.703,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "848f509531f546f690eef8bfc5fb0a25",
+        "ts": "2026-11-17T22:40:16.586207+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.005431,
+        "process_peak_rss_mb": 449.265625
+      },
+      {
+        "name": "train",
+        "status": "ok",
+        "volume": 65867,
+        "volume_unit": "rows",
+        "duration_ms": 748.795,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "23694718ed364554bf75cea4d254a2a6",
+        "ts": "2026-11-17T22:40:16.536032+00:00",
+        "error_type": null,
+        "cpu_seconds": 1.551374,
+        "process_peak_rss_mb": 442.15625
+      },
+      {
+        "name": "simulate_drift",
+        "status": "ok",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 106.018,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "f0d2cf95b9eb4bebb6f80c3d21b0988b",
+        "ts": "2026-11-17T22:40:16.693691+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.092305,
+        "process_peak_rss_mb": 465.5
+      },
+      {
+        "name": "predict",
+        "status": "ok",
+        "volume": 207055,
+        "volume_unit": "rows",
+        "duration_ms": 225.222,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "68ed03eb0f9448f6a6a6cd19f8e2d10d",
+        "ts": "2026-11-17T22:40:16.919665+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.494553,
+        "process_peak_rss_mb": 495.671875
+      },
+      {
+        "name": "detect_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 2160.767,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "7a8320d7d7bc4158a4b4f68a56a1cd18",
+        "ts": "2026-11-17T22:40:19.085185+00:00",
+        "error_type": null,
+        "cpu_seconds": 2.050807,
+        "process_peak_rss_mb": 543.75
+      },
+      {
+        "name": "concept_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 3305.236,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "40700ac30ac34d358ffbd4b9da927aed",
+        "ts": "2026-11-17T22:40:22.391317+00:00",
+        "error_type": null,
+        "cpu_seconds": 3.47466,
+        "process_peak_rss_mb": 668.0
+      }
+    ],
+    "execution_counts": {
+      "ok": 5,
+      "fail": 2,
+      "rejected": 1,
+      "alert": 2,
+      "running": 0
+    },
+    "execution_count": 10,
+    "stale_after_seconds": 86400
+  },
+  "collector": {
+    "status": "ok",
+    "execution_log": "reports/observability/executions.jsonl",
+    "invalid_lines": []
+  },
+  "infrastructure": {
+    "process_peak_rss_mb": 30.484375,
+    "disk_free_bytes": 1288388030464,
+    "disk_total_bytes": 1995218165760,
+    "cpu_count": 10,
+    "disk_free_share": 0.6457379210825495,
+    "status": "ok"
+  },
+  "model": {
+    "status": "ok",
+    "metrics_path": "artifacts/operational_demo/models/current/metrics.json",
+    "auc": 0.8572078813187844,
+    "recall_at_0.5": 0.7722681359044995,
+    "ks": 0.5675944207671723
+  },
+  "drift": {
+    "status": "alert",
+    "manifest_path": "artifacts/operational_demo/reports/drift/manifest.json",
+    "created_at_utc": "2026-11-17T22:40:16.939245+00:00",
+    "scenarios": [
+      {
+        "name": "t0_control",
+        "rows": 35297,
+        "drift_share": 0.0,
+        "dataset_drift_detected": false,
+        "drifted_features": []
+      },
+      {
+        "name": "t1",
+        "rows": 35297,
+        "drift_share": 0.1,
+        "dataset_drift_detected": false,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines"
+        ]
+      },
+      {
+        "name": "t2",
+        "rows": 35297,
+        "drift_share": 0.2,
+        "dataset_drift_detected": true,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines",
+          "NumberOfTimes90DaysLate"
+        ]
+      },
+      {
+        "name": "t3",
+        "rows": 35297,
+        "drift_share": 0.2,
+        "dataset_drift_detected": true,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines",
+          "NumberOfTimes90DaysLate"
+        ]
+      }
+    ],
+    "alerts": {
+      "dataset_drift_count": 2,
+      "any_alert": true
+    }
+  },
+  "performance": {
+    "status": "alert",
+    "manifest_path": "artifacts/operational_demo/concept_drift/manifest.json",
+    "scenarios": [
+      {
+        "scenario": "c0_control",
+        "shock_probability": 0.0,
+        "changed_labels": 0,
+        "rows": 35297,
+        "positive_labels": 2335,
+        "prevalence": 0.06615293084398108,
+        "mean_score": 0.32679033279418945,
+        "predicted_positive_rate": 0.24826472504745445,
+        "auc": 0.8432570982067857,
+        "average_precision": 0.3593542801280131,
+        "ks_classification": 0.5331301880680979,
+        "recall": 0.7408993576017131,
+        "precision": 0.19742097455209404,
+        "f1": 0.31176788610560463,
+        "accuracy": 0.7836076720401167,
+        "false_positive_rate": 0.2133669073478551,
+        "false_negative_rate": 0.25910064239828695,
+        "brier": 0.14759500324726105,
+        "log_loss": 0.45970743894577026,
+        "tn": 25929,
+        "fp": 7033,
+        "fn": 605,
+        "tp": 1730,
+        "auc_drop": 0.0,
+        "recall_drop": 0.0,
+        "performance_alert": false
+      },
+      {
+        "scenario": "c1",
+        "shock_probability": 0.1,
+        "changed_labels": 815,
+        "rows": 35297,
+        "positive_labels": 3150,
+        "prevalence": 0.08924271184519932,
+        "mean_score": 0.32679033279418945,
+        "predicted_positive_rate": 0.24826472504745445,
+        "auc": 0.7680764701438481,
+        "average_precision": 0.33265813547223083,
+        "ks_classification": 0.4144242643293877,
+        "recall": 0.6222222222222222,
+        "precision": 0.22366769371219902,
+        "f1": 0.3290522958112986,
+        "accuracy": 0.7735501600702609,
+        "false_positive_rate": 0.21162161321429682,
+        "false_negative_rate": 0.37777777777777777,
+        "brier": 0.15491412580013275,
+        "log_loss": 0.47908422350883484,
+        "tn": 25344,
+        "fp": 6803,
+        "fn": 1190,
+        "tp": 1960,
+        "auc_drop": 0.07518062806293768,
+        "recall_drop": 0.11867713537949087,
+        "performance_alert": true
+      },
+      {
+        "scenario": "c2",
+        "shock_probability": 0.25,
+        "changed_labels": 2062,
+        "rows": 35297,
+        "positive_labels": 4397,
+        "prevalence": 0.12457149332804487,
+        "mean_score": 0.32679033279418945,
+        "predicted_positive_rate": 0.24826472504745445,
+        "auc": 0.7100688907485466,
+        "average_precision": 0.3267899655937672,
+        "ks_classification": 0.32153494623062356,
+        "recall": 0.5249033431885376,
+        "precision": 0.26338012096314045,
+        "f1": 0.3507598784194529,
+        "accuracy": 0.7579397682522594,
+        "false_positive_rate": 0.20889967637540452,
+        "false_negative_rate": 0.47509665681146235,
+        "brier": 0.16581472754478455,
+        "log_loss": 0.508340060710907,
+        "tn": 24445,
+        "fp": 6455,
+        "fn": 2089,
+        "tp": 2308,
+        "auc_drop": 0.13318820745823912,
+        "recall_drop": 0.2159960144131755,
+        "performance_alert": true
+      },
+      {
+        "scenario": "c3",
+        "shock_probability": 0.5,
+        "changed_labels": 4123,
+        "rows": 35297,
+        "positive_labels": 6458,
+        "prevalence": 0.18296172479247527,
+        "mean_score": 0.32679033279418945,
+        "predicted_positive_rate": 0.24826472504745445,
+        "auc": 0.6696259573995079,
+        "average_precision": 0.36044638590507244,
+        "ks_classification": 0.25875171125230423,
+        "recall": 0.4535459894704243,
+        "precision": 0.33424626269542396,
+        "f1": 0.38486301819854146,
+        "accuracy": 0.7347366631725076,
+        "false_positive_rate": 0.2022955026179826,
+        "false_negative_rate": 0.5464540105295758,
+        "brier": 0.18235425651073456,
+        "log_loss": 0.553311824798584,
+        "tn": 23005,
+        "fp": 5834,
+        "fn": 3529,
+        "tp": 2929,
+        "auc_drop": 0.17363114080727782,
+        "recall_drop": 0.2873533681312888,
+        "performance_alert": true
+      }
+    ],
+    "alert_count": 3
+  },
+  "contract_alerts": {
+    "quarantined_batch_count": 1,
+    "rejected_execution_count": 1
+  },
+  "artifacts": {
+    "predictions_manifest_status": "ok",
+    "scenarios_manifest_status": "ok",
+    "predictions_manifest_exists": true,
+    "scenarios_manifest_exists": true
+  }
+}

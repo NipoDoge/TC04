@@ -1,0 +1,137 @@
+{
+  "created_at_utc": "2026-11-17T22:40:16.939245+00:00",
+  "versions": {
+    "evidently": "0.7.23",
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "reference": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/reference/reference.parquet",
+    "sha256": "fef151994e64216dac9150b760878073874a6be4cbcad35f1dbd5dd5656aaba7"
+  },
+  "reference_rows": 65867,
+  "feature_columns": [
+    "age",
+    "MonthlyIncome",
+    "DebtRatio",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "NumberOfDependents",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+    "NumberOfTimes90DaysLate",
+    "NumberOfTime60-89DaysPastDueNotWorse",
+    "NumberOfOpenCreditLinesAndLoans",
+    "NumberRealEstateLoansOrLines"
+  ],
+  "settings": {
+    "continuous_columns": [
+      "MonthlyIncome",
+      "DebtRatio",
+      "RevolvingUtilizationOfUnsecuredLines"
+    ],
+    "continuous_method": "ks",
+    "ks_p_value_threshold": 0.01,
+    "categorical_method": "psi",
+    "psi_threshold": 0.2,
+    "dataset_drift_share_threshold": 0.2
+  },
+  "limitations": "Os períodos são sintéticos, sem série temporal real. O controle pode diferir da referência por amostragem. Data drift não comprova degradação de desempenho, concept drift ou causalidade. Alvo e predições não são monitorados neste relatório. Os limiares são critérios iniciais do experimento, sem ajuste de múltiplas comparações.",
+  "scenarios": [
+    {
+      "name": "t0_control",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/production/scenarios/t0_control.parquet",
+        "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
+      },
+      "rows": 35297,
+      "drifted_features": [],
+      "drift_share": 0.0,
+      "dataset_drift_detected": false,
+      "reports": [
+        {
+          "file": "t0_control.html",
+          "sha256": "d23dc587584b4cae2db5e0ed15f21916004f8a3647788f5edb83e629efc5cdbf"
+        },
+        {
+          "file": "t0_control.json",
+          "sha256": "eeaf38912db3bea2f3294855c0b3e037614ccd5ee14a8e8804835da63c173d9c"
+        }
+      ]
+    },
+    {
+      "name": "t1",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/production/scenarios/t1.parquet",
+        "sha256": "ca6344ce247e8ce00e9b09ee49713be97c9a82a0aa53ca28410f6905a1ca2b05"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "RevolvingUtilizationOfUnsecuredLines"
+      ],
+      "drift_share": 0.1,
+      "dataset_drift_detected": false,
+      "reports": [
+        {
+          "file": "t1.html",
+          "sha256": "d68959138dd300f9c5778db7198c1d9f9ebc1c24daf3cb66f29076c3af570278"
+        },
+        {
+          "file": "t1.json",
+          "sha256": "ba2e823acf560fd655afb511cab4f22711cd7a9888170a256b46559e33a8bacd"
+        }
+      ]
+    },
+    {
+      "name": "t2",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/production/scenarios/t2.parquet",
+        "sha256": "04a5fe40261a4d6ec5a418e65398a4bf503b8a99cbea3ec158d99678b572fc2f"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTimes90DaysLate"
+      ],
+      "drift_share": 0.2,
+      "dataset_drift_detected": true,
+      "reports": [
+        {
+          "file": "t2.html",
+          "sha256": "817302e5fbc4ffb8d4a53c1c0b231e72729d4d8e4b5fe6df83d2d348a07b8315"
+        },
+        {
+          "file": "t2.json",
+          "sha256": "dec3ab63e593e81cab86bc367fee5d2740f7ec9500f317ac89a4bd332bbf7f54"
+        }
+      ]
+    },
+    {
+      "name": "t3",
+      "source": {
+        "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/production/scenarios/t3.parquet",
+        "sha256": "7bbf8f02fc997dd13dc80196bfc65b052b107ae698ea921ca213cc021b457a41"
+      },
+      "rows": 35297,
+      "drifted_features": [
+        "RevolvingUtilizationOfUnsecuredLines",
+        "NumberOfTimes90DaysLate"
+      ],
+      "drift_share": 0.2,
+      "dataset_drift_detected": true,
+      "reports": [
+        {
+          "file": "t3.html",
+          "sha256": "ff0d1ad6b1cb433c403c904891107e99886c7379016ba2989ef3baf1d23b2af4"
+        },
+        {
+          "file": "t3.json",
+          "sha256": "0ac59bd7385bf32126c0ba6edb1cd041ce4e6059a4137240ca8a4e13cbb7d11b"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "file": "summary.csv",
+    "sha256": "4f616f65ba3f3b7d6e36d4849c79c4b7d96be65b950ffafca1504ddbc40dc3d8"
+  }
+}

@@ -78,7 +78,7 @@ Foram preservados os 54 testes existentes e acrescentados **11 casos**, totaliza
 
 O perfil desta branch continua sendo utilização de crédito e atrasos de 90 dias. O teste alternativo de renda/endividamento verifica a capacidade geral do detector, sem mudar a configuração dos experimentos. As validações foram aplicadas às funções existentes em `src/`; não foi necessário alterar sua implementação.
 
-Não foram incorporados os testes específicos de dashboard, MLflow, logs centrais, alertas, PSI por decis, lotes mensais ou decomposição causal, pois seus módulos não existem nesta branch. Os testes de isolamento e desempenho foram adaptados às APIs de simulação e concept drift disponíveis; isso não implementa um orquestrador que conecte automaticamente a ingestão à inferência.
+Na adaptação original não foram incorporados os testes de dashboard, MLflow, logs centrais, alertas, PSI por decis, lotes mensais ou decomposição causal. Posteriormente, a instrumentação e a cobertura próprias de observabilidade foram adicionadas, conforme a seção abaixo. Os testes de isolamento e desempenho foram adaptados às APIs de simulação e concept drift disponíveis; isso não implementa um orquestrador que conecte automaticamente a ingestão à inferência.
 
 Para executar tudo, incluindo o comparativo histórico já existente:
 
@@ -96,3 +96,31 @@ Para executar somente a nova integração:
 Resultado da validação: **65 testes aprovados em 22,859 segundos**, `pip check` sem conflitos e **142 arquivos versionados protegidos sem alteração de SHA-256**, incluindo código de produção, dados, modelos, relatórios e evidências anteriores. A recarga do modelo versionado reproduziu AUC **0,8572078813**, recall **0,7722681359** e KS **0,5675944208**, iguais às métricas salvas. Não houve alteração de `src/`, requisitos ou Makefile. A execução usou o ambiente virtual existente; não foi criada uma instalação isolada de dependências.
 
 As evidências desta validação ficam em [test_adaptation](../artifacts/test_adaptation/validation.json), com o resultado da suíte, dependências e hashes das fontes de teste. O [log completo](../artifacts/test_adaptation/tests.txt) registra os casos executados. A verificação abrange comportamento e consistência de relatórios HTML/JSON; não certifica sua aparência visual nem a execução em outros sistemas operacionais.
+
+## Validação da observabilidade operacional
+
+A primeira validação da instrumentação operacional continha **78 testes**: os 65 anteriores e 13 casos em `tests/test_observability.py`. A execução passou em **22,607 segundos**. O alvo `make test` configura um journal temporário com limpeza automática; não mistura eventos de teste com os logs operacionais. Para executar diretamente o unittest, definir `TC04_EXECUTION_LOG` para um destino temporário.
+
+`make demo-observability PYTHON=.venv/bin/python` executou preparação, treino, contrato, simulação, inferência e relatórios reais em uma pasta separada. Foram preservados 20 eventos de dez chamadas, incluindo duas falhas operacionais provocadas, uma rejeição e recuperação. O painel final apresenta todas as sete etapas com duração e volume, dois alertas globais de data drift e três cenários com degradação de desempenho. O estado consolidado `alert` é esperado; o histórico de incidentes permanece disponível. [Evidências e comandos](observabilidade.md#demonstração-reproduzível).
+
+A preparação agora aceita `--raw` e `--output-root` para permitir execuções isoladas. O treino e os experimentos mantêm os contratos e formatos de retorno; a instrumentação acrescenta arquivos de eventos. Não foram adicionadas dependências. As evidências históricas de testes anteriores continuam referindo-se às versões originais.
+
+## Testes remotos de observabilidade
+
+Origem: branch `nipodoge/feat/fase4-entrega-final`, commit [`4f50a83`](https://github.com/NipoDoge/TC04/tree/4f50a83bb68a3f705fd03eb470236a5475d4d902), conferido com `git fetch nipodoge feat/fase4-entrega-final`. A adaptação preservou os 78 testes locais e acrescentou **36 casos**, totalizando **114 testes**; um teste de demonstração anterior foi ampliado. Não foi feito merge da implementação remota.
+
+| Origem remota | Cobertura adaptada |
+| --- | --- |
+| `tests/test_observability.py` | Cinco casos de eventos/IDs/duração/leitura e três de ingestão, agregação de regras e privacidade |
+| `tests/test_dashboard.py` | Nove casos de seções, números, HTML independente de recursos externos, nomes acessíveis das tabelas, isolamento por run, escaping, ausência de sucessos/fontes, links e CLI |
+| `tests/test_alerts.py` | Quatro casos de saúde, limite de queda de AUC/recall e AUC indefinida |
+| `tests/test_monitor.py` | Dois casos de métricas, um de falha operacional de drift e ampliação da integração existente para correlação de eventos e alertas |
+| Regressões locais adicionais | Doze casos de exceção original, fusos, metadados/JSON/UTF-8 inválidos, manifesto corrompido, proteção do journal e preservação do painel em falhas de renderização/gravação temporária |
+
+São 24 novos casos adaptados das fontes remotas e 12 regressões adicionais. A implementação local mantém início/término por chamada, estados `ok`/`fail`, duração em milissegundos, recall indefinido como `null` quando não há positivos e bloqueio em falha de gravação inicial do log. Na origem, alguns desses contratos são diferentes. Os testes de MLflow, cenários mensais, gráficos SVG, regras adicionais de alertas e decomposição causal não foram incorporados porque esses módulos não fazem parte da implementação atual. Nenhum teste foi marcado como skip ou expected failure.
+
+A integração acrescentou suporte a escalares NumPy/Path no JSONL e trouxe o resumo agregado das violações para a ingestão, preservando os retornos 0/1/2. As regressões identificadas foram corrigidas no logger, coletor, publicação do painel e comparação dos limiares de desempenho. Não foram adicionadas dependências.
+
+Executar: `make test PYTHON=.venv/bin/python`. Para somente a observabilidade: `python -m unittest discover -s tests -p 'test_observability*.py' -v`; esses testes configuram journals temporários por caso. A validação final e os hashes estão em [validation.json](../artifacts/observability_test_adaptation/validation.json), com [log da suíte](../artifacts/observability_test_adaptation/tests.txt) e [reprodução isolada com dados do projeto](../artifacts/observability_test_adaptation/reproduction.json). A checagem cobre comportamento, sintaxe, dependências e consistência estrutural dos relatórios; não certifica ausência de qualquer defeito nem aparência visual em navegador ou execução em outros sistemas operacionais.
+
+Resultado final: **114 testes aprovados em 21,766 segundos**, `pip check` sem conflitos, módulos compilados e `git diff --check` sem erros. Os **192 arquivos protegidos** (incluindo dados, modelos, relatórios e journal operacional anteriores, exceto os snapshots regeneráveis do painel) mantiveram seus hashes. A reprodução completa em diretório temporário repetiu as métricas do baseline publicado e confirmou 20 eventos, recuperação das falhas, dois cenários de data drift global e três alertas de desempenho.

@@ -82,7 +82,7 @@ Como o alvo tem horizonte de dois anos, produção real requer política de matu
 
 ## Monitoramento e resposta à degradação
 
-Esta seção propõe a operação contínua e a resposta aos sinais; agendamento, centralização e acionamento operacional ainda não estão implementados. A [detecção offline de data drift](data-drift.md) e o [experimento de concept drift](concept-drift.md) já estão executados. Os limiares são pontos iniciais e devem ser calibrados; não são exigências do enunciado.
+Esta seção propõe a operação contínua e a resposta aos sinais; o agendamento e o acionamento externo ainda não estão implementados. A centralização local de eventos reais, métricas e alertas está implementada em `src/execution_log.py` e `src/observability.py`. A [detecção offline de data drift](data-drift.md) e o [experimento de concept drift](concept-drift.md) já estão executados. Os limiares são pontos iniciais e devem ser calibrados; não são exigências do enunciado.
 
 | Sinal | Frequência proposta | Critério inicial | Resposta |
 | --- | --- | --- | --- |
@@ -92,7 +92,7 @@ Esta seção propõe a operação contínua e a resposta aos sinais; agendamento
 | Performance com rótulos maturados | Cada janela elegível | Queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra baseline, usando o mesmo limiar | Revisar incerteza, população e política; avaliar candidato |
 | Equidade | Cada avaliação e troca de modelo | Aumento absoluto de FNR ou FPR ≥ 0,10 em segmento com amostra suficiente | Revisão conjunta de Ciência de Dados, Risco e Privacidade |
 
-O baseline da Etapa 1 está preservado em `models/runs/32542e11c8c8477ea23d42db115efd0e`, com AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. O experimento de concept drift já calcula sinais offline de queda de AUC/recall contra o controle do holdout; alertas operacionais e acompanhamento contínuo por janelas ainda não foram implementados. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
+O baseline da Etapa 1 está preservado em `models/runs/32542e11c8c8477ea23d42db115efd0e`, com AUC 0,857208, recall no limiar 0,5 de 0,772268 e KS 0,567594 na validação. O experimento de concept drift já calcula sinais offline de queda de AUC/recall contra o controle do holdout; os alertas já são consolidados no painel local; notificações externas e acompanhamento contínuo por janelas ainda não foram implementados. O volume mínimo acima é uma regra operacional inicial; não substitui avaliação de poder estatístico e incerteza por segmento.
 
 Fluxo de resposta proposto:
 

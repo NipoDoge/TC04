@@ -1,0 +1,119 @@
+{
+  "pipeline": {
+    "status": "alert",
+    "run_id_filter": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+    "stages": [
+      {
+        "name": "prepare",
+        "status": "ok",
+        "volume": 117644,
+        "volume_unit": "rows",
+        "duration_ms": 258.715,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "fef00103ff7a497090420cdbffb78432",
+        "ts": "2026-11-17T22:54:07.343518+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.210304,
+        "process_peak_rss_mb": 410.625
+      },
+      {
+        "name": "ingest",
+        "status": "ok",
+        "volume": 500,
+        "volume_unit": "rows",
+        "duration_ms": 4.615,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "bc59b84ffbdf42dbaa3d6b3f837a1b15",
+        "ts": "2026-11-17T22:54:08.034065+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.005026,
+        "process_peak_rss_mb": 446.921875
+      },
+      {
+        "name": "train",
+        "status": "ok",
+        "volume": 65867,
+        "volume_unit": "rows",
+        "duration_ms": 636.979,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "1d7bb1f7ae4c447d82227c17f494236d",
+        "ts": "2026-11-17T22:54:07.984523+00:00",
+        "error_type": null,
+        "cpu_seconds": 1.555939,
+        "process_peak_rss_mb": 442.078125
+      },
+      {
+        "name": "simulate_drift",
+        "status": "ok",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 97.895,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "8c609d94a12f42cab05ad762a10e234a",
+        "ts": "2026-11-17T22:54:08.133253+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.086541,
+        "process_peak_rss_mb": 457.0625
+      },
+      {
+        "name": "predict",
+        "status": "ok",
+        "volume": 207055,
+        "volume_unit": "rows",
+        "duration_ms": 192.536,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "0c852d5678e54e6c893047c71ff12fd4",
+        "ts": "2026-11-17T22:54:08.326927+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.534303,
+        "process_peak_rss_mb": 468.9375
+      },
+      {
+        "name": "detect_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 1971.17,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "c8f2476e175841d98c5833c24a5af81d",
+        "ts": "2026-11-17T22:54:10.301315+00:00",
+        "error_type": null,
+        "cpu_seconds": 1.877266,
+        "process_peak_rss_mb": 522.5
+      },
+      {
+        "name": "concept_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 3171.669,
+        "run_id": "demo-ab38ee0649f34fb38a70556b5a8a8d4e",
+        "execution_id": "f90ac4d6d7b04759944fccca14d4ac44",
+        "ts": "2026-11-17T22:54:13.474643+00:00",
+        "error_type": null,
+        "cpu_seconds": 3.29337,
+        "process_peak_rss_mb": 646.53125
+      }
+    ],
+    "execution_counts": {
+      "ok": 5,
+      "fail": 2,
+      "rejected": 1,
+      "alert": 2,
+      "running": 0
+    },
+    "execution_count": 10,
+    "stale_after_seconds": 86400
+  },
+  "model_metrics": {
+    "auc": 0.8572078813187844,
+    "recall_at_0.5": 0.7722681359044995,
+    "ks": 0.5675944207671723
+  },
+  "baseline_matches_published": true,
+  "data_drift_alerts": 2,
+  "performance_alerts": 3,
+  "collector_status": "ok",
+  "journal_events": 20,
+  "temporary_outputs_cleaned_after_validation": true
+}

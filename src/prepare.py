@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from src.config import SEED, TARGET
+from src.execution_log import record, tracked
 
 OUTLIER_COLUMNS = ["DebtRatio", "RevolvingUtilizationOfUnsecuredLines"]
 
@@ -52,22 +54,38 @@ def prepare_datasets(raw):
     return datasets, limits, report
 
 
-def main():
-    datasets, limits, report = prepare_datasets(pd.read_csv("data/raw/cs-training.csv"))
+@tracked("prepare")
+def prepare(raw_path="data/raw/cs-training.csv", output_root="."):
+    raw = pd.read_csv(raw_path)
+    record(input_rows=len(raw))
+    datasets, limits, report = prepare_datasets(raw)
+    record(volume=sum(len(d) for d in datasets.values()),
+           partition_rows={name: len(d) for name, d in datasets.items()})
     paths = {
         "train": Path("data/reference/reference.parquet"),
         "validation": Path("data/validation/validation.parquet"),
         "holdout": Path("data/production/holdout.parquet"),
     }
     for name, path in paths.items():
+        path = Path(output_root) / path
         path.parent.mkdir(parents=True, exist_ok=True)
         datasets[name].to_parquet(path)
     for filename, payload in [("outlier_limits.json", limits), ("cleaning_report.json", report)]:
-        Path("data/reference", filename).write_text(
+        (Path(output_root) / "data/reference" / filename).write_text(
             json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
     print(report)
+    return datasets, limits, report
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Prepara as partições e registra a execução.")
+    parser.add_argument("--raw", default="data/raw/cs-training.csv")
+    parser.add_argument("--output-root", default=".")
+    args = parser.parse_args([] if argv is None else argv)
+    prepare(args.raw, args.output_root)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(sys.argv[1:])

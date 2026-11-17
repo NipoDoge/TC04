@@ -17,7 +17,7 @@
 | Detecção de data drift | [detect_drift.py](../src/detect_drift.py), [resumo estatístico](../reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: utilização de crédito detectada em t1–t3; atrasos de 90 dias detectados em t2–t3 |
 | Comparativo de intervenções | [compare_data_drift.py](../src/compare_data_drift.py) e [análise comparativa](../reports/drift_comparison/analysis.html) | Mesmo modelo/holdout; perfil anterior de renda/dívida preservado e comparado ao perfil atual de utilização/atrasos |
 | Concept drift e comportamento do modelo | [concept_drift.py](../src/concept_drift.py), [análise](../artifacts/concept_drift/analysis.html) e [métricas](../artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
-| Observabilidade centralizada | [`src/observability.py`](../src/observability.py), `make observe`, artefatos em [`reports/observability/`](../reports/observability/) e [métricas documentadas](observabilidade.md) | Executada (Opção A: dashboard [`index.html`](../reports/observability/index.html)) |
+| Observabilidade centralizada | [`src/execution_log.py`](../src/execution_log.py), [`src/observability.py`](../src/observability.py), `make observe`, artefatos em [`reports/observability/`](../reports/observability/) e [métricas documentadas](observabilidade.md) | Executada (logs reais de início/término, duração, volume, CPU/memória/disco, recuperação e dashboard [`index.html`](../reports/observability/index.html)) |
 | Governança e causalidade | [Plano de governança](governanca.md) | Política proposta e hipóteses documentadas |
 | Vídeo STAR | [Entrega e roteiro](entrega.md) | Gravação e link pendentes |
 
@@ -97,3 +97,7 @@ Modelo e métricas são gravados em um diretório temporário exclusivo dentro d
 Para ler modelo e métricas da mesma execução enquanto houver novos treinamentos, resolver o apontador uma única vez com `run_dir = Path("models/current").resolve()` e abrir ambos a partir de `run_dir`. Todos os consumidores do projeto usam a estrutura publicada em `models/current` ou uma versão explícita de `models/runs`. A publicação por links simbólicos foi validada no macOS e requer suporte do filesystem a esses links.
 
 O modelo é um `XGBClassifier` com 300 estimadores, profundidade 4, taxa de aprendizado 0,05 e ponderação da classe positiva. A avaliação calcula AUC ROC, recall com limiar 0,5 e KS como separação máxima entre TPR e FPR. **Esse KS de classificação não é um teste de drift entre datasets.** O limiar 0,5 é usado na avaliação; uma política de aprovação de crédito não foi implementada.
+
+## Telemetria operacional
+
+As operações de preparação, ingestão, treino, simulação, inferência, data drift e concept drift gravam início/término em `reports/observability/executions.jsonl`. `TC04_RUN_ID` correlaciona etapas; `TC04_EXECUTION_LOG` seleciona o journal. O coletor separa a última execução de cada etapa dos artefatos offline e mantém os incidentes anteriores no histórico. `make demo-observability` reproduz falha, rejeição, recuperação e alertas em `artifacts/operational_demo/`, sem substituir os artefatos ativos. [Contrato, métricas e limites](observabilidade.md).

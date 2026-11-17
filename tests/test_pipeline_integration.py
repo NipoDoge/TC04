@@ -1,7 +1,7 @@
 """Adaptação de tests/test_monitor.py da entrega final (4f50a83).
 
-Exercita os scripts existentes, com XGBoost e Evidently reais, sem introduzir
-monitoramento, alertas ou dashboards ausentes nesta branch.
+Exercita os scripts existentes com XGBoost e Evidently reais. A cobertura
+operacional e do dashboard está em test_observability.py.
 """
 import contextlib
 import json

@@ -1,0 +1,112 @@
+{
+  "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+  "execution_log": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/reports/observability/executions.jsonl",
+  "pipeline": {
+    "status": "alert",
+    "run_id_filter": "demo-92503fed6be049d1b14be30f653ccff5",
+    "stages": [
+      {
+        "name": "prepare",
+        "status": "ok",
+        "volume": 117644,
+        "volume_unit": "rows",
+        "duration_ms": 318.713,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "feabfefc2d6f41d0917ef34b5042c2f0",
+        "ts": "2026-11-17T22:40:15.786222+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.209928,
+        "process_peak_rss_mb": 402.6875
+      },
+      {
+        "name": "ingest",
+        "status": "ok",
+        "volume": 500,
+        "volume_unit": "rows",
+        "duration_ms": 4.703,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "848f509531f546f690eef8bfc5fb0a25",
+        "ts": "2026-11-17T22:40:16.586207+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.005431,
+        "process_peak_rss_mb": 449.265625
+      },
+      {
+        "name": "train",
+        "status": "ok",
+        "volume": 65867,
+        "volume_unit": "rows",
+        "duration_ms": 748.795,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "23694718ed364554bf75cea4d254a2a6",
+        "ts": "2026-11-17T22:40:16.536032+00:00",
+        "error_type": null,
+        "cpu_seconds": 1.551374,
+        "process_peak_rss_mb": 442.15625
+      },
+      {
+        "name": "simulate_drift",
+        "status": "ok",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 106.018,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "f0d2cf95b9eb4bebb6f80c3d21b0988b",
+        "ts": "2026-11-17T22:40:16.693691+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.092305,
+        "process_peak_rss_mb": 465.5
+      },
+      {
+        "name": "predict",
+        "status": "ok",
+        "volume": 207055,
+        "volume_unit": "rows",
+        "duration_ms": 225.222,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "68ed03eb0f9448f6a6a6cd19f8e2d10d",
+        "ts": "2026-11-17T22:40:16.919665+00:00",
+        "error_type": null,
+        "cpu_seconds": 0.494553,
+        "process_peak_rss_mb": 495.671875
+      },
+      {
+        "name": "detect_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 2160.767,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "7a8320d7d7bc4158a4b4f68a56a1cd18",
+        "ts": "2026-11-17T22:40:19.085185+00:00",
+        "error_type": null,
+        "cpu_seconds": 2.050807,
+        "process_peak_rss_mb": 543.75
+      },
+      {
+        "name": "concept_drift",
+        "status": "alert",
+        "volume": 141188,
+        "volume_unit": "rows",
+        "duration_ms": 3305.236,
+        "run_id": "demo-92503fed6be049d1b14be30f653ccff5",
+        "execution_id": "40700ac30ac34d358ffbd4b9da927aed",
+        "ts": "2026-11-17T22:40:22.391317+00:00",
+        "error_type": null,
+        "cpu_seconds": 3.47466,
+        "process_peak_rss_mb": 668.0
+      }
+    ],
+    "execution_counts": {
+      "ok": 5,
+      "fail": 2,
+      "rejected": 1,
+      "alert": 2,
+      "running": 0
+    },
+    "execution_count": 10,
+    "stale_after_seconds": 86400
+  },
+  "dashboard": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/dashboard/index.html",
+  "note": "Falhas de preparação/ingestão e rejeição de contrato foram provocadas para demonstrar recuperação. Drift permanece como alerta esperado."
+}

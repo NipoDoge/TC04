@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Observabilidade — saúde do pipeline</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --fail: #991b1b;
+      --fail-bg: #fee2e2;
+      --alert: #9a3412;
+      --alert-bg: #ffedd5;
+      --rejected: #7c2d12;
+      --rejected-bg: #fed7aa;
+      --unknown: #44403c;
+      --unknown-bg: #e7e5e4;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ebe6de 0%, var(--bg) 180px);
+      line-height: 1.45;
+    }
+    main { max-width: 1500px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+    h2 { margin: 1.75rem 0 0.6rem; font-size: 1.15rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; }
+    p.meta { margin: 0; color: var(--muted); font-size: 0.92rem; }
+    .banner {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+    }
+    .banner.alert { border-color: #fdba74; background: var(--alert-bg); }
+    .banner.ok { border-color: #86efac; background: var(--ok-bg); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.9rem;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.75rem 0.85rem;
+    }
+    .stat .label { display: block; color: var(--muted); font-size: 0.8rem; }
+    .stat .value { display: block; font-size: 1.25rem; font-weight: 650; margin-top: 0.15rem; }
+    table { display: block; overflow-x: auto;
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--line);
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.45rem 0.55rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { background: #f5f5f4; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .badge.ok { color: var(--ok); background: var(--ok-bg); }
+    .badge.fail { color: var(--fail); background: var(--fail-bg); }
+    .badge.alert { color: var(--alert); background: var(--alert-bg); }
+    .badge.rejected { color: var(--rejected); background: var(--rejected-bg); }
+    .badge.unknown { color: var(--unknown); background: var(--unknown-bg); }
+    a { color: #1d4ed8; }
+    footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Observabilidade do pipeline</h1>
+    <p><strong>Saúde: alert</strong> · Execuções: 10
+    · Histórico de resultados: {&#x27;ok&#x27;: 5, &#x27;fail&#x27;: 2, &#x27;rejected&#x27;: 1, &#x27;alert&#x27;: 2, &#x27;running&#x27;: 0}</p>
+    <p>Última execução de cada etapa; falhas anteriores permanecem no histórico.
+    Filtro de execução: demo-92503fed6be049d1b14be30f653ccff5.
+    Datas em UTC. Etapas sem registro ficam unknown; registros vencidos ficam stale.</p>
+    <p class="meta">Snapshot gerado em 2026-11-17T22:54:04.335516+00:00 (UTC) · pasta <code>reports/observability/</code></p>
+
+    <div class="banner alert">
+      <strong>Alertas:</strong>
+      drift de dados = 2 cenário(s);
+      estado do coletor = ok;
+      quarentena (contrato) = 1 lote(s);
+      alertas de desempenho = 3.
+    </div>
+
+    <div class="grid">
+      <div class="stat"><span class="label">AUC</span><span class="value">0.8572</span></div>
+      <div class="stat"><span class="label">Recall @ 0.5</span><span class="value">0.7723</span></div>
+      <div class="stat"><span class="label">KS</span><span class="value">0.5676</span></div>
+      <div class="stat"><span class="label">Cenários drift</span><span class="value">4</span></div>
+    </div>
+
+    <h2>Últimas execuções reais</h2>
+    <table aria-label="Últimas execuções reais">
+      <thead><tr><th>Etapa</th><th>Status</th><th>Linhas</th><th>Duração (ms)</th><th>CPU (s)</th><th>Pico RSS (MB)</th><th>Horário UTC</th><th>Tipo de erro</th></tr></thead>
+      <tbody>
+        <tr><td>prepare</td><td><span class="badge ok">ok</span></td><td>117644</td><td>318.7130</td><td>0.2099</td><td>402.6875</td><td>2026-11-17T22:40:15.786222+00:00</td><td>—</td></tr><tr><td>ingest</td><td><span class="badge ok">ok</span></td><td>500</td><td>4.7030</td><td>0.0054</td><td>449.2656</td><td>2026-11-17T22:40:16.586207+00:00</td><td>—</td></tr><tr><td>train</td><td><span class="badge ok">ok</span></td><td>65867</td><td>748.7950</td><td>1.5514</td><td>442.1562</td><td>2026-11-17T22:40:16.536032+00:00</td><td>—</td></tr><tr><td>simulate_drift</td><td><span class="badge ok">ok</span></td><td>141188</td><td>106.0180</td><td>0.0923</td><td>465.5000</td><td>2026-11-17T22:40:16.693691+00:00</td><td>—</td></tr><tr><td>predict</td><td><span class="badge ok">ok</span></td><td>207055</td><td>225.2220</td><td>0.4946</td><td>495.6719</td><td>2026-11-17T22:40:16.919665+00:00</td><td>—</td></tr><tr><td>detect_drift</td><td><span class="badge alert">alert</span></td><td>141188</td><td>2160.7670</td><td>2.0508</td><td>543.7500</td><td>2026-11-17T22:40:19.085185+00:00</td><td>—</td></tr><tr><td>concept_drift</td><td><span class="badge alert">alert</span></td><td>141188</td><td>3305.2360</td><td>3.4747</td><td>668.0000</td><td>2026-11-17T22:40:22.391317+00:00</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Infraestrutura no momento da coleta</h2>
+    <p>Disco livre: 1288388030464 bytes de 1995218165760;
+    fração livre: 0.6457; CPUs: 10; estado: ok.
+    Alerta de disco abaixo de 5% livre. CPU é tempo consumido pela etapa; RSS é o pico do processo até aquele momento.</p>
+    <h2>Desempenho sob concept drift</h2>
+    <p>Estado: alert. Experimento sintético offline com rótulos alterados;
+    compara cada cenário ao controle do mesmo holdout. <a href="../concept_drift/analysis.html">Análise completa</a>.</p>
+    <table aria-label="Desempenho sob concept drift"><thead><tr><th>Cenário</th><th>AUC</th><th>Recall</th><th>Queda AUC</th><th>Queda recall</th><th>Alerta</th></tr></thead>
+    <tbody><tr><td>c0_control</td><td>0.8433</td><td>0.7409</td><td>0.0000</td><td>0.0000</td><td>False</td></tr><tr><td>c1</td><td>0.7681</td><td>0.6222</td><td>0.0752</td><td>0.1187</td><td>True</td></tr><tr><td>c2</td><td>0.7101</td><td>0.5249</td><td>0.1332</td><td>0.2160</td><td>True</td></tr><tr><td>c3</td><td>0.6696</td><td>0.4535</td><td>0.1736</td><td>0.2874</td><td>True</td></tr></tbody></table>
+    <h2>Métricas publicadas do baseline (validação offline)</h2>
+    <table aria-label="Métricas publicadas do baseline">
+      <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>metrics_path</td><td><code>artifacts/operational_demo/models/current/metrics.json</code></td></tr>
+        <tr><td>auc</td><td>0.8572</td></tr>
+        <tr><td>recall_at_0.5</td><td>0.7723</td></tr>
+        <tr><td>ks</td><td>0.5676</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Drift por cenário</h2>
+    <p class="meta">Links relativos para HTML Evidently existentes (somente leitura; pasta <code>reports/drift/</code> não é regenerada).</p>
+    <table aria-label="Drift por cenário">
+      <thead>
+        <tr>
+          <th>Cenário</th><th>Linhas</th><th>drift_share</th>
+          <th>dataset_drift</th><th>features</th><th>Evidently</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>t0_control</td><td>35297</td><td>0.0000</td><td><span class="badge ok">não</span></td><td>—</td><td><a href="../reports/drift/t0_control.html">t0_control.html</a></td></tr><tr><td>t1</td><td>35297</td><td>0.1000</td><td><span class="badge ok">não</span></td><td>RevolvingUtilizationOfUnsecuredLines</td><td><a href="../reports/drift/t1.html">t1.html</a></td></tr><tr><td>t2</td><td>35297</td><td>0.2000</td><td><span class="badge alert">sim</span></td><td>RevolvingUtilizationOfUnsecuredLines, NumberOfTimes90DaysLate</td><td><a href="../reports/drift/t2.html">t2.html</a></td></tr><tr><td>t3</td><td>35297</td><td>0.2000</td><td><span class="badge alert">sim</span></td><td>RevolvingUtilizationOfUnsecuredLines, NumberOfTimes90DaysLate</td><td><a href="../reports/drift/t3.html">t3.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Alertas de contrato / quarentena</h2>
+    <table aria-label="Alertas de contrato e quarentena">
+      <thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>quarantined_batch_count</td><td>1</td></tr>
+        <tr><td>drift.manifest_path</td><td><code>artifacts/operational_demo/reports/drift/manifest.json</code></td></tr>
+        <tr><td>drift.created_at_utc</td><td>2026-11-17T22:40:16.939245+00:00</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Integridade das fontes de monitoramento</h2>
+    <table aria-label="Integridade das fontes"><thead><tr><th>Fonte</th><th>Status</th></tr></thead>
+    <tbody><tr><td>Journal</td><td>ok</td></tr><tr><td>Métricas do modelo</td><td>ok</td></tr><tr><td>Manifesto de data drift</td><td>alert</td></tr><tr><td>Manifesto de concept drift</td><td>alert</td></tr><tr><td>Manifesto de predições</td><td>ok</td></tr><tr><td>Manifesto de cenários</td><td>ok</td></tr></tbody></table>
+    <h2>Histórico de eventos reais</h2>
+    <p>Coletor: ok; linhas inválidas: [].</p>
+    <label>Filtrar eventos <input id="event-filter" placeholder="etapa, status ou identificador" oninput="filterEvents(this.value)"></label>
+    <table aria-label="Histórico de eventos reais">
+      <thead><tr><th>Horário UTC</th><th>Etapa</th><th>Evento</th><th>Status</th><th>Linhas</th><th>Duração (ms)</th><th>Run ID</th><th>Execution ID</th></tr></thead>
+      <tbody id="event-history">
+        <tr><td>2026-11-17T22:40:22.391317+00:00</td><td>concept_drift</td><td>execution_finished</td><td><span class="badge alert">alert</span></td><td>141188</td><td>3305.2360</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>40700ac30ac34d358ffbd4b9da927aed</td></tr><tr><td>2026-11-17T22:40:19.085717+00:00</td><td>concept_drift</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>40700ac30ac34d358ffbd4b9da927aed</td></tr><tr><td>2026-11-17T22:40:19.085185+00:00</td><td>detect_drift</td><td>execution_finished</td><td><span class="badge alert">alert</span></td><td>141188</td><td>2160.7670</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>7a8320d7d7bc4158a4b4f68a56a1cd18</td></tr><tr><td>2026-11-17T22:40:16.922718+00:00</td><td>detect_drift</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>7a8320d7d7bc4158a4b4f68a56a1cd18</td></tr><tr><td>2026-11-17T22:40:16.919665+00:00</td><td>predict</td><td>execution_finished</td><td><span class="badge ok">ok</span></td><td>207055</td><td>225.2220</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>68ed03eb0f9448f6a6a6cd19f8e2d10d</td></tr><tr><td>2026-11-17T22:40:16.694195+00:00</td><td>predict</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>68ed03eb0f9448f6a6a6cd19f8e2d10d</td></tr><tr><td>2026-11-17T22:40:16.693691+00:00</td><td>simulate_drift</td><td>execution_finished</td><td><span class="badge ok">ok</span></td><td>141188</td><td>106.0180</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>f0d2cf95b9eb4bebb6f80c3d21b0988b</td></tr><tr><td>2026-11-17T22:40:16.587397+00:00</td><td>simulate_drift</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>f0d2cf95b9eb4bebb6f80c3d21b0988b</td></tr><tr><td>2026-11-17T22:40:16.586207+00:00</td><td>ingest</td><td>execution_finished</td><td><span class="badge ok">ok</span></td><td>500</td><td>4.7030</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>848f509531f546f690eef8bfc5fb0a25</td></tr><tr><td>2026-11-17T22:40:16.581213+00:00</td><td>ingest</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>848f509531f546f690eef8bfc5fb0a25</td></tr><tr><td>2026-11-17T22:40:16.580600+00:00</td><td>ingest</td><td>execution_finished</td><td><span class="badge rejected">rejected</span></td><td>505</td><td>20.6730</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>24af667246114181b6ccd408c4b443f1</td></tr><tr><td>2026-11-17T22:40:16.559633+00:00</td><td>ingest</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>24af667246114181b6ccd408c4b443f1</td></tr><tr><td>2026-11-17T22:40:16.559285+00:00</td><td>ingest</td><td>execution_finished</td><td><span class="badge fail">fail</span></td><td>—</td><td>0.2050</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>1048219b23d047ef9caafcb097e0c752</td></tr><tr><td>2026-11-17T22:40:16.558783+00:00</td><td>ingest</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>1048219b23d047ef9caafcb097e0c752</td></tr><tr><td>2026-11-17T22:40:16.536032+00:00</td><td>train</td><td>execution_finished</td><td><span class="badge ok">ok</span></td><td>65867</td><td>748.7950</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>23694718ed364554bf75cea4d254a2a6</td></tr><tr><td>2026-11-17T22:40:15.786921+00:00</td><td>train</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>23694718ed364554bf75cea4d254a2a6</td></tr><tr><td>2026-11-17T22:40:15.786222+00:00</td><td>prepare</td><td>execution_finished</td><td><span class="badge ok">ok</span></td><td>117644</td><td>318.7130</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>feabfefc2d6f41d0917ef34b5042c2f0</td></tr><tr><td>2026-11-17T22:40:15.466784+00:00</td><td>prepare</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>feabfefc2d6f41d0917ef34b5042c2f0</td></tr><tr><td>2026-11-17T22:40:15.465572+00:00</td><td>prepare</td><td>execution_finished</td><td><span class="badge fail">fail</span></td><td>—</td><td>0.2920</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>0c156f9c3ffc4b5da21097226419ce50</td></tr><tr><td>2026-11-17T22:40:15.462802+00:00</td><td>prepare</td><td>execution_started</td><td><span class="badge unknown">running</span></td><td>—</td><td>—</td><td>demo-92503fed6be049d1b14be30f653ccff5</td><td>0c156f9c3ffc4b5da21097226419ce50</td></tr>
+      </tbody>
+    </table>
+
+    <footer>
+      Gerado por <code>python -m src.observability</code> / <code>make observe</code>.
+      O journal de execução é preservado; este painel é atualizado sob demanda.
+    </footer>
+  </main>
+<script>
+function filterEvents(value) {
+  for (const row of document.querySelectorAll('#event-history tr')) {
+    row.hidden = !row.textContent.toLowerCase().includes(value.toLowerCase());
+  }
+}
+</script>
+</body>
+</html>

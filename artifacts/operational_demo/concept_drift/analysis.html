@@ -1,0 +1,259 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Concept drift: comportamento do modelo</title>
+<style>body{font:16px system-ui,sans-serif;color:#172b4d;margin:32px;max-width:1500px}
+table{border-collapse:collapse;margin:20px 0;font-size:14px}th,td{border:1px solid #ccd5df;padding:8px;text-align:right}
+th{background:#eaf1f9}a{color:#145da0;margin-right:12px}.table-wrap{overflow:auto}p{max-width:1100px;line-height:1.6}</style>
+<h1>Concept drift: X e modelo fixos, mecanismo do alvo alterado</h1>
+<p>Experimento sintético, sem série temporal real ou inferência de causa econômica. O mecanismo de alteração dos rótulos é uma hipótese controlada, não desfechos observados. As métricas comparam o mesmo holdout com o seu controle histórico, não com a validação. Nenhum parâmetro do modelo ou limiar de classificação é ajustado neste experimento. As cinco seeds avaliam sensibilidade aos sorteios; não são intervalos de confiança. Na operação real, métricas supervisionadas exigem rótulos maturados no horizonte do alvo.</p>
+<h2>Desenho do experimento</h2><p>Segmento: MonthlyIncome &le; 3500, primeiro quartil ajustado somente na referência.
+Um sorteio U uniforme por cliente é compartilhado entre os períodos. Apenas rótulos 0 no segmento podem virar 1,
+com probabilidades adicionais de 10%, 25% e 50%. Rótulos positivos são preservados.
+Logo, Pq(Y=1|X)=p0(X)+(1-p0(X))*q*I(segmento), com p0 desconhecido, não estimado pelo modelo.</p>
+<h2>Resultado global, limiar de classificação 0,5</h2><div class="table-wrap"><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>scenario</th>
+      <th>changed_labels</th>
+      <th>prevalence</th>
+      <th>auc</th>
+      <th>recall</th>
+      <th>precision</th>
+      <th>brier</th>
+      <th>log_loss</th>
+      <th>fn</th>
+      <th>auc_drop</th>
+      <th>recall_drop</th>
+      <th>performance_alert</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>c0_control</td>
+      <td>0</td>
+      <td>0.066153</td>
+      <td>0.843257</td>
+      <td>0.740899</td>
+      <td>0.197421</td>
+      <td>0.147595</td>
+      <td>0.459707</td>
+      <td>605</td>
+      <td>0.000000</td>
+      <td>0.000000</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>c1</td>
+      <td>815</td>
+      <td>0.089243</td>
+      <td>0.768076</td>
+      <td>0.622222</td>
+      <td>0.223668</td>
+      <td>0.154914</td>
+      <td>0.479084</td>
+      <td>1190</td>
+      <td>0.075181</td>
+      <td>0.118677</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>c2</td>
+      <td>2062</td>
+      <td>0.124571</td>
+      <td>0.710069</td>
+      <td>0.524903</td>
+      <td>0.263380</td>
+      <td>0.165815</td>
+      <td>0.508340</td>
+      <td>2089</td>
+      <td>0.133188</td>
+      <td>0.215996</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>c3</td>
+      <td>4123</td>
+      <td>0.182962</td>
+      <td>0.669626</td>
+      <td>0.453546</td>
+      <td>0.334246</td>
+      <td>0.182354</td>
+      <td>0.553312</td>
+      <td>3529</td>
+      <td>0.173631</td>
+      <td>0.287353</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table></div>
+<p>No cenário c3, a AUC passa de 0.843257 para 0.669626 e o recall de 74.09% para 45.35%. Os falsos negativos passam de 605 para 3529. O Brier varia de 0.147595 para 0.182354 e o log loss de 0.459707 para 0.553312 (menor é melhor para ambos). A precisão passa de 19.74% para 33.42%, sem qualquer adaptação do modelo: com a mesma lista de previsões positivas, a nova prevalência muda quantas delas são consideradas corretas. Por isso, uma melhora isolada de precisão ou F1 não implica recuperação da discriminação.</p>
+<p>AUC e recall são comparados ao controle no mesmo holdout. Alerta experimental: queda absoluta de AUC &ge; 0.05
+ou recall &ge; 0.1. As taxas previstas e os scores são idênticos em todos os cenários;
+o modelo não observa a mudança no mecanismo do alvo. A referência de treino não é usada como avaliação.</p>
+<h2>Segmentos</h2><div class="table-wrap"><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>scenario</th>
+      <th>segment</th>
+      <th>rows</th>
+      <th>prevalence</th>
+      <th>auc</th>
+      <th>recall</th>
+      <th>precision</th>
+      <th>brier</th>
+      <th>fn</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>c0_control</td>
+      <td>income_le_q25</td>
+      <td>9147</td>
+      <td>0.086039</td>
+      <td>0.841789</td>
+      <td>0.815756</td>
+      <td>0.208239</td>
+      <td>0.182996</td>
+      <td>145</td>
+    </tr>
+    <tr>
+      <td>c0_control</td>
+      <td>income_gt_q25</td>
+      <td>26150</td>
+      <td>0.059197</td>
+      <td>0.840458</td>
+      <td>0.702842</td>
+      <td>0.191549</td>
+      <td>0.135212</td>
+      <td>460</td>
+    </tr>
+    <tr>
+      <td>c1</td>
+      <td>income_le_q25</td>
+      <td>9147</td>
+      <td>0.175139</td>
+      <td>0.658951</td>
+      <td>0.544320</td>
+      <td>0.282841</td>
+      <td>0.211239</td>
+      <td>730</td>
+    </tr>
+    <tr>
+      <td>c1</td>
+      <td>income_gt_q25</td>
+      <td>26150</td>
+      <td>0.059197</td>
+      <td>0.840458</td>
+      <td>0.702842</td>
+      <td>0.191549</td>
+      <td>0.135212</td>
+      <td>460</td>
+    </tr>
+    <tr>
+      <td>c2</td>
+      <td>income_le_q25</td>
+      <td>9147</td>
+      <td>0.311468</td>
+      <td>0.582908</td>
+      <td>0.428220</td>
+      <td>0.395718</td>
+      <td>0.253303</td>
+      <td>1629</td>
+    </tr>
+    <tr>
+      <td>c2</td>
+      <td>income_gt_q25</td>
+      <td>26150</td>
+      <td>0.059197</td>
+      <td>0.840458</td>
+      <td>0.702842</td>
+      <td>0.191549</td>
+      <td>0.135212</td>
+      <td>460</td>
+    </tr>
+    <tr>
+      <td>c3</td>
+      <td>income_le_q25</td>
+      <td>9147</td>
+      <td>0.536788</td>
+      <td>0.548125</td>
+      <td>0.374949</td>
+      <td>0.597146</td>
+      <td>0.317127</td>
+      <td>3069</td>
+    </tr>
+    <tr>
+      <td>c3</td>
+      <td>income_gt_q25</td>
+      <td>26150</td>
+      <td>0.059197</td>
+      <td>0.840458</td>
+      <td>0.702842</td>
+      <td>0.191549</td>
+      <td>0.135212</td>
+      <td>460</td>
+    </tr>
+  </tbody>
+</table></div>
+<h2>Sensibilidade aos sorteios: cinco seeds</h2><div class="table-wrap"><table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th colspan="2" halign="left">auc</th>
+      <th colspan="2" halign="left">recall</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>min</th>
+      <th>max</th>
+      <th>min</th>
+      <th>max</th>
+    </tr>
+    <tr>
+      <th>scenario</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>c0_control</th>
+      <td>0.843257</td>
+      <td>0.843257</td>
+      <td>0.740899</td>
+      <td>0.740899</td>
+    </tr>
+    <tr>
+      <th>c1</th>
+      <td>0.764881</td>
+      <td>0.772764</td>
+      <td>0.613116</td>
+      <td>0.630115</td>
+    </tr>
+    <tr>
+      <th>c2</th>
+      <td>0.710069</td>
+      <td>0.716343</td>
+      <td>0.520963</td>
+      <td>0.533409</td>
+    </tr>
+    <tr>
+      <th>c3</th>
+      <td>0.669626</td>
+      <td>0.673019</td>
+      <td>0.447468</td>
+      <td>0.458366</td>
+    </tr>
+  </tbody>
+</table></div>
+<p>Os intervalos acima são mínimos/máximos entre seeds, sem interpretação de intervalo de confiança.
+Precisão, average precision, Brier e log loss também respondem à prevalência: podem melhorar mesmo com piora de AUC/recall.
+O treinamento com ponderação de classes não garante probabilidades calibradas. Todas as métricas e matrizes de confusão estão nos CSVs.</p>
+<h2>Evidências e interpretação</h2><p><a href="classification_c0_control.html">c0_control</a> <a href="classification_c1.html">c1</a> <a href="classification_c2.html">c2</a> <a href="classification_c3.html">c3</a><a href="feature_drift.html">Drift das features: c3 vs controle</a></p>
+<p>Os relatórios de classificação mostram ROC, PR e matrizes de confusão. A igualdade exata das features e das predições é verificada
+em todos os períodos; os testes de features do Evidently comparam c3 ao controle, e não ao treino.</p>
+<p>O experimento ilustra uma degradação que monitoramento apenas de features e scores não detectaria.
+Em operação, investigar origem e maturação dos rótulos, revisar erros por segmento e avaliar recalibração ou retreinamento em dados independentes.
+O experimento não seleciona nem publica um modelo novo. Não autoriza conclusões sobre clientes reais ou causas econômicas.</p>
+</html>

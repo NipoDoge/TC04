@@ -14,6 +14,7 @@ import pandas as pd
 from src.artifacts import sha256, snapshot
 from src.config import SCENARIOS, TARGET, THRESHOLD
 from src.contract import FEATURE_COLUMNS, schema
+from src.execution_log import record, tracked
 
 
 def predict_dataset(model, dataset):
@@ -38,6 +39,7 @@ def predict_dataset(model, dataset):
     })
 
 
+@tracked("predict")
 def predict(model_path="models/current/model.joblib",
             reference_path="data/reference/reference.parquet",
             scenarios_dir="data/production/scenarios", output_dir="data/predictions"):
@@ -78,6 +80,7 @@ def predict(model_path="models/current/model.joblib",
                 "file": destination.name,
                 "sha256": sha256(destination),
             })
+            record(volume=sum(d["rows"] for d in manifest["datasets"]))
         (staging / "manifest.json").write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )

@@ -23,6 +23,7 @@ from src.config import (
     DRIFT_SHARE, SCENARIOS,
 )
 from src.contract import FEATURE_COLUMNS, schema
+from src.execution_log import record, tracked
 
 
 def compare_datasets(reference, current):
@@ -73,6 +74,7 @@ def summarize(evaluation, scenario):
     return rows
 
 
+@tracked("detect_drift")
 def detect_drift(reference_path="data/reference/reference.parquet",
                  scenarios_dir="data/production/scenarios", output_dir="reports/drift"):
     output_dir = Path(output_dir)
@@ -131,6 +133,9 @@ def detect_drift(reference_path="data/reference/reference.parquet",
             json.dumps(manifest, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8"
         )
         staging.rename(output_dir)
+    record(volume=sum(s["rows"] for s in manifest["scenarios"]),
+           alert_count=sum(s["dataset_drift_detected"] for s in manifest["scenarios"]),
+           manifest_path=str(output_dir / "manifest.json"))
     return manifest
 
 

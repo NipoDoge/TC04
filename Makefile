@@ -1,11 +1,11 @@
 PYTHON ?= python
 .DEFAULT_GOAL := help
-.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift compare-data-drift concept-drift observe test
+.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift compare-data-drift concept-drift observe demo-observability test
 
 help:
 	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, compare-data-drift, concept-drift, observe, test"
 	@echo "Sequência: prepare -> train -> simulate-drift -> predict -> detect-drift"
-	@echo "Observabilidade (aditivo): observe"
+	@echo "Observabilidade: observe; demonstração isolada: demo-observability"
 	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
 
 # Usa o holdout existente; não executa prepare nem altera a referência.
@@ -23,6 +23,9 @@ detect-drift:
 observe:
 	$(PYTHON) -m src.observability
 
+demo-observability:
+	$(PYTHON) -m src.demo_observability
+
 compare-data-drift:
 	$(PYTHON) -m src.compare_data_drift
 
@@ -36,7 +39,9 @@ train:
 	$(PYTHON) -m src.train
 
 test:
-	$(PYTHON) -m unittest discover -s tests -v
+	@tc04_test_dir=$$(mktemp -d); \
+	trap 'rm -rf "$$tc04_test_dir"' EXIT; \
+	TC04_EXECUTION_LOG="$$tc04_test_dir/executions.jsonl" $(PYTHON) -m unittest discover -s tests -v
 
 demo-bad:
 	$(PYTHON) -m src.make_bad_batch

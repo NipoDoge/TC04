@@ -15,6 +15,7 @@ from xgboost import XGBClassifier
 
 from src.config import SEED, TARGET, THRESHOLD
 from src.contract import FEATURE_COLUMNS, schema
+from src.execution_log import record, tracked
 
 log = logging.getLogger("train")
 
@@ -57,11 +58,13 @@ def publish_artifacts(model, metrics, output_dir):
     return published_dir
 
 
+@tracked("train")
 def train(reference_path="data/reference/reference.parquet",
           validation_path="data/validation/validation.parquet", output_dir="models"):
     # Validar ambas as partições antes de criar o modelo ou seus artefatos.
     ref = load_dataset(reference_path)
     validation = load_dataset(validation_path)
+    record(volume=len(ref), training_rows=len(ref), validation_rows=len(validation))
     Xtr, ytr = ref.loc[:, FEATURE_COLUMNS], ref[TARGET]
     Xte, yte = validation.loc[:, FEATURE_COLUMNS], validation[TARGET]
 
@@ -78,7 +81,8 @@ def train(reference_path="data/reference/reference.parquet",
         f"recall_at_{THRESHOLD:g}": float(recall_score(yte, p >= THRESHOLD)),
         "ks": float((tpr - fpr).max()),
     }
-    publish_artifacts(model, metrics, output_dir)
+    published = publish_artifacts(model, metrics, output_dir)
+    record(model_metrics=metrics, model_version=published.name)
     return metrics
 
 

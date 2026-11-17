@@ -10,7 +10,7 @@ Os cenários são sintéticos, sem série temporal real ou comprovação de caus
 | --- | --- |
 | 1 — Qualidade e contratos | Executada: Pandera, bloqueio/quarentena e baseline treinado |
 | 2 — Drift | Executada: data drift, concept drift, predições e relatórios Evidently |
-| 3 — Observabilidade | Executada (Opção A): coleta centralizada, `make observe` e dashboard em `reports/observability/index.html` |
+| 3 — Observabilidade | Executada: logs reais por operação, recursos, histórico e dashboard com `make observe` |
 | 4 — Governança e vídeo | Plano documentado; procedência dos dados, responsáveis e vídeo pendentes |
 
 **Vídeo STAR:** pendente de gravação e publicação, com duração máxima de cinco minutos. [Roteiro e checklist](docs/entrega.md).
@@ -27,7 +27,7 @@ python -m pip check
 make test PYTHON=.venv/bin/python
 ```
 
-A suíte possui **65 testes**, incluindo os casos da entrega final adaptados aos scripts desta branch. A cobertura e os resultados estão em [Reprodução e validação](docs/reproducao.md#testes-adaptados-da-entrega-final). O notebook é opcional; suas dependências estão em [requirements-notebooks.txt](requirements-notebooks.txt).
+A suíte possui **114 testes**, incluindo os casos da entrega final adaptados aos scripts desta branch. A cobertura e os resultados estão em [Reprodução e validação](docs/reproducao.md#testes-adaptados-da-entrega-final). O notebook é opcional; suas dependências estão em [requirements-notebooks.txt](requirements-notebooks.txt).
 
 | Comando `make` | Finalidade |
 | --- | --- |
@@ -36,7 +36,8 @@ A suíte possui **65 testes**, incluindo os casos da entrega final adaptados aos
 | `simulate-drift` / `predict` / `detect-drift` | Gerar cenários, predições e relatórios de data drift |
 | `compare-data-drift` | Comparar o perfil anterior com o atual, usando o mesmo modelo/holdout |
 | `concept-drift` | Alterar o mecanismo do alvo com features e modelo fixos |
-| `observe` | Consolidar logs/métricas e gerar o dashboard de observabilidade (Etapa 3) |
+| `observe` | Consolidar logs reais, recursos e alertas no dashboard (Etapa 3) |
+| `demo-observability` | Executar demonstração isolada com falhas, bloqueio, recuperação e drift |
 
 Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe ajuda.
 
@@ -44,7 +45,9 @@ Os artefatos já estão versionados. Simulação, inferência e relatórios exig
 
 ## Observabilidade (Etapa 3)
 
-O dashboard consolida status do pipeline, volumes, snapshot do modelo e alertas de drift/contrato a partir dos artefatos já existentes (pós-coleta). Não regenera Evidently nem o modelo.
+Os scripts registram início e término reais em `reports/observability/executions.jsonl`, com IDs, duração, linhas processadas, tipo de erro, CPU e pico de memória do processo. O dashboard consolida o histórico, a última execução de cada etapa, espaço em disco e alertas de data drift e concept drift. As métricas do baseline aparecem separadas dos cenários de degradação.
+
+A demonstração preservada contém **10 operações / 20 eventos**: duas falhas provocadas, um bloqueio de contrato e recuperação, com alertas de drift ativos ao final. [Painel da demonstração](artifacts/operational_demo/dashboard/index.html) e [resumo](artifacts/operational_demo/summary.json). Para reproduzir em uma pasta ainda inexistente: `make demo-observability PYTHON=.venv/bin/python`. O painel é atualizado sob demanda; etapas sem logs ficam `unknown` e registros vencidos ficam `stale`.
 
 **1. Gerar / atualizar o painel** (na raiz do repositório):
 
@@ -75,7 +78,7 @@ cd reports && python -m http.server 8765
 # no navegador: http://127.0.0.1:8765/observability/index.html
 ```
 
-No painel há links para os HTML do Evidently em `reports/drift/`. Detalhe das métricas: [Observabilidade](docs/observabilidade.md).
+O journal acumulativo é preservado a cada atualização. Os testes usam logs temporários. Para agrupar comandos, definir `TC04_RUN_ID`; para mudar o journal, `TC04_EXECUTION_LOG`. No painel há links para os HTML do Evidently. Detalhe das métricas: [Observabilidade](docs/observabilidade.md).
 
 ## Resultados principais
 
@@ -85,7 +88,7 @@ No painel há links para os HTML do Evidently em `reports/drift/`. Detalhe das m
 | Data drift atual | Utilização de crédito detectada em t1–t3; atrasos de 90 dias em t2–t3 | [Evidently t3](reports/drift/t3.html) |
 | Comparativo de intervenções | Em t3, AUC 0,842989 no perfil anterior e 0,800850 no atual | [Análise comparativa](reports/drift_comparison/analysis.html) |
 | Concept drift | AUC 0,843257 → 0,669626 e recall 74,09% → 45,35%, com features fixas | [Análise do experimento](artifacts/concept_drift/analysis.html) |
-| Observabilidade | Status do pipeline + alertas de drift/contrato no dashboard estático | [Dashboard](reports/observability/index.html) |
+| Observabilidade | Execuções reais, recuperação, duração, volumes, recursos e alertas de dados/desempenho | [Dashboard](reports/observability/index.html) |
 
 As métricas dos experimentos comparam o mesmo holdout ao seu controle; a validação do baseline é outra partição. As doses dos perfis de data drift não são economicamente equivalentes.
 

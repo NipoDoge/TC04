@@ -12,6 +12,7 @@ import pandas as pd
 from src.artifacts import sha256, snapshot
 from src.config import LATE90_COLUMN, PERIODS, SEED, UTILIZATION_COLUMN
 from src.contract import schema
+from src.execution_log import record, tracked
 
 LIMITATION = (
     "O dataset não fornece uma série temporal real. Os períodos são sintéticos "
@@ -35,6 +36,7 @@ def build_scenarios(holdout, seed=SEED):
     return scenarios
 
 
+@tracked("simulate_drift")
 def simulate(holdout_path="data/production/holdout.parquet",
              output_dir="data/production/scenarios", seed=SEED):
     holdout_path, output_dir = Path(holdout_path), Path(output_dir)
@@ -42,6 +44,7 @@ def simulate(holdout_path="data/production/holdout.parquet",
         raise FileExistsError(f"Destino já existe; escolha outro --output-dir: {output_dir}")
     payload, source = snapshot(holdout_path)
     holdout = pd.read_parquet(BytesIO(payload))
+    record(input_rows=len(holdout))
     scenarios = build_scenarios(holdout, seed)
     manifest = {
         "limitation": LIMITATION,
@@ -78,6 +81,7 @@ def simulate(holdout_path="data/production/holdout.parquet",
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         staging.rename(output_dir)
+    record(volume=sum(p["rows"] for p in manifest["periods"]), scenario_count=len(manifest["periods"]))
     return manifest
 
 

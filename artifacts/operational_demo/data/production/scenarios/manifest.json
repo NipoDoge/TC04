@@ -1,0 +1,99 @@
+{
+  "limitation": "O dataset não fornece uma série temporal real. Os períodos são sintéticos e reutilizam os mesmos clientes do holdout, na mesma ordem, para comparação pareada. Os rótulos históricos são preservados; o experimento não demonstra concept drift, causalidade econômica ou desempenho futuro real.",
+  "source": {
+    "path": "/Users/Elian/Dropbox/MLE_FIAP/TC04/TC04/artifacts/operational_demo/data/production/holdout.parquet",
+    "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
+  },
+  "design": "paired_full_holdout",
+  "scenario_definition": "credit_utilization_late90_v1",
+  "seed": 42,
+  "sampling": "Todos os registros; a composição da amostra permanece fixa.",
+  "randomization": "U uniforme por linha, compartilhado entre períodos; acrescenta um atraso quando U < probabilidade, independentemente de rótulos e scores.",
+  "target_policy": "SeriousDlqin2yrs preservado sem alterações.",
+  "periods": [
+    {
+      "name": "t0_control",
+      "file": "t0_control.parquet",
+      "rows": 35297,
+      "interventions": {
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "operation": "multiply",
+          "factor": 1.0
+        },
+        "NumberOfTimes90DaysLate": {
+          "operation": "add",
+          "increment": 1,
+          "selection_probability": 0.0
+        }
+      },
+      "changed_rows": {
+        "RevolvingUtilizationOfUnsecuredLines": 0,
+        "NumberOfTimes90DaysLate": 0
+      },
+      "sha256": "b88f1d376f3d1af9835acb6badc3b758b9e3a487f02e3207476c82e8e96e0889"
+    },
+    {
+      "name": "t1",
+      "file": "t1.parquet",
+      "rows": 35297,
+      "interventions": {
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "operation": "multiply",
+          "factor": 1.1
+        },
+        "NumberOfTimes90DaysLate": {
+          "operation": "add",
+          "increment": 1,
+          "selection_probability": 0.1
+        }
+      },
+      "changed_rows": {
+        "RevolvingUtilizationOfUnsecuredLines": 32977,
+        "NumberOfTimes90DaysLate": 3472
+      },
+      "sha256": "ca6344ce247e8ce00e9b09ee49713be97c9a82a0aa53ca28410f6905a1ca2b05"
+    },
+    {
+      "name": "t2",
+      "file": "t2.parquet",
+      "rows": 35297,
+      "interventions": {
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "operation": "multiply",
+          "factor": 1.3
+        },
+        "NumberOfTimes90DaysLate": {
+          "operation": "add",
+          "increment": 1,
+          "selection_probability": 0.25
+        }
+      },
+      "changed_rows": {
+        "RevolvingUtilizationOfUnsecuredLines": 32977,
+        "NumberOfTimes90DaysLate": 8889
+      },
+      "sha256": "04a5fe40261a4d6ec5a418e65398a4bf503b8a99cbea3ec158d99678b572fc2f"
+    },
+    {
+      "name": "t3",
+      "file": "t3.parquet",
+      "rows": 35297,
+      "interventions": {
+        "RevolvingUtilizationOfUnsecuredLines": {
+          "operation": "multiply",
+          "factor": 1.6
+        },
+        "NumberOfTimes90DaysLate": {
+          "operation": "add",
+          "increment": 1,
+          "selection_probability": 0.4
+        }
+      },
+      "changed_rows": {
+        "RevolvingUtilizationOfUnsecuredLines": 32977,
+        "NumberOfTimes90DaysLate": 14055
+      },
+      "sha256": "7bbf8f02fc997dd13dc80196bfc65b052b107ae698ea921ca213cc021b457a41"
+    }
+  ]
+}
