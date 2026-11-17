@@ -37,7 +37,7 @@ A suíte possui **114 testes**, incluindo os casos da entrega final adaptados ao
 | `compare-data-drift` | Comparar o perfil anterior com o atual, usando o mesmo modelo/holdout |
 | `concept-drift` | Alterar o mecanismo do alvo com features e modelo fixos |
 | `observe` | Consolidar logs reais, recursos e alertas no dashboard (Etapa 3) |
-| `demo-observability` | Executar demonstração isolada com falhas, bloqueio, recuperação e drift |
+| `demo-observability` | Executar demonstração no destino padrão, que deve estar inexistente; para repetir, seguir a seção de reprodução abaixo |
 
 Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe ajuda.
 
@@ -47,7 +47,27 @@ Os artefatos já estão versionados. Simulação, inferência e relatórios exig
 
 Os scripts registram início e término reais em `reports/observability/executions.jsonl`, com IDs, duração, linhas processadas, tipo de erro, CPU e pico de memória do processo. O dashboard consolida o histórico, a última execução de cada etapa, espaço em disco e alertas de data drift e concept drift. As métricas do baseline aparecem separadas dos cenários de degradação.
 
-A demonstração preservada contém **10 operações / 20 eventos**: duas falhas provocadas, um bloqueio de contrato e recuperação, com alertas de drift ativos ao final. [Painel da demonstração](artifacts/operational_demo/dashboard/index.html) e [resumo](artifacts/operational_demo/summary.json). Para reproduzir em uma pasta ainda inexistente: `make demo-observability PYTHON=.venv/bin/python`. O painel é atualizado sob demanda; etapas sem logs ficam `unknown` e registros vencidos ficam `stale`.
+A demonstração preservada contém **10 operações / 20 eventos**: duas falhas provocadas, um bloqueio de contrato e recuperação, com alertas de drift ativos ao final. [Painel da demonstração](artifacts/operational_demo/dashboard/index.html) e [resumo](artifacts/operational_demo/summary.json). O painel é atualizado sob demanda; etapas sem logs ficam `unknown` e registros vencidos ficam `stale`.
+
+### Reproduzir a demonstração
+
+Com as dependências instaladas, executar na raiz do repositório, escolhendo uma pasta de saída **que ainda não exista**:
+
+```bash
+.venv/bin/python -m src.demo_observability --output-dir artifacts/operational_demo_nova
+```
+
+O comando executa preparação, treino, ingestão, simulação, inferência e relatórios em uma pasta separada, preservando os dados, modelos e experimentos anteriores. O alvo `make demo-observability` usa o destino padrão `artifacts/operational_demo/`, já versionado neste repositório; por isso, a reexecução deve usar `--output-dir` como no exemplo. Em cada repetição, escolher outro nome de pasta. Se o destino já existir, o script encerra com `FileExistsError` para preservar seu conteúdo.
+
+A nova execução gera:
+
+- `artifacts/operational_demo_nova/dashboard/index.html`: painel da execução, com seus próprios modelos e relatórios.
+- `artifacts/operational_demo_nova/summary.json`: resumo com identificador, resultados e localização do painel.
+- Novos eventos no journal acumulativo `reports/observability/executions.jsonl`.
+
+As duas falhas operacionais e a rejeição de contrato são provocadas para demonstrar bloqueio e recuperação. Ao concluir, o resultado esperado é **20 eventos de 10 operações**, ingestão final `ok` com 500 registros e estado consolidado `alert` pelos cenários de drift. Os incidentes anteriores permanecem no histórico.
+
+### Atualizar e abrir os painéis
 
 **1. Gerar / atualizar o painel** (na raiz do repositório):
 
@@ -77,6 +97,7 @@ open reports/observability/index.html
 .venv/bin/python -m http.server 8765 --bind 127.0.0.1
 # painel principal: http://127.0.0.1:8765/reports/observability/index.html
 # demonstração: http://127.0.0.1:8765/artifacts/operational_demo/dashboard/index.html
+# nova execução: http://127.0.0.1:8765/artifacts/operational_demo_nova/dashboard/index.html
 ```
 
 Manter a raiz do repositório como diretório servido permite acessar os relatórios em `reports/` e `artifacts/`, incluindo a análise de concept drift. Encerrar o servidor com `Ctrl+C`.
