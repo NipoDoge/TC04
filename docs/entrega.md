@@ -22,9 +22,9 @@
 - [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
 - [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
 - [x] Executar experimento próprio de concept drift em `P(Y|X)` e analisar o modelo com features fixas.
-- [ ] Implementar a observabilidade da Etapa 3.
+- [x] Implementar a observabilidade da Etapa 3.
 - [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
 - [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
 - [ ] Publicar o vídeo STAR e inserir o link nesta seção.
 
-A Etapa 1 e os experimentos de data drift e concept drift da Etapa 2 possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. A Etapa 3, as pendências de governança e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.
+A Etapa 1, os experimentos de data drift e concept drift da Etapa 2 e a observabilidade da Etapa 3 (Opção A: `make observe` + [dashboard](../reports/observability/index.html); [métricas documentadas](observabilidade.md)) possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. As pendências de governança (procedência/responsáveis) e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.

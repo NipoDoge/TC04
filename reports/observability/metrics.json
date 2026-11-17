@@ -1,0 +1,80 @@
+{
+  "generated_at_utc": "2026-11-17T14:38:55.844489+00:00",
+  "pipeline": {
+    "stages": [
+      {
+        "name": "ingest",
+        "status": "rejected",
+        "volume": 2,
+        "duration_ms": null
+      },
+      {
+        "name": "train",
+        "status": "ok",
+        "volume": null,
+        "duration_ms": null
+      },
+      {
+        "name": "detect_drift",
+        "status": "alert",
+        "volume": 4,
+        "duration_ms": null
+      }
+    ]
+  },
+  "model": {
+    "metrics_path": "models/current/metrics.json",
+    "auc": 0.8572078813187844,
+    "recall_at_0.5": 0.7722681359044995,
+    "ks": 0.5675944207671723
+  },
+  "drift": {
+    "manifest_path": "reports/drift/manifest.json",
+    "created_at_utc": "2026-11-15T03:12:54.853689+00:00",
+    "scenarios": [
+      {
+        "name": "t0_control",
+        "rows": 35297,
+        "drift_share": 0.0,
+        "dataset_drift_detected": false,
+        "drifted_features": []
+      },
+      {
+        "name": "t1",
+        "rows": 35297,
+        "drift_share": 0.1,
+        "dataset_drift_detected": false,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines"
+        ]
+      },
+      {
+        "name": "t2",
+        "rows": 35297,
+        "drift_share": 0.2,
+        "dataset_drift_detected": true,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines",
+          "NumberOfTimes90DaysLate"
+        ]
+      },
+      {
+        "name": "t3",
+        "rows": 35297,
+        "drift_share": 0.2,
+        "dataset_drift_detected": true,
+        "drifted_features": [
+          "RevolvingUtilizationOfUnsecuredLines",
+          "NumberOfTimes90DaysLate"
+        ]
+      }
+    ],
+    "alerts": {
+      "dataset_drift_count": 2,
+      "any_alert": true
+    }
+  },
+  "contract_alerts": {
+    "quarantine_file_count": 2
+  }
+}

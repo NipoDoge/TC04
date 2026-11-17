@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Observabilidade — saúde do pipeline</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --fail: #991b1b;
+      --fail-bg: #fee2e2;
+      --alert: #9a3412;
+      --alert-bg: #ffedd5;
+      --rejected: #7c2d12;
+      --rejected-bg: #fed7aa;
+      --unknown: #44403c;
+      --unknown-bg: #e7e5e4;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ebe6de 0%, var(--bg) 180px);
+      line-height: 1.45;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+    h2 { margin: 1.75rem 0 0.6rem; font-size: 1.15rem; border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; }
+    p.meta { margin: 0; color: var(--muted); font-size: 0.92rem; }
+    .banner {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--card);
+    }
+    .banner.alert { border-color: #fdba74; background: var(--alert-bg); }
+    .banner.ok { border-color: #86efac; background: var(--ok-bg); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.9rem;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.75rem 0.85rem;
+    }
+    .stat .label { display: block; color: var(--muted); font-size: 0.8rem; }
+    .stat .value { display: block; font-size: 1.25rem; font-weight: 650; margin-top: 0.15rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--line);
+      font-size: 0.92rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.45rem 0.55rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { background: #f5f5f4; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .badge.ok { color: var(--ok); background: var(--ok-bg); }
+    .badge.fail { color: var(--fail); background: var(--fail-bg); }
+    .badge.alert { color: var(--alert); background: var(--alert-bg); }
+    .badge.rejected { color: var(--rejected); background: var(--rejected-bg); }
+    .badge.unknown { color: var(--unknown); background: var(--unknown-bg); }
+    a { color: #1d4ed8; }
+    footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Observabilidade do pipeline</h1>
+    <p class="meta">Snapshot gerado em 2026-11-17T14:38:55.844489+00:00 (UTC) · pasta <code>reports/observability/</code></p>
+
+    <div class="banner alert">
+      <strong>Alertas:</strong>
+      dataset_drift = 2 cenário(s);
+      any_alert = True;
+      quarentena (contrato) = 2 arquivo(s).
+    </div>
+
+    <div class="grid">
+      <div class="stat"><span class="label">AUC</span><span class="value">0.8572</span></div>
+      <div class="stat"><span class="label">Recall @ 0.5</span><span class="value">0.7723</span></div>
+      <div class="stat"><span class="label">KS</span><span class="value">0.5676</span></div>
+      <div class="stat"><span class="label">Cenários drift</span><span class="value">4</span></div>
+    </div>
+
+    <h2>Status das etapas</h2>
+    <table>
+      <thead><tr><th>Etapa</th><th>Status</th><th>Volume</th><th>Duração (ms)</th></tr></thead>
+      <tbody>
+        <tr><td>ingest</td><td><span class="badge rejected">rejected</span></td><td>2</td><td>—</td></tr><tr><td>train</td><td><span class="badge ok">ok</span></td><td>—</td><td>—</td></tr><tr><td>detect_drift</td><td><span class="badge alert">alert</span></td><td>4</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Métricas do modelo</h2>
+    <table>
+      <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>metrics_path</td><td><code>models/current/metrics.json</code></td></tr>
+        <tr><td>auc</td><td>0.8572</td></tr>
+        <tr><td>recall_at_0.5</td><td>0.7723</td></tr>
+        <tr><td>ks</td><td>0.5676</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Drift por cenário</h2>
+    <p class="meta">Links relativos para HTML Evidently existentes (somente leitura; pasta <code>reports/drift/</code> não é regenerada).</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Cenário</th><th>Linhas</th><th>drift_share</th>
+          <th>dataset_drift</th><th>features</th><th>Evidently</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>t0_control</td><td>35297</td><td>0.0000</td><td><span class="badge ok">não</span></td><td>—</td><td><a href="../drift/t0_control.html">t0_control.html</a></td></tr><tr><td>t1</td><td>35297</td><td>0.1000</td><td><span class="badge ok">não</span></td><td>RevolvingUtilizationOfUnsecuredLines</td><td><a href="../drift/t1.html">t1.html</a></td></tr><tr><td>t2</td><td>35297</td><td>0.2000</td><td><span class="badge alert">sim</span></td><td>RevolvingUtilizationOfUnsecuredLines, NumberOfTimes90DaysLate</td><td><a href="../drift/t2.html">t2.html</a></td></tr><tr><td>t3</td><td>35297</td><td>0.2000</td><td><span class="badge alert">sim</span></td><td>RevolvingUtilizationOfUnsecuredLines, NumberOfTimes90DaysLate</td><td><a href="../drift/t3.html">t3.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Alertas de contrato / quarentena</h2>
+    <table>
+      <thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>quarantine_file_count</td><td>2</td></tr>
+        <tr><td>drift.manifest_path</td><td><code>reports/drift/manifest.json</code></td></tr>
+        <tr><td>drift.created_at_utc</td><td>2026-11-15T03:12:54.853689+00:00</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Amostra de eventos</h2>
+    <table>
+      <thead><tr><th>ts</th><th>source</th><th>event</th><th>status</th><th>volume</th></tr></thead>
+      <tbody>
+        <tr><td>2026-11-17T14:38:55.844489+00:00</td><td>ingest</td><td>pipeline_status</td><td><span class="badge rejected">rejected</span></td><td>2</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>train</td><td>model_snapshot</td><td><span class="badge ok">ok</span></td><td>—</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>detect_drift</td><td>drift_scenario</td><td><span class="badge ok">ok</span></td><td>35297</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>detect_drift</td><td>drift_scenario</td><td><span class="badge ok">ok</span></td><td>35297</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>detect_drift</td><td>drift_scenario</td><td><span class="badge alert">alert</span></td><td>35297</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>detect_drift</td><td>drift_scenario</td><td><span class="badge alert">alert</span></td><td>35297</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>detect_drift</td><td>pipeline_status</td><td><span class="badge alert">alert</span></td><td>4</td></tr><tr><td>2026-11-17T14:38:55.844489+00:00</td><td>observe</td><td>pipeline_status</td><td><span class="badge ok">ok</span></td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <footer>
+      Gerado por <code>python -m src.observability</code> / <code>make observe</code>.
+      Escrita exclusiva sob <code>reports/observability/</code>.
+    </footer>
+  </main>
+</body>
+</html>

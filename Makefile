@@ -1,10 +1,11 @@
 PYTHON ?= python
 .DEFAULT_GOAL := help
-.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift compare-data-drift concept-drift test
+.PHONY: help prepare train demo-bad demo-good simulate-drift predict detect-drift compare-data-drift concept-drift observe test
 
 help:
-	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, compare-data-drift, concept-drift, test"
+	@echo "Alvos: prepare, train, demo-bad, demo-good, simulate-drift, predict, detect-drift, compare-data-drift, concept-drift, observe, test"
 	@echo "Sequência: prepare -> train -> simulate-drift -> predict -> detect-drift"
+	@echo "Observabilidade (aditivo): observe"
 	@echo "Use PYTHON=.venv/bin/python para selecionar o ambiente."
 
 # Usa o holdout existente; não executa prepare nem altera a referência.
@@ -17,6 +18,10 @@ predict:
 
 detect-drift:
 	$(PYTHON) -m src.detect_drift
+
+# Pós-coleta + dashboard HTML; escreve só em reports/observability/.
+observe:
+	$(PYTHON) -m src.observability
 
 compare-data-drift:
 	$(PYTHON) -m src.compare_data_drift

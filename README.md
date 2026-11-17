@@ -10,7 +10,7 @@ Os cenários são sintéticos, sem série temporal real ou comprovação de caus
 | --- | --- |
 | 1 — Qualidade e contratos | Executada: Pandera, bloqueio/quarentena e baseline treinado |
 | 2 — Drift | Executada: data drift, concept drift, predições e relatórios Evidently |
-| 3 — Observabilidade | Pendente: centralização de logs, métricas e rastreamento/dashboard |
+| 3 — Observabilidade | Executada (Opção A): coleta centralizada, `make observe` e dashboard em `reports/observability/index.html` |
 | 4 — Governança e vídeo | Plano documentado; procedência dos dados, responsáveis e vídeo pendentes |
 
 **Vídeo STAR:** pendente de gravação e publicação, com duração máxima de cinco minutos. [Roteiro e checklist](docs/entrega.md).
@@ -36,6 +36,7 @@ A suíte possui **65 testes**, incluindo os casos da entrega final adaptados aos
 | `simulate-drift` / `predict` / `detect-drift` | Gerar cenários, predições e relatórios de data drift |
 | `compare-data-drift` | Comparar o perfil anterior com o atual, usando o mesmo modelo/holdout |
 | `concept-drift` | Alterar o mecanismo do alvo com features e modelo fixos |
+| `observe` | Consolidar logs/métricas e gerar o dashboard de observabilidade (Etapa 3) |
 
 Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe ajuda.
 
@@ -67,6 +68,7 @@ O [plano completo de governança](docs/governanca.md) detalha fontes legais, tra
 | Documento | Conteúdo |
 | --- | --- |
 | [Arquitetura](docs/arquitetura.md) | Dados, features, modelo, fluxo e mapa das evidências |
+| [Observabilidade](docs/observabilidade.md) | Métricas de saúde, `make observe` e dashboard (Etapa 3) |
 | [Etapa 1](docs/etapa-1.md) | Contrato, limpeza, limitações, baseline e execução preservada |
 | [Data drift](docs/data-drift.md) | Cenários atuais, predições, métodos e relatórios estatísticos |
 | [Comparativo](docs/comparativo-drift.md) | Perfil anterior, efeitos no modelo e importância das features |

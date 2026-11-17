@@ -150,6 +150,10 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
+# Local planning / squad briefing (não versionar)
+briefing/
+context.md
+
 # Environments
 .env
 .envrc

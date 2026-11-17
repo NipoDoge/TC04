@@ -17,7 +17,7 @@
 | Detecção de data drift | [detect_drift.py](../src/detect_drift.py), [resumo estatístico](../reports/drift/summary.csv) e relatórios HTML do Evidently | Executada: utilização de crédito detectada em t1–t3; atrasos de 90 dias detectados em t2–t3 |
 | Comparativo de intervenções | [compare_data_drift.py](../src/compare_data_drift.py) e [análise comparativa](../reports/drift_comparison/analysis.html) | Mesmo modelo/holdout; perfil anterior de renda/dívida preservado e comparado ao perfil atual de utilização/atrasos |
 | Concept drift e comportamento do modelo | [concept_drift.py](../src/concept_drift.py), [análise](../artifacts/concept_drift/analysis.html) e [métricas](../artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
-| Observabilidade centralizada | Logs locais na ingestão; sem dashboard ou rastreamento identificado | Parcial |
+| Observabilidade centralizada | [`src/observability.py`](../src/observability.py), `make observe`, artefatos em [`reports/observability/`](../reports/observability/) e [métricas documentadas](observabilidade.md) | Executada (Opção A: dashboard [`index.html`](../reports/observability/index.html)) |
 | Governança e causalidade | [Plano de governança](governanca.md) | Política proposta e hipóteses documentadas |
 | Vídeo STAR | [Entrega e roteiro](entrega.md) | Gravação e link pendentes |
 
