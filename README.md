@@ -11,7 +11,7 @@ Os cenários são sintéticos, sem série temporal real ou comprovação de caus
 | 1 — Qualidade e contratos | Executada: Pandera, bloqueio/quarentena e baseline treinado |
 | 2 — Drift | Executada: data drift, concept drift, predições e relatórios Evidently |
 | 3 — Observabilidade | Executada: logs reais por operação, recursos, histórico e dashboard com `make observe` |
-| 4 — Governança e vídeo | Plano documentado; procedência dos dados, responsáveis e vídeo pendentes |
+| 4 — Governança e vídeo | Governança documentada, enquadramento acadêmico validado e dados revisados pelo grupo; gravação, revisão e publicação do vídeo pendentes |
 
 **Vídeo STAR:** pendente de gravação e publicação, com duração máxima de cinco minutos. [Roteiro e checklist](docs/entrega.md).
 
@@ -43,7 +43,7 @@ Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe 
 
 Os artefatos já estão versionados. Simulação, inferência e relatórios exigem **destinos inexistentes**; para novas execuções, usar os argumentos `--output-dir` dos scripts. Preparação e geração dos lotes sobrescrevem suas saídas; o treino publica uma nova versão. [Reprodução e ressalvas](docs/reproducao.md).
 
-## Observabilidade (Etapa 3)
+## Observabilidade
 
 Os scripts registram início e término reais em `reports/observability/executions.jsonl`, com IDs, duração, linhas processadas, tipo de erro, CPU e pico de memória do processo. O dashboard consolida o histórico, a última execução de cada etapa, espaço em disco e alertas de data drift e concept drift. As métricas do baseline aparecem separadas dos cenários de degradação.
 
@@ -71,12 +71,15 @@ xdg-open reports/observability/index.html
 open reports/observability/index.html
 ```
 
-- **Servidor HTTP local** (útil se o navegador bloquear links relativos via `file://`):
+- **Servidor HTTP local** (executar na raiz do repositório):
 
 ```bash
-cd reports && python -m http.server 8765
-# no navegador: http://127.0.0.1:8765/observability/index.html
+.venv/bin/python -m http.server 8765 --bind 127.0.0.1
+# painel principal: http://127.0.0.1:8765/reports/observability/index.html
+# demonstração: http://127.0.0.1:8765/artifacts/operational_demo/dashboard/index.html
 ```
+
+Manter a raiz do repositório como diretório servido permite acessar os relatórios em `reports/` e `artifacts/`, incluindo a análise de concept drift. Encerrar o servidor com `Ctrl+C`.
 
 O journal acumulativo é preservado a cada atualização. Os testes usam logs temporários. Para agrupar comandos, definir `TC04_RUN_ID`; para mudar o journal, `TC04_EXECUTION_LOG`. No painel há links para os HTML do Evidently. Detalhe das métricas: [Observabilidade](docs/observabilidade.md).
 
@@ -94,11 +97,46 @@ As métricas dos experimentos comparam o mesmo holdout ao seu controle; a valida
 
 ## Governança e privacidade
 
-Não foram identificados nome, CPF, telefone ou e-mail. O índice original é removido; isso **não comprova anonimização**. Dados financeiros, combinações de atributos e valores em quarentena exigem revisão antes da divulgação.
+O dataset foi obtido no [Kaggle — Give Me Some Credit](https://www.kaggle.com/c/GiveMeSomeCredit/) em **28 de outubro de 2026**. Sua utilização neste projeto limita-se a fins acadêmicos, sem fins lucrativos.
 
-A base legal proposta para a fintech hipotética é proteção do crédito; o enquadramento do uso acadêmico e os termos do dataset continuam pendentes. As políticas são propostas documentais, sem comprovação de conformidade operacional integral.
+Não foi informado um identificador de versão externa do dataset. A cópia de treino utilizada (`data/raw/cs-training.csv`) é identificada pelo SHA-256 registrado no [manifesto da Etapa 1](artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json), no campo `input.sha256`.
+
+Não foram identificados nome, CPF, telefone ou e-mail. O índice original é removido, embora isso não comprove anonimização.
+
+A base legal proposta para a fintech hipotética é proteção do crédito. O enquadramento acadêmico validado pelo grupo descreve o Tech Challenge da Fase 4 do MLET/FIAP como estudo educacional de qualidade, drift e observabilidade, sem decisões reais de crédito. Abrange obtenção, preparação, treinamento, simulação e apresentação dos resultados à equipe, avaliadores e demais pessoas com acesso ao repositório e ao vídeo. O texto completo está em [Enquadramento acadêmico](docs/governanca.md#enquadramento-acadêmico).
+
+A [revisão dos dados para publicação](docs/governanca.md#revisão-da-publicação) está concluída conforme confirmação do grupo. O documento mantém o escopo da revisão e as diretrizes para apresentação e novas publicações, priorizando resultados agregados e demonstrações sintéticas. A revisão da gravação integra a entrega do vídeo STAR. As políticas documentadas não comprovam conformidade operacional integral.
 
 A retenção proposta é: dados brutos/derivados até 90 dias após a avaliação final; quarentena até 30 dias após a triagem; logs sem valores individuais por 180 dias após a execução; relatórios por 12 meses após a avaliação; modelos/metadados até 12 meses após a substituição. O descarte não está automatizado.
+
+### Causalidade e limites das conclusões
+
+Os experimentos permitem atribuir diferenças à **intervenção programada dentro da simulação**: no data drift, alteram-se utilização de crédito e atrasos de 90 dias, preservando os rótulos; no concept drift, altera-se o mecanismo do alvo, mantendo features, modelo e predições fixos. As métricas são comparadas ao controle do mesmo holdout. Os cenários reutilizam uma amostra aleatória e não representam uma série temporal real de concessões.
+
+Inflação, redução de renda, endividamento e mudanças na política de aprovação são hipóteses de domínio a investigar. O projeto não estima seus efeitos econômicos. PSI e KS identificam mudanças de distribuição; sua detecção, a importância de uma feature ou a queda de AUC não estabelecem, isoladamente, a causa da degradação. Um diagnóstico operacional deve verificar qualidade, seleção da população, política de crédito e maturação dos rótulos; o alvo tem horizonte de dois anos.
+
+### Riscos de viés e mitigação proposta
+
+| Risco identificado | Mitigação a avaliar antes de uso operacional |
+| --- | --- |
+| Excluir renda/dependentes ausentes e valores extremos pode mudar a população atendida | Comparar incluídos e excluídos por idade e renda; avaliar imputação ajustada somente no treino e indicador de ausência como alternativa à exclusão |
+| Desequilíbrio do alvo e limiar fixo podem distribuir erros de forma desigual | Avaliar AUC, recall, FPR, FNR e calibração por segmento, com tamanho amostral e incerteza; definir o limiar considerando inadimplência e recusa indevida |
+| Idade, dependentes e atributos financeiros podem funcionar como proxies socioeconômicos | Justificar a necessidade das variáveis, comparar alternativas e submeter impactos à revisão de Risco e Privacidade |
+
+O `scale_pos_weight` trata o desequilíbrio de classes no treinamento, mas não demonstra equidade. A análise existente aponta risco de seleção na limpeza; a auditoria de equidade e as comparações de alternativas acima são propostas. A ausência de atributos suficientes para avaliar todos os grupos protegidos limita as conclusões.
+
+### Resposta à degradação
+
+**Implementado:** bloqueio e quarentena por contrato, detecção estatística de data drift, alertas de desempenho no experimento de concept drift e registro de execuções reais no painel local. Nesse experimento, queda absoluta de AUC ≥ 0,05 ou recall ≥ 0,10 contra o controle do mesmo holdout gera alerta; esses limiares iniciais precisam de calibração para uma operação real.
+
+**Fluxo operacional proposto:**
+
+1. Registrar incidente com lote, horário e versões de código, dados e modelo. Engenharia investiga integridade e origem; Ciência de Dados examina distribuição, rótulos e desempenho; Risco avalia o impacto.
+2. Corrigir e revalidar lotes bloqueados. Em degradação crítica, o responsável operacional decide sobre suspensão da decisão automática ou encaminhamento à análise humana.
+3. Avaliar correção, recalibração ou retreinamento, comparando o candidato em dados independentes, inclusive por segmento. Exigir aprovação de Risco e do responsável técnico antes da publicação.
+4. Acompanhar a nova versão, manter a anterior para rollback e registrar o encerramento e as medidas de prevenção.
+
+O painel é atualizado sob demanda. Notificações externas, resposta a incidentes e promoção de novos modelos não estão automatizadas. As responsabilidades funcionais do plano estão descritas na documentação de governança.
 
 O [plano completo de governança](docs/governanca.md) detalha fontes legais, tratamento dos dados, retenção, vieses, causalidade, responsabilidades e resposta à degradação.
 

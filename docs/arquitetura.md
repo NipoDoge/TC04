@@ -18,12 +18,14 @@
 | Comparativo de intervenções | [compare_data_drift.py](../src/compare_data_drift.py) e [análise comparativa](../reports/drift_comparison/analysis.html) | Mesmo modelo/holdout; perfil anterior de renda/dívida preservado e comparado ao perfil atual de utilização/atrasos |
 | Concept drift e comportamento do modelo | [concept_drift.py](../src/concept_drift.py), [análise](../artifacts/concept_drift/analysis.html) e [métricas](../artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
 | Observabilidade centralizada | [`src/execution_log.py`](../src/execution_log.py), [`src/observability.py`](../src/observability.py), `make observe`, artefatos em [`reports/observability/`](../reports/observability/) e [métricas documentadas](observabilidade.md) | Executada (logs reais de início/término, duração, volume, CPU/memória/disco, recuperação e dashboard [`index.html`](../reports/observability/index.html)) |
-| Governança e causalidade | [Plano de governança](governanca.md) | Política proposta e hipóteses documentadas |
+| Governança e causalidade | [Plano de governança](governanca.md) | Plano e hipóteses documentados; enquadramento acadêmico validado e dados revisados pelo grupo |
 | Vídeo STAR | [Entrega e roteiro](entrega.md) | Gravação e link pendentes |
 
 ## Dados e finalidade
 
-Os arquivos locais correspondem ao conjunto **Give Me Some Credit**, com 150.000 registros no `cs-training.csv`. A finalidade acadêmica é estimar o risco de inadimplência e estudar qualidade e confiabilidade. A origem de obtenção, a versão e os termos de uso devem ser registrados antes da entrega; a presença dos arquivos no Git não comprova autorização de redistribuição.
+Os arquivos locais correspondem ao conjunto **Give Me Some Credit**, com 150.000 registros no `cs-training.csv`. A finalidade acadêmica é estimar o risco de inadimplência e estudar qualidade e confiabilidade. A fonte no Kaggle, a data de obtenção e a identificação da cópia de treino estão consolidadas no [README — Governança e privacidade](../README.md#governança-e-privacidade). Não foi informado um identificador de versão externa; o SHA-256 do CSV utilizado está preservado no campo `input.sha256` do [manifesto da Etapa 1](../artifacts/stage1/20261114T201315-0300-5fbfe64d/manifest.json).
+
+O [enquadramento acadêmico](governanca.md#enquadramento-acadêmico) foi validado pelo grupo, que também confirmou a conclusão da [revisão dos dados para publicação](governanca.md#revisão-da-publicação). As responsabilidades funcionais permanecem descritas no plano de governança.
 
 O alvo `SeriousDlqin2yrs` representa inadimplência grave no horizonte de dois anos. As dez variáveis preditoras são:
 

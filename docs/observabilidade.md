@@ -17,6 +17,14 @@
 
 Abra o HTML no navegador. A coleta não executa nem retreina o pipeline. Os registros passam a existir a partir da instrumentação; artefatos anteriores não são convertidos em execuções fictícias.
 
+Para abrir por HTTP, executar **na raiz do repositório**:
+
+```bash
+.venv/bin/python -m http.server 8765 --bind 127.0.0.1
+```
+
+O painel principal fica em `http://127.0.0.1:8765/reports/observability/index.html`; o da demonstração, em `http://127.0.0.1:8765/artifacts/operational_demo/dashboard/index.html`. Servir a raiz mantém acessíveis os links relativos para data drift em `reports/` e concept drift em `artifacts/`. Encerrar com `Ctrl+C`.
+
 ## Contrato dos eventos
 
 - `run_id`: agrupa etapas de uma execução; definir `TC04_RUN_ID` para compartilhar o identificador entre processos. Sem essa variável, cada chamada recebe seu próprio identificador.

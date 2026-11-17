@@ -8,7 +8,41 @@
 
 Na hipótese de operação real da fintech, a base legal proposta para avaliação de risco é **proteção do crédito, art. 7º, X, da LGPD**. O controlador deverá validar sua adequação à finalidade e aos dados tratados. Essa hipótese não autoriza automaticamente o reuso acadêmico ou a publicação da base. Finalidade acadêmica também exige observar os arts. 7º e 11, conforme art. 4º, II, b. Fonte: [texto atualizado da LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html).
 
-Para este estudo, permanece pendente documentar a procedência, os termos de uso e o enquadramento do tratamento. O caráter público de uma fonte não afasta, por si só, os cuidados com dados pessoais. Fonte: [perguntas frequentes da ANPD](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes).
+A fonte, a data de obtenção e a finalidade acadêmica estão registradas no [README — Governança e privacidade](../README.md#governança-e-privacidade). O mesmo registro informa a ausência de identificador de versão externa e aponta o SHA-256 que identifica a cópia de treino utilizada.
+
+O grupo confirmou a validação do enquadramento acadêmico e a conclusão da revisão dos dados. As seções abaixo registram esse estado e mantêm as diretrizes para apresentação e novas publicações.
+
+### Enquadramento acadêmico
+
+**Situação: validado pelo grupo.**
+
+O TC04 é um projeto acadêmico da Fase 4 do MLET/FIAP, desenvolvido para estudar a sustentação e a confiabilidade de um classificador de risco de crédito. Sua finalidade é educacional, sem exploração comercial ou concessão real de crédito. O estudo utiliza o conjunto Give Me Some Credit, com fonte, data de obtenção e identificação da cópia de treino registradas no README.
+
+As atividades abrangem obtenção e armazenamento local dos dados, exploração, limpeza, separação de partições, treinamento e avaliação do baseline, validação de lotes, simulações de data drift e concept drift, geração de predições, relatórios e logs e apresentação dos resultados no repositório e no vídeo STAR. Os cenários de degradação são sintéticos; as conclusões se limitam às intervenções realizadas no experimento.
+
+O público previsto é composto pelos integrantes do grupo, docentes e avaliadores, além de outras pessoas que tenham acesso ao repositório GitHub e ao vídeo conforme a configuração de compartilhamento adotada. A apresentação deve priorizar resultados agregados e exemplos sintéticos. Registros financeiros individuais e valores em quarentena integram a revisão da publicação descrita a seguir.
+
+O projeto remove o índice original das features, valida o contrato de dados e mantém o journal operacional com contagens e métricas, sem valores individuais. A ausência de identificadores diretos não comprova anonimização. A retenção proposta está documentada neste plano; sua execução ainda depende da equipe. O enquadramento descreve o contexto acadêmico e não representa aprovação para uso operacional do modelo.
+
+A validação registrada refere-se ao contexto acadêmico deste projeto. A base proposta para uma operação real da fintech permanece uma hipótese do plano de implantação futura.
+
+### Revisão da publicação
+
+**Situação: revisão dos dados concluída conforme confirmação do grupo.** A tabela mantém o escopo da revisão e as diretrizes para apresentação e novas publicações. A inspeção da gravação integra a preparação do vídeo STAR, ainda pendente.
+
+| Categoria e localização | Aspectos abrangidos pela revisão | Diretrizes para apresentação e novas publicações |
+| --- | --- | --- |
+| Dados brutos em `data/raw/` | Necessidade de compartilhar o conjunto completo e exposição de registros financeiros individuais | Priorizar referência à fonte e resultados agregados; registrar a justificativa e o alcance de acesso se os arquivos forem mantidos |
+| Partições e cenários em `data/` e `artifacts/` | Presença de atributos financeiros e possibilidade de relacionar registros entre arquivos | Avaliar cada conjunto necessário à reprodução; usar exemplos sintéticos para demonstrações de linhas individuais |
+| Quarentenas e `*_errors.csv` | Valores rejeitados, índices e amostras de registros | Apresentar o resumo agregado por regra; evitar exibir os valores individuais no vídeo e registrar o tratamento dos arquivos versionados |
+| Predições e intervenções em `data/predictions/` e `artifacts/` | Scores, rótulos e posições que permitem associação ao dataset de origem | Priorizar métricas e distribuições agregadas na apresentação; justificar a manutenção dos arquivos por registro |
+| Modelos e manifestos em `models/` e `artifacts/` | Metadados, caminhos de ambiente e necessidade dos artefatos para reprodução | Manter a rastreabilidade necessária e revisar metadados expostos antes da apresentação |
+| HTML, JSON, CSV de métricas e notebook | Amostras individuais, tabelas incorporadas e saídas antigas | Conferir o conteúdo efetivo; apresentar agregados e remover ou substituir exposições desnecessárias que a revisão identificar |
+| Journal e logs de console | Mensagens de exceção e outros campos que possam conter valores individuais | Priorizar o journal estruturado; revisar os logs textuais separadamente, pois não têm o mesmo contrato de campos |
+
+Em novas revisões, registrar, por categoria, os caminhos inspecionados, a decisão de **manter, ajustar, substituir por material sintético ou restringir**, a justificativa e a data. Qualquer ajuste deve ser conferido após sua execução. Quando houver remoção de conteúdo já compartilhado, incluir o histórico Git e as cópias conhecidas na avaliação do alcance da medida.
+
+**Vídeo STAR:** mostrar painéis, métricas e exemplos sintéticos; conferir o conteúdo visível, os arquivos abertos e a configuração de acesso ao vídeo antes da publicação.
 
 ### Privacy by Design e by Default
 
@@ -18,7 +52,7 @@ Para este estudo, permanece pendente documentar a procedência, os termos de uso
 | Segregação | Diretórios de dados brutos, referência e holdout | Separar ambientes, identidades e permissões; manter chaves de associação fora da área analítica |
 | Acesso | Sem controle de acesso implementado no projeto | Menor privilégio; dados detalhados restritos à equipe autorizada; revisão ao trocar integrantes |
 | Armazenamento e transporte | Arquivos locais; sem configuração de criptografia no código | Armazenamento e backups criptografados; TLS nas transferências; segredos fora do Git |
-| Publicação | CSV e Parquet estão versionados | Avaliar termos e risco; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
+| Publicação | CSV e Parquet estão versionados; revisão dos dados concluída pelo grupo | Em novas publicações, avaliar exposição de registros individuais; preferir amostras sintéticas e resultados agregados; tratar histórico Git se houver remoção necessária |
 | Logs e relatórios | Log de lote e CSV de falhas | Não registrar linhas de clientes; restringir quarentena e sanitizar valores antes de compartilhar relatórios ou vídeo |
 | Descarte | Sem rotina implementada | Aplicar a tabela de retenção, incluindo cópias, backups e histórico sob controle da equipe |
 
@@ -107,7 +141,7 @@ Em suspeita de exposição de dados, conter acessos, preservar evidências restr
 
 ## Responsabilidades e rastreabilidade
 
-Os papéis abaixo deverão ser atribuídos nominalmente pelo grupo antes da entrega; não há pessoas ou contatos presumidos.
+A tabela organiza as responsabilidades do plano de governança por função, incluindo os papéis previstos para uma implantação futura.
 
 | Papel | Responsabilidade proposta |
 | --- | --- |

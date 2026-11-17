@@ -16,8 +16,12 @@
 - [x] Documentar arquitetura e distinguir controles implementados de políticas propostas.
 - [x] Explicar tratamento de dados, base legal proposta, minimização e retenção.
 - [x] Documentar riscos de viés, hipóteses causais e plano de resposta.
-- [ ] Registrar origem, versão, termos de uso e enquadramento dos dados acadêmicos.
-- [ ] Atribuir responsáveis e validar as políticas propostas.
+- [x] Registrar fonte e data de obtenção no [README](../README.md#governança-e-privacidade).
+- [x] Identificar a cópia de treino pelo SHA-256 do manifesto da Etapa 1 e explicitar que a versão externa não foi informada.
+- [x] Documentar o [enquadramento acadêmico](governanca.md#enquadramento-acadêmico), com finalidade, atividades, público e limites do estudo.
+- [x] Registrar a validação do enquadramento acadêmico pelo grupo.
+- [x] Documentar o escopo e as diretrizes da [revisão da publicação](governanca.md#revisão-da-publicação).
+- [x] Documentar as responsabilidades funcionais do plano de governança.
 - [x] Executar a demonstração e guardar evidências de contrato, quarentena, modelo e métricas.
 - [x] Gerar cenários sintéticos de data drift e predições com o modelo salvo.
 - [x] Executar a detecção estatística e gerar os relatórios HTML de data drift da Etapa 2.
@@ -25,7 +29,7 @@
 - [x] Implementar a observabilidade da Etapa 3 com logs reais, recursos, histórico e alertas de desempenho.
 - [x] Demonstrar falhas operacionais, bloqueio por contrato e recuperação em execução isolada.
 - [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
-- [ ] Revisar os dados e valores expostos no repositório, relatórios e vídeo.
-- [ ] Publicar o vídeo STAR e inserir o link nesta seção.
+- [x] Registrar a conclusão da revisão dos dados e materiais do projeto, conforme confirmação do grupo.
+- [ ] Gravar, revisar e publicar o vídeo STAR e inserir o link nesta seção.
 
-A Etapa 1, os experimentos de data drift e concept drift da Etapa 2 e a observabilidade da Etapa 3 (logs reais por execução + `make observe` + [dashboard](../reports/observability/index.html); [métricas documentadas](observabilidade.md)) possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. As pendências de governança (procedência/responsáveis) e o vídeo ainda precisam ser concluídos para a entrega completa do projeto.
+A Etapa 1, os experimentos de data drift e concept drift da Etapa 2 e a observabilidade da Etapa 3 (logs reais por execução + `make observe` + [dashboard](../reports/observability/index.html); [métricas documentadas](observabilidade.md)) possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. A fonte, a data de obtenção e a identificação da cópia de treino estão documentadas. O grupo confirmou a validação do enquadramento acadêmico e a conclusão da revisão dos dados; as responsabilidades funcionais estão descritas no plano. A pendência deste checklist é gravar, revisar e publicar o vídeo STAR, inserindo seu link acessível na documentação.
