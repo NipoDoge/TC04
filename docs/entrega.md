@@ -4,8 +4,6 @@
 
 **Link do vídeo: pendente de gravação e publicação pelo grupo.** Substituir esta indicação por um link acessível antes da entrega. Duração máxima: 5 minutos.
 
-[Roteiro detalhado em Word](roteiro-video-star.docx): passo a passo com tempos, falas sugeridas, telas, destaques visuais e checklist de gravação.
-
 | Tempo | STAR | Conteúdo sugerido |
 | --- | --- | --- |
 | 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
