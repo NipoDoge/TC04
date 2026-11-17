@@ -42,6 +42,41 @@ Adicionar `PYTHON=.venv/bin/python` para escolher o interpretador. `make` exibe 
 
 Os artefatos já estão versionados. Simulação, inferência e relatórios exigem **destinos inexistentes**; para novas execuções, usar os argumentos `--output-dir` dos scripts. Preparação e geração dos lotes sobrescrevem suas saídas; o treino publica uma nova versão. [Reprodução e ressalvas](docs/reproducao.md).
 
+## Observabilidade (Etapa 3)
+
+O dashboard consolida status do pipeline, volumes, snapshot do modelo e alertas de drift/contrato a partir dos artefatos já existentes (pós-coleta). Não regenera Evidently nem o modelo.
+
+**1. Gerar / atualizar o painel** (na raiz do repositório):
+
+```bash
+make observe PYTHON=.venv/bin/python
+# equivalente:
+python -m src.observability
+```
+
+Saída em `reports/observability/`: `events.jsonl`, `metrics.json` e [`index.html`](reports/observability/index.html).
+
+**2. Abrir o dashboard** — escolha uma das formas:
+
+- **Arquivo local:** abra `reports/observability/index.html` no navegador (duplo clique no Explorer/Finder, ou arraste o arquivo para o Chrome/Firefox).
+- **Pelo terminal (caminho file://):**
+
+```bash
+# Linux / WSL (exemplo)
+xdg-open reports/observability/index.html
+# macOS
+open reports/observability/index.html
+```
+
+- **Servidor HTTP local** (útil se o navegador bloquear links relativos via `file://`):
+
+```bash
+cd reports && python -m http.server 8765
+# no navegador: http://127.0.0.1:8765/observability/index.html
+```
+
+No painel há links para os HTML do Evidently em `reports/drift/`. Detalhe das métricas: [Observabilidade](docs/observabilidade.md).
+
 ## Resultados principais
 
 | Evidência | Resultado | Relatório |
@@ -50,6 +85,7 @@ Os artefatos já estão versionados. Simulação, inferência e relatórios exig
 | Data drift atual | Utilização de crédito detectada em t1–t3; atrasos de 90 dias em t2–t3 | [Evidently t3](reports/drift/t3.html) |
 | Comparativo de intervenções | Em t3, AUC 0,842989 no perfil anterior e 0,800850 no atual | [Análise comparativa](reports/drift_comparison/analysis.html) |
 | Concept drift | AUC 0,843257 → 0,669626 e recall 74,09% → 45,35%, com features fixas | [Análise do experimento](artifacts/concept_drift/analysis.html) |
+| Observabilidade | Status do pipeline + alertas de drift/contrato no dashboard estático | [Dashboard](reports/observability/index.html) |
 
 As métricas dos experimentos comparam o mesmo holdout ao seu controle; a validação do baseline é outra partição. As doses dos perfis de data drift não são economicamente equivalentes.
 
