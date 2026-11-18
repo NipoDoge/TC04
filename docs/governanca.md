@@ -28,7 +28,7 @@ A validação registrada refere-se ao contexto acadêmico deste projeto. A base 
 
 ### Revisão da publicação
 
-**Situação: revisão dos dados concluída conforme confirmação do grupo.** A tabela mantém o escopo da revisão e as diretrizes para apresentação e novas publicações. A inspeção da gravação integra a preparação do vídeo STAR, ainda pendente.
+**Situação: revisão dos dados concluída conforme confirmação do grupo.** A tabela mantém o escopo da revisão e as diretrizes para apresentação e novas publicações. A inspeção da gravação integra a preparação do vídeo STAR.
 
 | Categoria e localização | Aspectos abrangidos pela revisão | Diretrizes para apresentação e novas publicações |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ A validação registrada refere-se ao contexto acadêmico deste projeto. A base 
 
 Em novas revisões, registrar, por categoria, os caminhos inspecionados, a decisão de **manter, ajustar, substituir por material sintético ou restringir**, a justificativa e a data. Qualquer ajuste deve ser conferido após sua execução. Quando houver remoção de conteúdo já compartilhado, incluir o histórico Git e as cópias conhecidas na avaliação do alcance da medida.
 
-**Vídeo STAR:** mostrar painéis, métricas e exemplos sintéticos; conferir o conteúdo visível, os arquivos abertos e a configuração de acesso ao vídeo antes da publicação.
+**Vídeo STAR:** https://youtu.be/YPTX4RqxAWw?si=cBuzLOQu30ClY_BV
 
 ### Privacy by Design e by Default
 

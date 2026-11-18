@@ -11,9 +11,9 @@ Os cenários são sintéticos, sem série temporal real ou comprovação de caus
 | 1 — Qualidade e contratos | Executada: Pandera, bloqueio/quarentena e baseline treinado |
 | 2 — Drift | Executada: data drift, concept drift, predições e relatórios Evidently |
 | 3 — Observabilidade | Executada: logs reais por operação, recursos, histórico e dashboard com `make observe` |
-| 4 — Governança e vídeo | Governança documentada, enquadramento acadêmico validado e dados revisados pelo grupo; gravação, revisão e publicação do vídeo pendentes |
+| 4 — Governança e vídeo | Governança documentada, enquadramento acadêmico validado e dados revisados pelo grupo |
 
-**Vídeo STAR:** pendente de gravação e publicação, com duração máxima de cinco minutos. [Roteiro e checklist](docs/entrega.md).
+**Vídeo STAR:** https://youtu.be/YPTX4RqxAWw?si=cBuzLOQu30ClY_BV [Roteiro e checklist](docs/entrega.md).
 
 ## Executar
 

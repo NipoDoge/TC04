@@ -2,14 +2,7 @@
 
 [Voltar ao README](../README.md)
 
-**Link do vídeo: pendente de gravação e publicação pelo grupo.** Substituir esta indicação por um link acessível antes da entrega. Duração máxima: 5 minutos.
-
-| Tempo | STAR | Conteúdo sugerido |
-| --- | --- | --- |
-| 0:00–0:40 | Situation | Cenário da fintech, risco de degradação silenciosa e impacto sobre crédito |
-| 0:40–1:10 | Task | Validar dados, detectar drift, observar o pipeline e definir governança |
-| 1:10–3:40 | Action | Mostrar contrato, bloqueio/quarentena, modelo, simulação, predições, relatórios de data drift e degradação sob concept drift; demonstrar logs reais, duração, recursos, falhas e recuperação no painel; explicar privacidade e retenção |
-| 3:40–5:00 | Result | Mostrar métricas e alertas efetivamente gerados, interpretação, limitações causais, mitigação de vieses e resposta proposta |
+**Vídeo STAR:** [Assistir no YouTube](https://youtu.be/YPTX4RqxAWw)
 
 ### Antes da entrega
 
@@ -30,6 +23,6 @@
 - [x] Demonstrar falhas operacionais, bloqueio por contrato e recuperação em execução isolada.
 - [x] Atualizar a interpretação dos experimentos com resultados observados e distinguir intervenção sintética de causa econômica real.
 - [x] Registrar a conclusão da revisão dos dados e materiais do projeto, conforme confirmação do grupo.
-- [ ] Gravar, revisar e publicar o vídeo STAR e inserir o link nesta seção.
+- [x] Gravar, revisar e publicar o vídeo STAR e inserir o link nesta seção.
 
-A Etapa 1, os experimentos de data drift e concept drift da Etapa 2 e a observabilidade da Etapa 3 (logs reais por execução + `make observe` + [dashboard](../reports/observability/index.html); [métricas documentadas](observabilidade.md)) possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. A fonte, a data de obtenção e a identificação da cópia de treino estão documentadas. O grupo confirmou a validação do enquadramento acadêmico e a conclusão da revisão dos dados; as responsabilidades funcionais estão descritas no plano. A pendência deste checklist é gravar, revisar e publicar o vídeo STAR, inserindo seu link acessível na documentação.
+A Etapa 1, os experimentos de data drift e concept drift da Etapa 2 e a observabilidade da Etapa 3 (logs reais por execução + `make observe` + [dashboard](../reports/observability/index.html); [métricas documentadas](observabilidade.md)) possuem execução e evidências preservadas; o [plano de governança](governanca.md) cobre a proposta teórica da Etapa 4. A fonte, a data de obtenção e a identificação da cópia de treino estão documentadas. O grupo confirmou a validação do enquadramento acadêmico e a conclusão da revisão dos dados; as responsabilidades funcionais estão descritas no plano. O vídeo STAR foi publicado e seu link está disponível no início deste documento. Todos os itens deste checklist estão concluídos.

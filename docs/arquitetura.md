@@ -19,7 +19,7 @@
 | Concept drift e comportamento do modelo | [concept_drift.py](../src/concept_drift.py), [análise](../artifacts/concept_drift/analysis.html) e [métricas](../artifacts/concept_drift/metrics.csv) | Executados: alteração condicional do alvo, features e modelo fixos, avaliação global e por segmento e sensibilidade a cinco seeds |
 | Observabilidade centralizada | [`src/execution_log.py`](../src/execution_log.py), [`src/observability.py`](../src/observability.py), `make observe`, artefatos em [`reports/observability/`](../reports/observability/) e [métricas documentadas](observabilidade.md) | Executada (logs reais de início/término, duração, volume, CPU/memória/disco, recuperação e dashboard [`index.html`](../reports/observability/index.html)) |
 | Governança e causalidade | [Plano de governança](governanca.md) | Plano e hipóteses documentados; enquadramento acadêmico validado e dados revisados pelo grupo |
-| Vídeo STAR | [Entrega e roteiro](entrega.md) | Gravação e link pendentes |
+| Vídeo STAR | [Entrega e roteiro](entrega.md) | https://youtu.be/YPTX4RqxAWw?si=cBuzLOQu30ClY_BV |
 
 ## Dados e finalidade
 
